@@ -1,10 +1,15 @@
 import os
 import parse
 import shutil
+import stat
 
 from dataset import data_dir
 from utils.general import list_dirs, generate_data_frames, get_num_frames, get_match_median
 from utils.visualize import plot_median_files
+
+def remove_readonly(func, path, excinfo):
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
 
 
 # Replace csv to corrected csv in test set
@@ -58,8 +63,10 @@ if not os.path.exists(os.path.join(data_dir, 'val')):
                     os.path.join(data_dir, 'val', match_dir, 'csv', f'{rally_id}_ball.csv'))
         shutil.move(os.path.join(data_dir, 'train', match_dir, 'video', f'{rally_id}.mp4'),
                     os.path.join(data_dir, 'val', match_dir, 'video', f'{rally_id}.mp4'))
-        shutil.move(os.path.join(data_dir, 'train', match_dir, 'frame', rally_id),
-                    os.path.join(data_dir, 'val', match_dir, 'frame', rally_id))
+
+        shutil.copytree(os.path.join(data_dir, 'train', match_dir, 'frame', rally_id),
+                    os.path.join(data_dir, 'val', match_dir, 'frame', rally_id), dirs_exist_ok=True)
+        shutil.rmtree(os.path.join(data_dir, 'train', match_dir, 'frame', rally_id), onerror=remove_readonly)
         shutil.copy(os.path.join(data_dir, 'train', match_dir, 'median.npz'),
                     os.path.join(data_dir, 'val', match_dir, 'median.npz'))
 

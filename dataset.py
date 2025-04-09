@@ -127,7 +127,7 @@ class Shuttlecock_Trajectory_Dataset(Dataset):
             else:
                 # Split based
                 # Generate and load input file 
-                input_file = os.path.join(self.root_dir, f'data_l{self.seq_len}_s{self.sliding_step}_{self.data_mode}_{self.split}.npz')
+                input_file = os.path.join(self.root_dir, f'data_l{self.seq_len}_s{self.sliding_step}_{self.data_mode}_{self.split}.npz') # made in preprocess.py
                 if not os.path.exists(input_file):
                     self._gen_input_file(file_name=input_file)
                 data_dict = np.load(input_file)
@@ -221,7 +221,9 @@ class Shuttlecock_Trajectory_Dataset(Dataset):
         if self.data_mode == 'heatmap':
             # Read label csv file
             if 'test' in rally_dir:
-                csv_file = os.path.join(match_dir, 'corrected_csv', f'{rally_id}_ball.csv')
+                ## might be a problem since i dont know what this corrected_csv is
+                #csv_file = os.path.join(match_dir, 'corrected_csv', f'{rally_id}_ball.csv')
+                csv_file = os.path.join(match_dir, 'csv', f'{rally_id}_ball.csv')
             else:
                 csv_file = os.path.join(match_dir, 'csv', f'{rally_id}_ball.csv')
             
@@ -477,7 +479,7 @@ class Shuttlecock_Trajectory_Dataset(Dataset):
                 data_idx = self.data_dict['id'][idx] # (L,)
                 frame_file = self.data_dict['frame_file'][idx] # (L,)
                 coor = self.data_dict['coor'][idx] # (L, 2)
-                vis = self.data_dict['vis'][idx] # (L,)
+                vis = self.data_dict['vis'][idx] # (L,)frame_file
                 w, h = self.img_config['img_shape'][data_idx[0][0]]
                 w_scaler, h_scaler = self.img_config['img_scaler'][data_idx[0][0]]
 

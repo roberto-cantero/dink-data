@@ -6,6 +6,7 @@ import parse
 import shutil
 import numpy as np
 import pandas as pd
+import stat
 
 from collections import deque
 from PIL import Image, ImageDraw
@@ -43,6 +44,10 @@ class ResumeArgumentParser():
 
 
 ###################################  Helper Functions ###################################
+def remove_readonly(func, path, excinfo):
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
 def get_model(model_name, seq_len=None, bg_mode=None):
     """ Create model by name and the configuration parameter.
 
@@ -207,12 +212,17 @@ def generate_frames(video_file):
 
         Returns:
             frame_list (List[numpy.ndarray]): List of sampled frames
+            fps (int): frames per second of the video
+            (w, h) (dict): dict containing the width and height of the video
     """
 
     assert video_file[-4:] == '.mp4', 'Invalid video file format.'
 
     # Get camera parameters
     cap = cv2.VideoCapture(video_file)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     frame_list = []
     success = True
 
@@ -222,7 +232,7 @@ def generate_frames(video_file):
         if success:
             frame_list.append(frame)
             
-    return frame_list
+    return frame_list, fps, (w, h)
 
 def draw_traj(img, traj, radius=3, color='red'):
     """ Draw trajectory on the image.
@@ -315,6 +325,60 @@ def write_pred_video(video_file, pred_dict, save_file, traj_len=8, label_df=None
 
         out.write(frame)
         i+=1
+
+    out.release()
+    cap.release()
+
+def write_gt_video(video_file, label_df, save_file, traj_len=8):
+    """ Write a video with ground truth trajectory only.
+
+        Args:
+            video_file (str): Path to the input video file
+            label_df (pandas.DataFrame): Ground truth labels with columns ['Frame', 'X', 'Y', 'Visibility']
+            save_file (str): Path to save the output video
+            traj_len (int, optional): Number of past frames to show in the trajectory (default: 8)
+
+        Returns:
+            None
+    """
+    # Read video
+    cap = cv2.VideoCapture(video_file)
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
+
+    # Extract ground truth data
+    f_i, x, y, vis = label_df['Frame'], label_df['X'], label_df['Y'], label_df['Visibility']
+
+    # Video writer setup
+    out = cv2.VideoWriter(save_file, fourcc, fps, (w, h))
+
+    # Create a queue for trajectory
+    gt_queue = deque()
+
+    i = 0
+    while True:
+        success, frame = cap.read()
+        if not success or i >= len(label_df):
+            break
+
+        # Limit trajectory length
+        if len(gt_queue) >= traj_len:
+            gt_queue.pop()
+
+        # Add current point to the queue if visible
+        if vis[i]:
+            gt_queue.appendleft([x[i], y[i]])
+        else:
+            gt_queue.appendleft(None)
+   
+        # Draw trajectory
+        frame = draw_traj(frame, gt_queue, color='red')
+
+        # Write frame
+        out.write(frame)
+        i += 1
 
     out.release()
     cap.release()
@@ -441,9 +505,11 @@ def generate_data_frames(video_file):
         os.makedirs(rally_dir)
     else:
         label_df = pd.read_csv(csv_file, encoding='utf8')
-        if len(list_dirs(rally_dir)) < len(label_df):
+        print(len([f for f in os.listdir(rally_dir) if f.endswith(".png")]), len(label_df))
+        if len([f for f in os.listdir(rally_dir) if f.endswith(".png")]) < len(label_df):
+            print(f"reprocessing {rally_dir}")
             # Some error has occured, remove the directory and process again
-            shutil.rmtree(rally_dir)
+            shutil.rmtree(rally_dir, onerror=remove_readonly)
             os.makedirs(rally_dir)
         else:
             # Already processed.
@@ -459,6 +525,10 @@ def generate_data_frames(video_file):
         if success:
             frames.append(frame)
             cv2.imwrite(os.path.join(rally_dir, f'{len(frames)-1}.{IMG_FORMAT}'), frame)
+    
+    if len(frames) < len(label_df):
+        print("Error: Generated less frames than .csv")
+    print(f"{rally_dir}, frames processed: {len(frames)}, csv len: {len(label_df)}")
     
     # Calculate the median of all frames
     median = np.median(np.array(frames), 0)

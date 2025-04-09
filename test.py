@@ -920,6 +920,7 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', action='store_true', default=False)
     parser.add_argument('--debug', action='store_true', default=False)
     parser.add_argument('--linear_interp', action='store_true', default=False)
+    parser.add_argument('--gt_only', action='store_true', default=False)
     args = parser.parse_args()
 
     param_dict = vars(args)
@@ -949,7 +950,7 @@ if __name__ == '__main__':
         inpaintnet.load_state_dict(inpaintnet_ckpt['model'])
         model = (tracknet, inpaintnet)
 
-    if args.video_file:
+    if args.video_file and args.gt_only == False:
         # Evaluation on video
         print(f'Test on video {args.video_file} ...')
         file_format_str = os.path.join('{}', 'video', '{}.mp4')
@@ -957,7 +958,7 @@ if __name__ == '__main__':
         rally_dir = os.path.join(match_dir, 'frame', rally_id)
 
         # Load label
-        csv_file = os.path.join(match_dir, 'corrected_csv', f'{rally_id}_ball.csv') if 'test' in rally_dir else os.path.join(match_dir, 'csv', f'{rally_id}_ball.csv')
+        csv_file = os.path.join(match_dir, 'csv', f'{rally_id}_ball.csv') if 'test' in rally_dir else os.path.join(match_dir, 'csv', f'{rally_id}_ball.csv')
         assert os.path.exists(csv_file), f'{csv_file} does not exist.'
         label_df = pd.read_csv(csv_file, encoding='utf8').sort_values(by='Frame').fillna(0)
 
@@ -966,10 +967,26 @@ if __name__ == '__main__':
 
         # Write results
         out_video_file = os.path.join(args.save_dir, f'{rally_id}.mp4')
-        out_csv_file = os.path.join(args.save_dir, f'{rally_id}_ball.csv')
+        out_csv_file = os.path.join(args.save_dir, f'{rally_id}_ball_pred.csv')
         frame_list, fps, (w, h) = generate_frames(args.video_file)
-        write_pred_video(frame_list, dict(fps=fps, shape=(w, h)), pred_dict, label_df=label_df, save_file=out_video_file)
+        write_pred_video(args.video_file, pred_dict, label_df=label_df, save_file=out_video_file)
         write_pred_csv(pred_dict, save_file=out_csv_file)
+    elif args.video_file and args.gt_only == True:
+        # Create output video with only ground truth labels
+        print(f'Ground truth on video {args.video_file} ...')
+        file_format_str = os.path.join('{}', 'video', '{}.mp4')
+        match_dir, rally_id = parse.parse(file_format_str, args.video_file)
+        rally_dir = os.path.join(match_dir, 'frame', rally_id)
+
+        # Load label
+        csv_file = os.path.join(match_dir, 'csv', f'{rally_id}_ball.csv') if 'test' in rally_dir else os.path.join(match_dir, 'csv', f'{rally_id}_ball.csv')
+        assert os.path.exists(csv_file), f'{csv_file} does not exist.'
+        label_df = pd.read_csv(csv_file, encoding='utf8').sort_values(by='Frame').fillna(0)
+
+        # Write results
+        out_video_file = os.path.join(args.save_dir, f'{rally_id}.mp4')
+        frame_list, fps, (w, h) = generate_frames(args.video_file)
+        write_gt_video(args.video_file, label_df, save_file=out_video_file)
     else:
         # Evaluation on dataset
         eval_analysis_file = os.path.join(args.save_dir, f'{args.split}_eval_analysis_{args.eval_mode}.json') # for error analysis interface
@@ -983,7 +1000,7 @@ if __name__ == '__main__':
         pred_dict = test(model, args.split, param_dict, linear_interp=args.linear_interp)
         if args.split == 'test':
             # Drop samples which is not in the effective trajectory
-            res_dict = get_test_res(pred_dict, drop=True)
+            res_dict = get_test_res(pred_dict, drop=False)
         else:
             res_dict = get_test_res(pred_dict, drop=False)
         

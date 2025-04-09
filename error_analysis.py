@@ -40,7 +40,7 @@ elif split == 'val':
     ]
 elif split == 'test':
     eval_file_list = [
-        # {'label': label_name, 'value': json_path},
+        {'label': 'tracknetv3', 'value': 'eval\\test_eval_analysis_weight.json'},
     ]
 else:
     raise ValueError(f'Invalid split: {split}')
@@ -66,8 +66,9 @@ rally_id_map = {k: i for i, k in enumerate(rally_keys)}
 
 # Load drop frame dict if split is test
 if split == 'test':
-    drop_frame_dict = json.load(open(f'{data_dir}/drop_frame.json'))
-    start_f, end_f = drop_frame_dict['start'], drop_frame_dict['end']
+    #drop_frame_dict = json.load(open(f'{data_dir}/drop_frame.json'))
+    #start_f, end_f = drop_frame_dict['start'], drop_frame_dict['end']
+    start_f, end_f = {''}, 100
 else:
     start_f, end_f = None, None
 
@@ -117,6 +118,7 @@ app.layout = html.Div(children=[
     Input('rally-key-dropdown', 'value')]
 )
 def change_dropdown(eval_file_1, eval_file_2, rally_key):
+    print(rally_key)##
     global match_id, rally_id, x_gt, y_gt, x_pred_1, y_pred_1, x_pred_2, y_pred_2
     
     # Bar chart settings
@@ -146,7 +148,7 @@ def change_dropdown(eval_file_1, eval_file_2, rally_key):
         bar_list[i]['TN'] = bar_list[i]['TN'] * y_min
     
     # Read ground truth labels
-    csv_dir = 'corrected_csv' if split == 'test' else 'csv'
+    csv_dir = 'csv' if split == 'test' else 'csv'
     assert os.path.exists(os.path.join(data_dir, split, f'match{match_id}', csv_dir, f'{rally_id}_ball.csv'))
     csv_file = os.path.join(data_dir, split, f'match{match_id}', csv_dir, f'{rally_id}_ball.csv')
     label_df = pd.read_csv(csv_file, encoding='utf8')
@@ -197,7 +199,7 @@ def show_frame(hoverData):
     point_visible = True if mode == 'point' else 'legendonly'
     traj_visible = True if mode == 'traj' else 'legendonly'
     
-    #print(f'hover_data: {hoverData}')
+    print(f'hover_data: {hoverData}')
     frame_id = hoverData['points'][0]['x']
     cx, cy = x_gt[frame_id], y_gt[frame_id]
     cx_pred_1, cy_pred_1 = x_pred_1[frame_id], y_pred_1[frame_id]
@@ -276,4 +278,4 @@ def show_frame(hoverData):
     return frame_fig
 
 if __name__ == '__main__':
-   app.run_server(host=host, debug=debug)
+   app.run(host=host, debug=debug)

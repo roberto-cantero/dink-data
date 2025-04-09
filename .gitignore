@@ -16,3 +16,15 @@ model_compare.py
 predict_old.py
 *.sh
 *.mp4
+
+/exp/
+/data/
+/data_badminton/
+/TrackNetV2/
+/output/
+/prediction/
+scratch.ipynb
+test.py
+TrackNetV2.zip
+/eval/
+openh264-1.8.0-win64.dll
