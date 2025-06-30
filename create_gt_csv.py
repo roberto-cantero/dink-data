@@ -25,13 +25,36 @@ def parse_tasks(xml_file):
 
     return tasks
 
+def parse_tasks(xml_file):
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+
+    # Navigate to the tasks node
+    tasks = {}
+    for task in root.findall(".//task"):
+        task_data = {
+            "name": task.find("name").text,
+            "size": int(task.find("size").text),
+            "start_frame": int(task.find("start_frame").text),
+            "stop_frame": int(task.find("stop_frame").text),
+            "resolution": {
+                "width": int(task.find("original_size/width").text),
+                "height": int(task.find("original_size/height").text)
+            }
+        }
+        tasks[int(task.find("id").text)] = task_data
+
+    return tasks
+
 def parse_tracks(match_dir_path):
+    print(match_dir_path)
     for xml_filename in os.listdir(os.path.join(match_dir_path, "annotations")):
         xml_file = os.path.join(match_dir_path, "annotations", xml_filename)
         tree = ET.parse(xml_file)
         root = tree.getroot()
 
         task_data = parse_tasks(xml_file)
+        print(task_data)
         
         last_start_frame_actual = 0
         last_size = 0
@@ -47,7 +70,7 @@ def parse_tracks(match_dir_path):
 
         for track in root.findall(".//track"):
             track_info = track.attrib
-            #print(track_info)
+            print(track_info)
             frames = []
             start_frame = None
             tracking_outside = 0
@@ -113,6 +136,7 @@ def parse_tracks(match_dir_path):
             
             df = pd.DataFrame(frames)
             df.to_csv(os.path.join(csv_dir_path, file_name), index=False)
+            print(os.path.join(csv_dir_path, file_name))
 
 for match_dir in os.listdir(os.path.join(data_dir, "train")):
     match_dir_path = os.path.join(data_dir, "train", match_dir)

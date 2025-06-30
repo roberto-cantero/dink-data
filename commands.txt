@@ -1,0 +1,2 @@
+python create_gt_csv.py
+python test.py --tracknet_file ckpts/TrackNet_best.pt --video_file data\train\match1\video\rally_1.mp4 --gt_only 
