@@ -10,7 +10,7 @@ from test import predict_location, get_ensemble_weight, generate_inpaint_mask
 from dataset import Shuttlecock_Trajectory_Dataset, Video_IterableDataset
 from utils.general import *
 
-
+# python predict.py --video_file data_rally_detection\ph_team1.mp4 --tracknet_file ckpts/TrackNet_best.pt --save_dir prediction --large_video --output_video
 def predict(indices, y_pred=None, c_pred=None, img_scaler=(1, 1)):
     """ Predict coordinates from heatmap or inpainted coordinates. 
 
@@ -83,9 +83,9 @@ if __name__ == '__main__':
     parser.add_argument('--traj_len', type=int, default=8, help='length of trajectory to draw on video')
     args = parser.parse_args()
 
-    num_workers = 0 #args.batch_size if args.batch_size <= 16 else 16
+    num_workers = args.batch_size if args.batch_size <= 16 else 16
     video_file = args.video_file
-    video_name = video_file.split('/')[-1][:-4]
+    video_name = video_file.split('\\')[-1][:-4]
     video_range = args.video_range if args.video_range else None
     large_video = args.large_video
     out_csv_file = os.path.join(args.save_dir, f'{video_name}_ball.csv')
@@ -154,7 +154,7 @@ if __name__ == '__main__':
             
         else:
             # Sample all frames from video
-            frame_list = generate_frames(args.video_file)
+            frame_list, _, _ = generate_frames(args.video_file)
             dataset = Shuttlecock_Trajectory_Dataset(seq_len=seq_len, sliding_step=1, data_mode='heatmap', bg_mode=bg_mode,
                                                  frame_arr=np.array(frame_list)[:, :, :, ::-1])
             data_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False, num_workers=num_workers, drop_last=False)

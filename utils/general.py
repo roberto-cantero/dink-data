@@ -20,6 +20,11 @@ DELTA_T = 1/math.sqrt(HEIGHT**2 + WIDTH**2)
 COOR_TH = DELTA_T * 50
 IMG_FORMAT = 'png'
 
+# load once at import
+COURT_BASE = cv2.imread("keypoints\court_base.png", cv2.IMREAD_COLOR)
+COURT_H, COURT_W = COURT_BASE.shape[:2]
+H          = np.load("keypoints\homography.npy")
+TRAIL_LEN  = 8  
 
 class ResumeArgumentParser():
     """ A argument parser for parsing the parameter dictionary from checkpoint file."""
@@ -282,6 +287,10 @@ def write_pred_video(video_file, pred_dict, save_file, traj_len=8, label_df=None
     w, h = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
     fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
 
+    court_traj = deque()                     # store last positions (court coords)
+    inset_scale = 0.5                        # shrink if you like (1.0 = original)
+    inset_w, inset_h = int(COURT_W*inset_scale), int(COURT_H*inset_scale)
+
     # Read ground truth label if exists
     if label_df is not None:
         f_i, x, y, vis = label_df['Frame'], label_df['X'], label_df['Y'], label_df['Visibility']
@@ -322,6 +331,15 @@ def write_pred_video(video_file, pred_dict, save_file, traj_len=8, label_df=None
         
         # Draw prediction trajectory
         frame = draw_traj(frame, pred_queue, color='yellow')
+
+        # # Creates a 2D minimap and draws the ball onto it
+        # # fetch current ball point (None if invisible)
+        # ix, iy = (x_pred[i], y_pred[i]) if vis_pred[i] else (None, None)
+        # inset   = make_inset(ix, iy, court_traj)
+        # inset   = cv2.resize(inset, (inset_w, inset_h), interpolation=cv2.INTER_AREA)
+
+        # # paste into upper-left corner
+        # frame[0:inset_h, 0:inset_w] = inset
 
         out.write(frame)
         i+=1
@@ -605,3 +623,32 @@ def re_generate_median_files(data_dir):
                 get_rally_median(video_file)
             get_match_median(match_dir)
             print(f'Finish processing {match_name}.')
+
+def image_pt_to_court(pt_xy):
+    """(x, y) in image → (u, v) on flat court png."""
+    return cv2.perspectiveTransform(
+        np.array([[pt_xy]], dtype=np.float32),  # [[x,y]]
+        H
+    )[0,0].astype(int)
+
+def make_inset(x, y, court_traj):
+    """
+    Returns a fresh overlay (BGR) with the current ball/trajectory drawn.
+    x,y are image coordinates; pass None when Visibility==0.
+    court_traj is a collections.deque keeping last TRAIL_LEN court pts.
+    """
+    canvas = COURT_BASE.copy()
+
+    if x is not None and y is not None:
+        court_pt = tuple(image_pt_to_court((x, y)))
+        court_traj.appendleft(court_pt)
+
+    # keep only latest TRAIL_LEN positions
+    while len(court_traj) > TRAIL_LEN:
+        court_traj.pop()
+
+    # draw trail
+    for p in court_traj:
+        cv2.circle(canvas, p, 4, (0,0,255), -1)        # red dot
+
+    return canvas
