@@ -9,28 +9,29 @@ DinkData computes per-player pickleball stats from single-camera PickleCam
 video. A Python pipeline turns a game video into an event log (rallies, hits,
 bounces, players), and pure functions turn the event log into stats.
 
-Stage: **P0 (foundations)**. The repo root still holds the prototype: a
-TrackNetV3 fork retrained to track the ball, plus a rally-segmentation notebook.
+Stage: **P0 (foundations)**. `legacy/` holds the prototype: a TrackNetV3 fork
+retrained to track the ball, plus a rally-segmentation notebook.
 New code goes under `pipeline/`, `stats/`, `contracts/` and `eval/` (see Layout).
 A web app comes later (P3).
 
 ## Commands
 
-Only the prototype commands exist today. Rows marked _planned_ are the target
-for P0. Until they exist, say that you could not run them; don't claim you did.
+Rows marked _planned_ don't exist yet. Until they do, say that you could not
+run them; don't claim you did.
 
 | Purpose | Command |
 |---|---|
-| Install (prototype) | `pip install -r requirements.txt` (pins are stale, see FAILURE-LOG F3) |
-| Ball tracking on a video (prototype) | `python predict.py --video_file <video.mp4> --tracknet_file ckpts/TrackNet_best.pt --inpaintnet_file ckpts/InpaintNet_best.pt --save_dir prediction` |
-| Train ball tracker (prototype) | see `README.md` › Training |
-| Install | _planned_ `uv sync` |
-| Lint / format | _planned_ `uv run ruff check . && uv run ruff format --check .` |
-| Unit tests | _planned_ `uv run pytest -q` |
+| Install (CPU torch + git hooks) | `make setup` (= `uv sync --extra cpu` + `uv run pre-commit install`) |
+| Install on an NVIDIA GPU machine | `uv sync --extra cu126` (add `--extra players` for ultralytics) |
+| Lint / format | `make lint` (= `uv run ruff check . && uv run ruff format --check .`) |
+| Type check | `make typecheck` (= `uv run pyright`) |
+| Unit tests | `make test` (= `uv run pytest -q -m "not gpu and not data"`) |
+| CLI | `uv run dink-cv --help` |
 | Accuracy eval on held-out court | _planned_ `uv run dink-cv eval --split heldout` |
 | Run pipeline on a clip | _planned_ `uv run dink-cv run <clip.mp4> --out out/` |
 | Overlay video for debugging | _planned_ `uv run dink-cv render out/events.json <clip.mp4>` |
-| **Full pre-PR check** | _planned_ `make check` (lint + tests + eval smoke test) |
+| **Full pre-PR check** | `make check` (lint + type check + tests; eval smoke test _planned_) |
+| Prototype (reference only) | `legacy/` scripts; pins in `legacy/requirements.txt` are stale (FAILURE-LOG F3) |
 
 ## Layout and ownership
 
@@ -43,7 +44,8 @@ for P0. Until they exist, say that you could not run them; don't claim you did.
 | `stats/` | pure `events -> stats` functions | Partner B |
 | `contracts/` | JSON Schemas for the four handoff files | both |
 | `eval/` | gold-set scoring harness | both |
-| repo root `*.py`, `*.ipynb`, `utils/` | prototype, being ported | both |
+| `tests/` | mirrors the packages; synthetic fixtures in `tests/fixtures/` | both |
+| `legacy/` | prototype, being ported (paths in FAILURE-LOG predate the move) | both |
 
 Ask before changing code owned by the other partner. When porting prototype
 code, move it into the new layout with tests; don't build on it in place.
@@ -84,8 +86,8 @@ partner in the PR.
 ## Data
 
 - Never commit videos, frames, checkpoints or labels. They live in `FILL-IN: bucket or drive`.
-- `data/`, `ckpts/` and `prediction/` are gitignored. `keypoints/` is not in the
-  repo either but isn't ignored yet; don't commit it. Scripts take paths as arguments.
+- `data/`, `ckpts/`, `keypoints/`, `prediction/`, `out/`, videos, model weights and
+  `*.parquet` (outside `tests/fixtures/`) are gitignored. Scripts take paths as arguments.
 
 ## Platform
 
@@ -103,7 +105,8 @@ Check it before working in an area, and add to it when you find a new one.
 ## Boundaries
 
 - **Never:** commit secrets, `.env` files, data or checkpoints · push to `main` ·
-  change `contracts/` alone · disable tests or lint rules to make a check pass
+  change `contracts/` alone · disable tests or lint rules to make a check pass ·
+  put footage, personal data or client details in code, commits, issues, PRs or logs
 - **Ask first:** new dependencies · contract or schema changes · the other
   partner's area · CI or eval config · changing a stat definition
 - **Go ahead:** everything else inside the task

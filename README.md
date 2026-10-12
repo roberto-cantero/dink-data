@@ -1,15 +1,68 @@
-# TrackNetV3
+# DinkData
+
+DinkData turns a single-camera PickleCam video of a pickleball game into
+per-player stats. A Python pipeline finds the court, the ball and the players,
+builds an event log (rallies, hits, bounces), and pure functions turn that log
+into stats like serve-in %, third-shot drops and kitchen arrival.
+
+The plan we follow is [`docs/DinkDataRebuildPlan.pdf`](docs/DinkDataRebuildPlan.pdf).
+Stat definitions live in [`docs/STATS.md`](docs/STATS.md), court geometry in
+[`docs/COURT.md`](docs/COURT.md), known bugs in [`docs/FAILURE-LOG.md`](docs/FAILURE-LOG.md).
+Rules for working in the repo (including for Claude Code) are in [`CLAUDE.md`](CLAUDE.md).
+
+## Setup
+
+You need [uv](https://docs.astral.sh/uv/) and `make`. uv installs the right Python by itself.
+
+```bash
+git clone https://github.com/roberto-cantero/dink-data.git
+cd dink-data
+make setup        # installs dependencies (CPU torch) and the git hooks
+make check        # lint + type check + tests
+uv run dink-cv --help
+```
+
+On an NVIDIA GPU machine, use `uv sync --extra cu126` instead of the CPU build.
+Videos, labels and model checkpoints are never committed; they live outside the repo.
+
+## Layout
+
+| Path | What |
+|---|---|
+| `pipeline/court/`, `pipeline/ball/` | court calibration, ball tracking, bounces (Partner A) |
+| `pipeline/players/`, `pipeline/events/` | player tracking, hits, rallies, score (Partner B) |
+| `stats/` | pure `events -> stats` functions (Partner B) |
+| `contracts/` | JSON Schemas for the four handoff files (both) |
+| `eval/` | scores every stage against the gold set on the held-out court (both) |
+| `tests/` | unit tests; synthetic fixtures only |
+| `legacy/` | the original prototype, kept for reference while we port it |
+
+## How we work
+
+1. **Pick an issue** from the [DinkData board](https://github.com/users/roberto-cantero/projects/1) and move it to *In progress*.
+2. **Branch** off `main`: `git checkout -b a/short-name` (Partner A) or `b/short-name` (Partner B).
+3. **Commit** small steps with [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`). The git hooks check style and secrets on every commit.
+4. **Open a PR**, fill in the template, and link the issue. CI runs `lint` and `test`.
+5. **Review:** the other partner approves. Model, threshold or heuristic changes need held-out eval scores before and after.
+6. **Squash merge.** Each PR becomes one commit on `main`, and the branch is deleted. Nobody pushes to `main` directly.
+
+## Credits
+
+The ball tracker is a fork of [TrackNetV3](https://github.com/qaz812345/TrackNetV3)
+(Chen and Wang, ACM MM Asia 2023, [paper](https://dl.acm.org/doi/10.1145/3595916.3626370)),
+retrained to track a pickleball. Released under the MIT License (see [`LICENSE`](LICENSE)).
+
+## Prototype: TrackNetV3 (`legacy/`)
+
+The original TrackNetV3 instructions, kept for the prototype in `legacy/`. Run these
+commands from inside `legacy/`. Its pinned dependencies are stale (FAILURE-LOG F3).
+
 We present TrackNetV3, a model composed of two core modules: trajectory prediction and rectification. The trajectory prediction module leverages an estimated background as auxiliary data to locate the shuttlecock in spite of the fluctuating visual interferences. This module also incorporates mixup data augmentation to formulate complex
 scenarios to strengthen the network’s robustness. Given that a shuttlecock can occasionally be obstructed, we create repair masks by analyzing the predicted trajectory, subsequently rectifying the path via inpainting.
 [[paper](https://dl.acm.org/doi/10.1145/3595916.3626370)]
 
-<div align="center">
-    <a href="./">
-        <img src="./figure/NetArch.png" width="50%"/>
-    </a>
-</div>
 
-## Performance 
+### Performance 
 
 * Performance on the test split of [Shuttlecock Trajectory Dataset](https://hackmd.io/Nf8Rh1NrSrqNUzmO0sQKZw).
 
@@ -32,13 +85,9 @@ scenarios to strengthen the network’s robustness. Given that a shuttlecock can
         </tr>
     </tbody>
     </table>
-    </br>
-    <a href="./">
-        <img src="./figure/Comparison.png" width="80%"/>
-    </a>
 </div>
 
-## Installation
+### Installation
 * Develop Environment
     ```
     Ubuntu 16.04.7 LTS
@@ -55,7 +104,7 @@ scenarios to strengthen the network’s robustness. Given that a shuttlecock can
     pip install -r requirements.txt
     ```
 
-## Inference
+### Inference
 * Download the [checkpoints](https://drive.google.com/file/d/1CfzE87a0f6LhBp0kniSl1-89zaLCZ8cA/view?usp=sharing)
 * Unzip the file and place the parameter files to ```ckpts```
     ```
@@ -77,8 +126,8 @@ scenarios to strengthen the network’s robustness. Given that a shuttlecock can
     python predict.py --video_file test.mp4 --tracknet_file ckpts/TrackNet_best.pt --inpaintnet_file ckpts/InpaintNet_best.pt --save_dir prediction --large_video --video_range 324,330
     ```
 
-## Training
-### 1. Prepare Dataset
+### Training
+#### 1. Prepare Dataset
 * Download [Shuttlecock Trajectory Dataset](https://hackmd.io/Nf8Rh1NrSrqNUzmO0sQKZw)
 * Adjust file structure:
     1. Merge the `Professional` and `Amateur` match directories into a single `train` directory.
@@ -138,7 +187,7 @@ scenarios to strengthen the network’s robustness. Given that a shuttlecock can
 * Set the data root directory to `data_dir` in `dataset.py`.
     * `dataset.py` will generate the image mapping for each sample and cache the result in `.npy` files.
     * If you modify any related functions in `dataset.py`, please ensure you delete these cached files.
-### 2. Train Tracking Module
+#### 2. Train Tracking Module
 * Train the tracking module from scratch
     ```
     python train.py --model_name TrackNet --seq_len 8 --epochs 30 --batch_size 10 --bg_mode concat --alpha 0.5 --save_dir exp --verbose
@@ -149,14 +198,14 @@ scenarios to strengthen the network’s robustness. Given that a shuttlecock can
     python train.py --model_name TrackNet --epochs 30 --save_dir exp --resume_training --verbose
     ```
 
-### 3. Generate Predicted Trajectories and Inpainting Masks
+#### 3. Generate Predicted Trajectories and Inpainting Masks
 * Generate predicted trajectories and inpainting masks for training rectification module
     * Noted that the coordinate range corresponds to the input spatial dimensions, not the size of the original image.
     ```
     python generate_mask_data.py --tracknet_file ckpts/TrackNet_best.pt --batch_size 16
     ```
 
-### 4. Train Rectification Module
+#### 4. Train Rectification Module
 * Train the rectification module from scratch.
     ```
     python train.py --model_name InpaintNet --seq_len 16 --epoch 300 --batch_size 32 --lr_scheduler StepLR --mask_ratio 0.3 --save_dir exp --verbose
@@ -167,7 +216,7 @@ scenarios to strengthen the network’s robustness. Given that a shuttlecock can
     python train.py --model_name InpaintNet --epochs 30 --save_dir exp --resume_training
     ```
 
-## Evaluation
+### Evaluation
 * Evaluate TrackNetV3 on test set
     ```
     python generate_mask_data.py --tracknet_file ckpts/TrackNet_best.pt --split_list test
@@ -184,7 +233,7 @@ scenarios to strengthen the network’s robustness. Given that a shuttlecock can
     python test.py --tracknet_file ckpts/TrackNet_best.pt --video_file data/test/match1/video/1_05_02.mp4 
     ```
 
-## Error Analysis Interface
+### Error Analysis Interface
 * Evaluate TrackNetV3 on test set and save the detail results for error analysis
     ```
     python test.py --tracknet_file ckpts/TrackNet_best.pt --inpaintnet_file ckpts/InpaintNet_best.pt --save_dir eval --output_pred
@@ -216,13 +265,8 @@ scenarios to strengthen the network’s robustness. Given that a shuttlecock can
     ```
     python error_analysis.py --split test --host 127.0.0.1
     ```
-<div align="center">
-    <a href="./">
-        <img src="./figure/ErrorAnalysisUI.png" width="70%"/>
-    </a>
-</div>
 
-## Reference
+### Reference
 * TrackNetV2: https://nol.cs.nctu.edu.tw:234/open-source/TrackNetv2
 * Shuttlecock Trajectory Dataset: https://hackmd.io/@TUIK/rJkRW54cU
 * Labeling Tool: https://github.com/Chang-Chia-Chi/TrackNet-Badminton-Tracking-tensorflow2?tab=readme-ov-file#label
