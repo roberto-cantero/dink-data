@@ -1,0 +1,27 @@
+# Runs on every commit (after `make setup`) and in CI.
+# legacy/ is the unchanged prototype: style hooks skip it, safety hooks don't.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.0
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+        exclude: ^(legacy/|docs/.*\.pdf$)
+      - id: no-commit-to-branch
+        args: [--branch, main]
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks

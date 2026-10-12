@@ -24,7 +24,24 @@ predict_old.py
 /output/
 /prediction/
 scratch.ipynb
-test.py
 TrackNetV2.zip
-/eval/
 openh264-1.8.0-win64.dll
+# DinkData
+.venv/
+.env
+.env.*
+*.pt
+*.pth
+*.onnx
+*.mp4
+data/
+ckpts/
+keypoints/
+out/
+*.parquet
+!tests/fixtures/**/*.parquet
+.coverage
+.pytest_cache/
+.ruff_cache/
+.claude/settings.local.json
+.claude/worktrees/
