@@ -2,13 +2,13 @@
 # legacy/ is the unchanged prototype: style hooks skip it, safety hooks don't.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.17.0
+    rev: 44b5042edab9382aba712eed4f9c7bab7a3d6a3e  # frozen: v0.17.0
     hooks:
       - id: ruff-check
         args: [--fix]
       - id: ruff-format
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
     hooks:
       - id: check-added-large-files
         args: [--maxkb=500]
@@ -18,10 +18,10 @@ repos:
       - id: no-commit-to-branch
         args: [--branch, main]
   - repo: https://github.com/kynan/nbstripout
-    rev: 0.9.1
+    rev: f5da19ce3b7b40e97c12ee9cd8ce97f48f97ddf7  # frozen: 0.9.1
     hooks:
       - id: nbstripout
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.0
+    rev: 2ca41cc1372d1e939a6a879f18cdc19fc1cac1ce  # frozen: v8.30.0
     hooks:
       - id: gitleaks

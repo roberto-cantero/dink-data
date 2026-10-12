@@ -29,9 +29,9 @@ Videos, labels and model checkpoints are never committed; they live outside the 
 
 | Path | What |
 |---|---|
-| `pipeline/court/`, `pipeline/ball/` | court calibration, ball tracking, bounces (Partner A) |
-| `pipeline/players/`, `pipeline/events/` | player tracking, hits, rallies, score (Partner B) |
-| `stats/` | pure `events -> stats` functions (Partner B) |
+| `pipeline/court/`, `pipeline/ball/` | court calibration, ball tracking, bounces (Robby, Partner A) |
+| `pipeline/players/`, `pipeline/events/` | player tracking, hits, rallies, score (Marti, Partner B) |
+| `stats/` | pure `events -> stats` functions (Marti, Partner B) |
 | `contracts/` | JSON Schemas for the four handoff files (both) |
 | `eval/` | scores every stage against the gold set on the held-out court (both) |
 | `tests/` | unit tests; synthetic fixtures only |
@@ -40,7 +40,7 @@ Videos, labels and model checkpoints are never committed; they live outside the 
 ## How we work
 
 1. **Pick an issue** from the [DinkData board](https://github.com/users/roberto-cantero/projects/1) and move it to *In progress*.
-2. **Branch** off `main`: `git checkout -b a/short-name` (Partner A) or `b/short-name` (Partner B).
+2. **Branch** off `main`: `git checkout -b a/short-name` (Robby) or `b/short-name` (Marti).
 3. **Commit** small steps with [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`). The git hooks check style and secrets on every commit.
 4. **Open a PR**, fill in the template, and link the issue. CI runs `lint` and `test`.
 5. **Review:** the other partner approves. Model, threshold or heuristic changes need held-out eval scores before and after.

@@ -1,5 +1,5 @@
 # Who reviews what. Later lines win over earlier ones.
-# Partner A: court + ball. Partner B: players + events + stats.
+# Robby (Partner A): court + ball. Marti (Partner B): players + events + stats.
 
 /pipeline/court/     @roberto-cantero
 /pipeline/ball/      @roberto-cantero

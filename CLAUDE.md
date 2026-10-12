@@ -35,6 +35,9 @@ run them; don't claim you did.
 
 ## Layout and ownership
 
+Partner A is Robby (`@roberto-cantero`, label `owner:Robby`). Partner B is Marti
+(`@probablynotmarti`, label `owner:Marti`).
+
 | Path | What | Owner |
 |---|---|---|
 | `pipeline/court/` | calibration, homography, court lines | Partner A |
