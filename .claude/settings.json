@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run pytest:*)", "Bash(uv run ruff:*)", "Bash(uv run pyright:*)",
+      "Bash(uv sync:*)", "Bash(make check)", "Bash(make test)", "Bash(make lint)",
+      "Bash(git status)", "Bash(git diff:*)", "Bash(git log:*)", "Bash(gh pr view:*)", "Bash(gh pr checks:*)"
+    ],
+    "ask": ["Bash(git push:*)", "Bash(gh pr merge:*)", "Bash(uv add:*)", "Edit(contracts/**)", "Edit(.github/**)"],
+    "deny": [
+      "Read(./.env)", "Read(./.env.*)", "Read(./data/**)", "Read(./ckpts/**)",
+      "Bash(git push origin main:*)", "Bash(git push --force:*)", "Bash(git push -f:*)",
+      "Bash(git push --no-verify:*)", "Bash(git commit --no-verify:*)", "Bash(rm -rf:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [{
+      "matcher": "Edit|Write",
+      "hooks": [{ "type": "command",
+        "command": "jq -r '.tool_input.file_path' | grep '\\.py$' | xargs -r uv run ruff format --quiet" }]
+    }]
+  },
+  "enabledPlugins": {
+    "pyright-lsp@claude-plugins-official": true,
+    "commit-commands@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true
+  }
+}

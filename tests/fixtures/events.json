@@ -1,0 +1,31 @@
+{
+  "_note": "Hand-written test fixture following the rebuild plan's event log sketch. Not the frozen contract: see contracts/.",
+  "schema": "dinkdata.events/v1",
+  "video": { "id": "synthetic-001", "fps": 30, "width": 320, "height": 180 },
+  "court": { "units": "ft", "source": "manual" },
+  "players": [
+    { "id": "p1", "team": "A", "label": "Player 1", "track_ids": [1] },
+    { "id": "p2", "team": "A", "label": "Player 2", "track_ids": [2] },
+    { "id": "p3", "team": "B", "label": "Player 3", "track_ids": [3] },
+    { "id": "p4", "team": "B", "label": "Player 4", "track_ids": [4] }
+  ],
+  "rallies": [
+    {
+      "id": "r1",
+      "start_frame": 0,
+      "end_frame": 59,
+      "server": "p1",
+      "server_number": 2,
+      "score_before": "0-0-2",
+      "winner_team": "A",
+      "end_reason": "out",
+      "reviewed": false,
+      "events": [
+        { "t": 2, "type": "hit", "player": "p1", "shot": "serve", "volley": false, "conf": 0.97 },
+        { "t": 30, "type": "bounce", "court_xy": [6.5, 10.0], "in": true, "close_call": false, "conf": 0.93 },
+        { "t": 38, "type": "hit", "player": "p3", "shot": "return", "volley": false, "conf": 0.88 },
+        { "t": 57, "type": "bounce", "court_xy": [21.5, 40.0], "in": false, "close_call": false, "conf": 0.9 }
+      ]
+    }
+  ]
+}

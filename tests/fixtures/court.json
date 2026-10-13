@@ -1,0 +1,19 @@
+{
+  "_note": "Hand-written test fixture for the synthetic clip. Not the frozen contract: see contracts/.",
+  "camera_id": "synthetic-cam",
+  "image_size": { "width": 320, "height": 180 },
+  "units": "ft",
+  "source": "manual",
+  "homography": [
+    [0.2857142857142857, 0.0, -35.714285714285715],
+    [0.0, 0.2857142857142857, -3.7142857142857144],
+    [0.0, 0.0, 1.0]
+  ],
+  "reprojection_error_px": 0.0,
+  "keypoints": {
+    "far_left_corner": { "court_xy": [0, 0], "image_xy": [125.0, 13.0] },
+    "far_right_corner": { "court_xy": [20, 0], "image_xy": [195.0, 13.0] },
+    "near_right_corner": { "court_xy": [20, 44], "image_xy": [195.0, 167.0] },
+    "near_left_corner": { "court_xy": [0, 44], "image_xy": [125.0, 167.0] }
+  }
+}
