@@ -1,0 +1,57 @@
+{
+  "schema": "dinkdata.events/v1",
+  "video": { "id": "vid_synthetic_001", "fps": 30, "width": 1920, "height": 1080 },
+  "court": { "units": "ft", "source": "manual", "camera_id": "synthetic-cam" },
+  "players": [
+    { "id": "p1", "team": "A", "label": "Player 1", "track_ids": [1] },
+    { "id": "p2", "team": "A", "label": "Player 2", "track_ids": [2, 9] },
+    { "id": "p3", "team": "B", "label": "Player 3", "track_ids": [3] },
+    { "id": "p4", "team": "B", "label": "Player 4", "track_ids": [4] }
+  ],
+  "rallies": [
+    {
+      "id": "r1",
+      "start_frame": 120,
+      "end_frame": 300,
+      "server": "p1",
+      "server_number": 2,
+      "score_before": "0-0-2",
+      "winner_team": "A",
+      "end_reason": "net",
+      "reviewed": false,
+      "events": [
+        { "id": "r1_e1", "t": 122, "type": "hit", "player": "p1", "shot": "serve", "volley": false, "conf": 0.97 },
+        { "id": "r1_e2", "t": 160, "type": "bounce", "court_xy": [6.5, 9.0], "in": true, "close_call": false, "conf": 0.94 },
+        { "id": "r1_e3", "t": 172, "type": "hit", "player": "p3", "shot": "return", "volley": false, "conf": 0.9 },
+        { "id": "r1_e4", "t": 215, "type": "bounce", "court_xy": [13.0, 38.5], "in": true, "close_call": false, "conf": 0.92 },
+        { "id": "r1_e5", "t": 228, "type": "hit", "player": "p2", "shot": "drop", "volley": false, "conf": 0.86 },
+        { "id": "r1_e6", "t": 268, "type": "bounce", "court_xy": [11.0, 19.0], "in": true, "close_call": false, "conf": 0.9 },
+        { "id": "r1_e7", "t": 280, "type": "hit", "player": "p4", "shot": "dink", "volley": false, "conf": 0.81 }
+      ]
+    },
+    {
+      "id": "r2",
+      "start_frame": 900,
+      "end_frame": 1075,
+      "server": "p1",
+      "server_number": 2,
+      "score_before": "1-0-2",
+      "winner_team": "A",
+      "end_reason": "out",
+      "reviewed": true,
+      "events": [
+        { "id": "r2_e1", "t": 902, "type": "hit", "player": "p1", "shot": "serve", "volley": false, "conf": 0.96 },
+        { "id": "r2_e2", "t": 940, "type": "bounce", "court_xy": [14.5, 8.0], "in": true, "close_call": false, "conf": 0.93 },
+        { "id": "r2_e3", "t": 952, "type": "hit", "player": "p4", "shot": "return", "volley": false, "conf": 0.89 },
+        { "id": "r2_e4", "t": 995, "type": "bounce", "court_xy": [7.0, 36.0], "in": true, "close_call": false, "conf": 0.91 },
+        { "id": "r2_e5", "t": 1006, "type": "hit", "player": "p1", "shot": "drive", "volley": false, "conf": 0.84 },
+        { "id": "r2_e6", "t": 1030, "type": "hit", "player": "p3", "shot": null, "volley": true, "conf": 0.72 },
+        { "id": "r2_e7", "t": 1060, "type": "bounce", "court_xy": [21.3, 40.5], "in": false, "close_call": false, "conf": 0.88 }
+      ]
+    }
+  ],
+  "tracks": {
+    "ball": "out/vid_synthetic_001/ball.parquet",
+    "players": "out/vid_synthetic_001/players.parquet"
+  }
+}

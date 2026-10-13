@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/roberto-cantero/dink-data/contracts/events.schema.json",
+  "title": "DinkData event log v1 (events.json)",
+  "description": "One game: who played, and every rally with its hits and bounces. Made by pipeline/events (Partner B) with Partner A's bounces; read by stats/ and later the app. Stat definitions: docs/STATS.md. Court coordinates: docs/COURT.md. Rules JSON Schema can't express are listed under $comment.",
+  "$comment": "Also required, checked in code: player ids are unique; rally and event ids are unique in the file; every `server` and hit `player` is a listed player id; within a rally, events are sorted by `t` and every `t` is between `start_frame` and `end_frame`; rallies are sorted by `start_frame` and don't overlap. Human corrections are stored as a separate patch file that refers to rally and event ids, never by editing this file.",
+  "type": "object",
+  "required": ["schema", "video", "court", "players", "rallies"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "description": "Format and version of this file. A breaking change bumps the version.",
+      "const": "dinkdata.events/v1"
+    },
+    "video": {
+      "type": "object",
+      "required": ["id", "fps", "width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Opaque video id. Never a player name, location or original file name.",
+          "type": "string",
+          "minLength": 1
+        },
+        "fps": { "type": "number", "exclusiveMinimum": 0 },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "court": {
+      "description": "Which calibration produced the court positions. The homography itself lives in court.json.",
+      "type": "object",
+      "required": ["units", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "units": { "const": "ft" },
+        "source": { "enum": ["auto", "manual"] },
+        "camera_id": {
+          "description": "The camera_id of the court.json used.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "players": {
+      "description": "Everyone on court: 4 for doubles, 2 for singles.",
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/player" }
+    },
+    "rallies": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rally" }
+    },
+    "tracks": {
+      "description": "Where the per-frame tracks for this video are stored (URIs or paths).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ball": { "type": "string", "minLength": 1 },
+        "players": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "player_id": {
+      "type": "string",
+      "pattern": "^p[0-9]+$"
+    },
+    "team": { "enum": ["A", "B"] },
+    "frame": {
+      "description": "Frame index in the video, from 0.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "conf": {
+      "description": "Model confidence, 0 to 1. Human-entered events use 1.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "player": {
+      "type": "object",
+      "required": ["id", "team", "label", "track_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/player_id" },
+        "team": { "$ref": "#/$defs/team" },
+        "label": {
+          "description": "Display name. Generic ('Player 1') unless the player has agreed to more.",
+          "type": "string",
+          "minLength": 1
+        },
+        "track_ids": {
+          "description": "Tracker ids in players.parquet that belong to this player.",
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "rally": {
+      "type": "object",
+      "required": [
+        "id",
+        "start_frame",
+        "end_frame",
+        "server",
+        "server_number",
+        "score_before",
+        "winner_team",
+        "end_reason",
+        "reviewed",
+        "events"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "start_frame": { "$ref": "#/$defs/frame" },
+        "end_frame": { "$ref": "#/$defs/frame" },
+        "server": { "$ref": "#/$defs/player_id" },
+        "server_number": {
+          "description": "1 or 2 in doubles. Singles always uses 1.",
+          "enum": [1, 2]
+        },
+        "score_before": {
+          "description": "Score called before the serve: serving-team-receiving-team-server, e.g. '4-3-2'. Singles omits the server number: '4-3'.",
+          "type": "string",
+          "pattern": "^[0-9]+-[0-9]+(-[12])?$"
+        },
+        "winner_team": {
+          "description": "Team that won the rally. null when the pipeline can't tell; review fills it in.",
+          "oneOf": [{ "$ref": "#/$defs/team" }, { "type": "null" }]
+        },
+        "end_reason": {
+          "description": "Why the ball died. net: last shot didn't cross the net. out: first bounce after the last shot was out. double_bounce: the ball bounced twice on one side. unreturned: a player touched it but didn't get it back over. fault: any other rule fault (e.g. two-bounce rule, kitchen volley). null when unknown.",
+          "enum": ["net", "out", "double_bounce", "unreturned", "fault", null]
+        },
+        "reviewed": {
+          "description": "true once a person has checked this rally.",
+          "type": "boolean"
+        },
+        "events": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/event" }
+        }
+      }
+    },
+    "event": {
+      "oneOf": [{ "$ref": "#/$defs/hit" }, { "$ref": "#/$defs/bounce" }]
+    },
+    "hit": {
+      "type": "object",
+      "required": ["id", "t", "type", "player", "shot", "volley", "conf"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "t": { "$ref": "#/$defs/frame" },
+        "type": { "const": "hit" },
+        "player": {
+          "description": "Who hit it. null when the hit is detected but not attributed.",
+          "oneOf": [{ "$ref": "#/$defs/player_id" }, { "type": "null" }]
+        },
+        "shot": {
+          "description": "serve and return are shots 1 and 2. Later shots are classified as drop, drive, lob, dink or speedup (docs/STATS.md), or other. null until the shot classifier exists.",
+          "enum": ["serve", "return", "drop", "drive", "lob", "dink", "speedup", "other", null]
+        },
+        "volley": {
+          "description": "true if hit before the ball bounced on the hitter's side.",
+          "type": "boolean"
+        },
+        "conf": { "$ref": "#/$defs/conf" }
+      }
+    },
+    "bounce": {
+      "type": "object",
+      "required": ["id", "t", "type", "court_xy", "in", "close_call", "conf"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "t": { "$ref": "#/$defs/frame" },
+        "type": { "const": "bounce" },
+        "court_xy": {
+          "description": "Bounce position in court feet (docs/COURT.md). Can be outside 0-20 x 0-44 for out balls.",
+          "type": "array",
+          "prefixItems": [{ "type": "number" }, { "type": "number" }],
+          "items": false,
+          "minItems": 2
+        },
+        "in": {
+          "description": "Inside the court, or for a serve's first bounce, inside the correct service court. A serve on the kitchen line is not in.",
+          "type": "boolean"
+        },
+        "close_call": {
+          "description": "Within the close-call distance of a line (docs/COURT.md > Zones). Goes to review instead of being trusted.",
+          "type": "boolean"
+        },
+        "conf": { "$ref": "#/$defs/conf" }
+      }
+    }
+  }
+}
