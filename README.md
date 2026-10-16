@@ -5,6 +5,11 @@ per-player stats. A Python pipeline finds the court, the ball and the players,
 builds an event log (rallies, hits, bounces), and pure functions turn that log
 into stats like serve-in %, third-shot drops and kitchen arrival.
 
+Input is 1080p video at a nominal 30 fps (some videos have unstable fps) from
+many different cameras, capped at 45 minutes. About 80% are shot down the centre
+line from the back wall and about 20% from a slight diagonal; see
+[`docs/COURT.md`](docs/COURT.md).
+
 The plan we follow is [`docs/DinkDataRebuildPlan.pdf`](docs/DinkDataRebuildPlan.pdf).
 Stat definitions live in [`docs/STATS.md`](docs/STATS.md), court geometry in
 [`docs/COURT.md`](docs/COURT.md), known bugs in [`docs/FAILURE-LOG.md`](docs/FAILURE-LOG.md).
