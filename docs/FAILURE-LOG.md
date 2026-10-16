@@ -72,7 +72,7 @@ Found in the review of the prototype at commit `e808fd6` (Jul 19, 2025).
 - **Where:** `rally_segmentation.ipynb` (`NET_Y_UPPER = 145`, `NET_Y_LOWER = 300`,
   segment lengths and gaps)
 - **What:** tuned for one video; wrong for any other camera position.
-- **Fix:** take the net line from the calibration; express gaps in seconds using the video's fps.
+- **Fix:** take the net line from the calibration; express gaps in seconds using frame timestamps (fps is nominal 30 but can be unstable).
 
 ## F8 · Calibration click order mislabelled
 

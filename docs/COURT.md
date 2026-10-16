@@ -73,6 +73,22 @@ The 12 template points, in court feet. Calibration matches image points to some 
 Name points in code by these names, never by index. Mixing up indexes is
 failure F8 in `docs/FAILURE-LOG.md`.
 
+## Camera setups and video format
+
+Every video is 1080p at a nominal 30 fps, shot on a different camera. Some videos
+have dropped or unstable frame rates, so convert frames to seconds with frame
+timestamps, not a fixed 30. Videos time out at 45 minutes and end automatically,
+so a game can stop mid-rally.
+
+| Setup | Share of videos | Notes |
+|---|---|---|
+| Down-the-line (DTL), low (2 m or below) | ~64% (80% x 80%) | Most common. Steep foreshortening: far-court players and ball are small, and players occlude each other |
+| DTL, high (above 2 m) | ~16% (80% x 20%) | Better view of the floor; less occlusion |
+| Slight diagonal | ~20% | Used when court restrictions block the DTL spot. The court is skewed in the image, so don't assume the net is horizontal |
+
+DTL means centred on the back wall, looking down the centre line. Shares are
+approximate. Eval sets must include all three setups.
+
 ## Calibration
 
 The homography maps image pixels to court feet on the ground plane.
@@ -84,7 +100,8 @@ The homography maps image pixels to court feet on the ground plane.
    calibration if it doesn't.
 3. **Store** it in `court.json` with the camera id, the image size it was made at,
    the error, and whether it was manual or automatic.
-4. **Reuse** it for every video from the same fixed PickleCam camera.
+4. **Reuse** it only for videos known to come from the same fixed camera in the
+   same position. Cameras differ between videos, so by default calibrate each video.
    Recalibrate if the camera is moved or bumped, or if the reprojection check
    on a new video's first frame fails.
 
@@ -119,6 +136,7 @@ whose position is within the line's width plus the calibration error as a close 
 
 ## Open questions
 
-- [ ] Typical PickleCam mount height and position. Is the camera always behind one baseline?
+- [x] Typical mount: ~80% DTL on the back wall, ~20% slight diagonal; of the DTL, ~80% at 2 m or below. See "Camera setups and video format".
+- [ ] Does the camera ever sit behind the other baseline within one match, or do the far/near ends swap?
 - [ ] Reprojection error threshold, set from the first real calibrations.
 - [ ] Are all four corners always visible in PickleCam footage? If not, which keypoints can stand in?

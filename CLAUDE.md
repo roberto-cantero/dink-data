@@ -62,7 +62,20 @@ Full details: `docs/COURT.md`.
 - The homography is only valid for points on the ground: player feet and ball
   bounces. Never project an airborne ball through it.
 - No hardcoded pixel thresholds. Take the net, lines and zones from the calibration.
-- Time is measured in frames. Read fps from the video; never assume 30.
+- Time is measured in frames. Read fps from the video; never assume 30 (see Input video).
+
+## Input video
+
+Full details: `docs/COURT.md` (camera setups).
+
+- All footage is 1080p at a nominal 30 fps, but each video comes from a different camera
+  and some have dropped or unstable frame rates. Use frame timestamps, not `frame / 30`.
+- Two camera angles: ~80% are down-the-line (DTL), centred on the back wall; ~20% are a
+  slight diagonal because of court restrictions. Of the DTL videos, ~80% are low
+  (2 m or below) and ~20% are higher (above 2 m). Calibrate per video; never assume a camera pose.
+- Videos time out at 45 minutes and end automatically, so a game can be cut off mid-rally.
+  Handle truncated rallies and unfinished games.
+- Eval splits should cover all of these (DTL low, DTL high, diagonal), not only the common case.
 
 ## Stats
 
