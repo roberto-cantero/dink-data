@@ -118,6 +118,20 @@ partner in the PR.
 `docs/FAILURE-LOG.md` lists known bugs and design mistakes in the prototype.
 Check it before working in an area, and add to it when you find a new one.
 
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `roberto-cantero/dink-data`, via `gh`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
 ## Boundaries
 
 - **Never:** commit secrets, `.env` files, data or checkpoints · push to `main` ·
