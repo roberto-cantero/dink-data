@@ -4,7 +4,7 @@ The product requirements, technical design and system design for DinkData. This 
 
 | | |
 |---|---|
-| Version | 1.5 |
+| Version | 1.6 |
 | Date | 19 October 2026 |
 | Owners | Robby (`@roberto-cantero`) and Marti (`@probablynotmarti`) |
 | Prepared with | Claude Code, after a review session with Robby and review comments from Marti |
@@ -1063,8 +1063,9 @@ CODEOWNERS follows the split in section 5. Robby owns `data`, `video`, `court`, 
 The core dependencies are numpy, pydantic, pyarrow, polars, typer, httpx and boto3, enough for
 stats, contracts and eval. The `cv` extra adds torch, torchvision, rfdetr, rtmlib,
 supervision, av, opencv-headless, scipy and scikit-learn. The `cpu` and `cu126` extras pick the PyTorch build,
-and the `studio` extra adds fastapi, uvicorn and jinja2. New dependencies need the other
-owner's approval.
+and the `studio` extra adds fastapi, uvicorn and jinja2. This list is the target. Each
+library joins `pyproject.toml` with the ticket that first uses it, and new dependencies need the
+other owner's approval.
 
 Pre-commit runs ruff, gitleaks, a large-file block, notebook stripping, a block on commits to
 `main` and the `frame / 30` check. CI runs lint, pyright in standard mode, tests and the eval
@@ -1135,7 +1136,7 @@ There is no deadline. Each milestone ends with a measurable result.
 | Milestone | Delivers | Done when |
 |---|---|---|
 | Setup | Section 14.2 | The docs and package layout are merged and the issues are ready |
-| M0 Foundations | Contracts v1, the endpoint spec sent, catalog, sample and fetch, 150 games in R2, the Docker image and cloud accounts with guardrails, stats v1 on hand-written logs and CVAT ball clicks with a converter (Robby). The highlight renderer on a hand-written rally list, the minimal rally labeller and the player spike with partner-identity accuracy (Marti). Rally-level labelling starts | Contract tests pass, 150 games with timestamps are in R2, stats tests cover every v1 rule, a reel renders from a hand-written list, and partner-identity accuracy is measured for near and far teams |
+| M0 Foundations | Contracts v1, the endpoint spec sent, catalog, sample and fetch, 150 games in R2, cloud accounts with guardrails, stats v1 on hand-written logs and CVAT ball clicks with a converter (Robby). The Docker image, the highlight renderer on a hand-written rally list, the minimal rally labeller and the player spike with partner-identity accuracy (Marti). Rally-level labelling starts | Contract tests pass, 150 games with timestamps are in R2, stats tests cover every v1 rule, a reel renders from a hand-written list, and partner-identity accuracy is measured for near and far teams |
 | M1 Ground truth | The calibration tool and calibrations, the camera-moved check, the studio with its events mode, the rest of the rally-level gold set and the first full-event games, the eval command with baselines and coverage per setup, and a first end-to-end version that produces a report and a reel | `dink run` produces a report and reels, `dink eval` prints every metric, and agreement is measured |
 | M2 Score and first reels | Serve states, game mode, rallies, the score decoder with rule deviations and rally-based reels, designed around the measured partner-identity accuracy (Marti). Ball tracker v1 (Robby) | The score and rally-reel gates pass, and the ball reaches 90% at 10 px |
 | M3 Ball stats and full reels | Silver labels, the spotter, the rally grammar and attribution, bounces and in/out, stats 2 to 5 and the landing map (Robby). Reels with winners and aces (Marti) | The stats and events gates pass, with coverage reported |
@@ -1185,26 +1186,28 @@ the PDF renders from the Markdown and no personal data appears anywhere.
 
 | # | Issue | Owner | Phase |
 |---|---|---|---|
-| 1 | Contracts v1: pydantic models, generated schemas, examples, round-trip tests | Both | M0 |
+| 1 | Contracts v1: pydantic models, generated schemas, examples, round-trip tests. Marti writes the players, rallies, score and highlights models, Robby the rest | Both | M0 |
 | 2 | Send the endpoint spec and Appendix B to the backend developer | Robby | M0 |
-| 3 | R2 bucket, keys and rclone | Robby | M0 |
-| 4 | `dink catalog sync`, against a recorded response first | Robby | M0 |
-| 5 | `dink sample` with facility hold-out and setup coverage | Robby | M0 |
-| 6 | `dink fetch`: download or remux, drop audio, timestamps, upload, daily schedule | Robby | M0 |
-| 7 | `dinkdata.video`: a frame-accurate reader with timestamps | Robby | M0 |
-| 8 | Stats v1 as pure functions, tested on hand-written logs | Robby | M0 |
-| 9 | CVAT for ball clicks, and a converter to `ball_labels` with a frame-alignment test | Robby | M0 |
-| 10 | Docker image, RunPod, Vast.ai and Modal accounts, spending guardrails, scheduled fetch workflow, and `OPERATIONS.md` | Marti | M0 |
-| 11 | Highlight renderer: cut, mark and join clips from a hand-written rally list | Marti | M0 |
-| 12 | Minimal rally labeller: a local web page that writes `rallies.json` | Marti | M0 |
-| 13 | Spike: RF-DETR, RTMPose and ByteTrack on 5 games, court filter, cut-off feet, and partner-identity accuracy at the serve for near and far teams | Marti | M0 |
-| 14 | Start labelling the rally-level gold set | Both | M0 |
-| 15 | Calibration click tool, solver, shared lens, visibility mask, floor functions | Robby | M1 |
-| 16 | Calibrate the sampled cameras, set the threshold, camera-moved check | Robby | M1 |
-| 17 | Studio server and events mode | Marti | M1 |
-| 18 | Finish the rally-level gold set, label the full-event gold set (4, then 12), the agreement game and foot clicks | Both | M1 |
-| 19 | Eval v1: all metrics, baselines, coverage per setup, intervals, CI smoke test | Both | M1 |
-| 20 | First end-to-end version: ball baseline, rule events, stats and report (Robby), and rallies from serves with a reel (Marti) | Both | M1 |
+| 3 | R2 bucket, keys, rclone and the nightly backup of labels and calibrations | Robby | M0 |
+| 4 | Pick the held-out facilities and download the first games by hand from training facilities | Both | M0 |
+| 5 | `dink catalog sync`, against a recorded response first | Robby | M0 |
+| 6 | `dink sample` with facility hold-out and setup coverage | Robby | M0 |
+| 7 | `dink fetch`: download or remux, drop audio, timestamps, upload, daily scheduled workflow | Robby | M0 |
+| 8 | `dinkdata.video`: a frame-accurate reader with timestamps | Robby | M0 |
+| 9 | Stats v1 as pure functions, tested on hand-written logs | Robby | M0 |
+| 10 | CVAT for ball clicks, and a converter to `ball_labels` with a frame-alignment test | Robby | M0 |
+| 11 | RunPod, Vast.ai and Modal accounts on Robby's card, with prepaid credit, the $50 cap and the $30 alert | Robby | M0 |
+| 12 | The Docker image, tested on a pod, and `OPERATIONS.md` commands | Marti | M0 |
+| 13 | Highlight renderer: cut, mark and join clips from a hand-written rally list | Marti | M0 |
+| 14 | Minimal rally labeller: a local web page that writes `rallies.json` | Marti | M0 |
+| 15 | Spike: RF-DETR, RTMPose and ByteTrack on 5 games, court filter, cut-off feet, and partner-identity accuracy at the serve for near and far teams | Marti | M0 |
+| 16 | Start labelling the rally-level gold set | Both | M0 |
+| 17 | Calibration click tool, solver, shared lens, visibility mask, floor functions | Robby | M1 |
+| 18 | Calibrate the sampled cameras, set the threshold, camera-moved check | Robby | M1 |
+| 19 | Studio server and events mode | Marti | M1 |
+| 20 | Finish the rally-level gold set, label the full-event gold set (4, then 12), the agreement game and foot clicks | Both | M1 |
+| 21 | Eval v1: all metrics, baselines, coverage per setup, intervals, CI smoke test | Both | M1 |
+| 22 | First end-to-end version: ball baseline, rule events, stats and report (Robby), and rallies from serves with a reel (Marti) | Both | M1 |
 
 The M2 to M4 issues are written when those milestones start.
 

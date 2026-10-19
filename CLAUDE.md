@@ -1,132 +1,101 @@
 # CLAUDE.md
 
-<!-- Read at the start of every Claude Code session in this repo. Keep it short
-     (under ~150 lines). Put detail in docs/ and link to it. -->
+<!-- Read at the start of every Claude Code session in this repo. Keep it under 150 lines.
+     Put detail in docs/ and link to it. -->
 
 ## Project
 
-DinkData turns a PickleCam doubles recording into per-player stats and a
-per-player highlight reel. A Python pipeline turns a game video into an event log
-(rallies, hits, bounces, players, score), and pure functions turn the event log
-into stats and reels.
+DinkData turns a PickleCam recording of a doubles pickleball game into per-player stats and
+highlight reels. The pipeline finds the court, ball and players, builds a game log of rallies,
+hits, bounces and the score, and pure functions turn the game log into stats and reels.
 
-**`docs/DESIGN.md` (v1.5) is the source of truth** for the product, architecture,
-ownership and roadmap. Where this file or another doc disagrees with it, follow
-DESIGN.md and flag the conflict.
+`docs/DESIGN.md` is the source of truth for what we build and why. Read the section for your
+area before starting. If another doc disagrees with it, follow `DESIGN.md` and flag the
+conflict in your PR. `GLOSSARY.md` fixes the words we use. `docs/adr/` records decisions.
 
-Stage: **Setup, then M0 (foundations)**. The setup phase (DESIGN §14.2) replaces this
-layout with `src/dinkdata/`, deletes `legacy/` and rewrites this file. Until then,
-new code goes under `pipeline/`, `stats/`, `contracts/` and `eval/` (see Layout).
+Stage: setup phase. M0 starts once its tickets are on the board (`docs/DESIGN.md` section 14).
 
 ## Commands
 
-Rows marked _planned_ don't exist yet. Until they do, say that you could not
-run them; don't claim you did.
+Rows marked _planned_ don't exist yet. If you couldn't run something, say so.
 
 | Purpose | Command |
 |---|---|
-| Install (CPU torch + git hooks) | `make setup` (= `uv sync --extra cpu` + `uv run pre-commit install`) |
-| Install on an NVIDIA GPU machine | `uv sync --extra cu126` (add `--extra players` for ultralytics) |
-| Lint / format | `make lint` (= `uv run ruff check . && uv run ruff format --check .`) |
-| Type check | `make typecheck` (= `uv run pyright`) |
-| Unit tests | `make test` (= `uv run pytest -q -m "not gpu and not data"`) |
-| CLI | `uv run dink-cv --help` |
-| Accuracy eval on held-out court | _planned_ `uv run dink-cv eval --split heldout` |
-| Run pipeline on a clip | _planned_ `uv run dink-cv run <clip.mp4> --out out/` |
-| Overlay video for debugging | _planned_ `uv run dink-cv render out/events.json <clip.mp4>` |
-| **Full pre-PR check** | `make check` (lint + type check + tests; eval smoke test _planned_) |
-| Prototype (reference only) | `legacy/` scripts; pins in `legacy/requirements.txt` are stale (FAILURE-LOG F3) |
+| Install with CPU PyTorch and git hooks | `make setup` |
+| Install on a GPU machine (always pair `cv` with `cpu` or `cu126`) | `uv sync --extra cv --extra cu126` |
+| Lint and format check | `make lint` |
+| Type check | `make typecheck` |
+| Unit tests | `make test` |
+| Full pre-PR check: lint, types, tests and pre-commit hooks | `make check` |
+| CLI | `uv run dink --help` |
+| Rebuild the design PDF after editing `docs/DESIGN.md` | `make design-pdf` |
+| Run the pipeline on a recording | _planned_ `uv run dink run <video_id>` |
+| Accuracy eval | _planned_ `uv run dink eval --run <run_id> --split test` |
 
 ## Layout and ownership
 
-Ownership follows the two v1 priorities (DESIGN §5). **Robby** (`@roberto-cantero`,
-label `owner:Robby`) leads stats: intake, video I/O, court, ball, event spotter, rally
-grammar, stats and report. **Marti** (`@probablynotmarti`, label `owner:Marti`) leads
-highlights: players, serve states, game mode and rallies, score decoder and highlights.
+Robby is `@roberto-cantero` (`owner:Robby`). Marti is `@probablynotmarti` (`owner:Marti`).
 
 | Path | What | Owner |
 |---|---|---|
-| `pipeline/court/` | calibration, court mapping, visibility mask | Robby |
-| `pipeline/ball/` | background, ball tracking | Robby |
-| `pipeline/players/` | player detection, tracking, ids, pose, serve states, rallies | Marti |
-| `pipeline/events/` | event spotter, rally grammar decoder | Robby |
-| `stats/` | pure `events -> stats` functions | Robby |
-| `contracts/` | handoff file formats (DESIGN §7) | both |
-| `eval/` | gold-set scoring harness | both |
-| `tests/` | mirrors the packages; synthetic fixtures in `tests/fixtures/` | both |
-| `legacy/` | prototype, deleted in setup; reference only | both |
+| `src/dinkdata/data/`, `video/` | catalog, sampling, fetch, frame-accurate reading | Robby |
+| `src/dinkdata/court/` | calibration, floor mapping, visibility | Robby |
+| `src/dinkdata/ball/` | background images, ball tracker | Robby |
+| `src/dinkdata/events/` | event spotter, rally grammar | Robby |
+| `src/dinkdata/stats/`, `report/` | stats and the report | Robby |
+| `src/dinkdata/players/` | detection, tracking, ids, serve states, game mode, rallies | Marti |
+| `src/dinkdata/score/` | score decoder | Marti |
+| `src/dinkdata/highlights/` | reel selection and rendering | Marti |
+| `src/dinkdata/contracts/`, `eval/`, `studio/` | file formats, evaluation, labelling tool | both |
+| `tests/` | mirrors `src/dinkdata/`, synthetic fixtures only | both |
 
-The score decoder and highlights have no folder yet; they arrive as `src/dinkdata/score`
-and `src/dinkdata/highlights` (Marti) in the setup phase. The studio and docs are shared.
+Ask before changing the other owner's area.
 
-Ask before changing code owned by the other partner. Don't port or reuse `legacy/` code (DESIGN §13).
+## Rules
 
-## Court geometry
+- **Time.** Use frame timestamps. Never compute time as `frame / 30`, because PickleCam videos
+  drop frames. A pre-commit check catches it.
+- **Court.** Positions are in feet (`docs/COURT.md`). The court mapping is only valid for
+  points on the floor, such as feet and bounces, never a ball in the air. No hardcoded pixel
+  thresholds.
+- **Contracts.** File formats are pydantic models in `src/dinkdata/contracts/`, with generated
+  JSON Schemas in `contracts/`. Validate files at run time. Every detection has `conf`.
+  Changing a contract needs a version bump and both owners' approval.
+- **Corrections.** Human corrections are patches on top of model output, never overwrites.
+- **Stats.** Definitions live in `docs/STATS.md`. Code must match them, and every rule gets a
+  unit test from a hand-written game log.
+- **Accuracy.** Any change to a model, threshold or rule puts the `dink eval` table, before
+  and after, in the PR (`docs/EVAL.md`). Test sets are whole held-out facilities. Never train
+  or tune on test data. Gold labels never train.
+- **Data and privacy.** Data lives in the Cloudflare R2 bucket `dinkdata` (`docs/DATA.md`).
+  Never commit videos, frames, checkpoints, labels or `.env`. No emails, facility names,
+  session ids or Bunny ids in code, commits, issues, PRs or logs.
+- **Cost.** GPU work runs on cloud GPUs in one Docker image. Use the cheapest GPU that gives
+  the same result, but never cut quality to save money (`docs/OPERATIONS.md`).
+- **Platform.** Code runs on macOS for development and Linux for GPU work, not Windows. Use
+  `pathlib`. Pick the device automatically (cuda, mps, cpu). Load no files or models at
+  import time.
+- **No legacy code.** Don't reuse code from the `legacy-prototype` tag or TrackNetV3. Write
+  from the papers and `docs/DESIGN.md` (ADR 0001).
 
-Full details: `docs/COURT.md`.
+## Writing
 
-- Units are feet. Origin = far-left baseline corner as seen from the camera.
-  x runs 0-20 across, y runs 0-44 toward the camera. Net at y=22, kitchen lines at y=15 and y=29.
-- The homography is only valid for points on the ground: player feet and ball
-  bounces. Never project an airborne ball through it.
-- No hardcoded pixel thresholds. Take the net, lines and zones from the calibration.
-- Time is measured in frames. Read fps from the video; never assume 30 (see Input video).
-
-## Input video
-
-Full details: `docs/COURT.md` (camera setups).
-
-- All footage is 1080p at a nominal 30 fps, but each video comes from a different camera
-  and some have dropped or unstable frame rates. Use frame timestamps, not `frame / 30`.
-- Two camera angles: ~80% are down-the-line (DTL), centred on the back wall; ~20% are a
-  slight diagonal because of court restrictions. Of the DTL videos, ~80% are low
-  (2 m or below) and ~20% are higher (above 2 m). Calibrate per video; never assume a camera pose.
-- Videos time out at 45 minutes and end automatically, so a game can be cut off mid-rally.
-  Handle truncated rallies and unfinished games.
-- Eval splits should cover all of these (DTL low, DTL high, diagonal), not only the common case.
-
-## Stats
-
-Definitions: `docs/STATS.md`. A stat's code must match its definition there.
-Changing a definition means updating the doc, its tests and telling the other
-partner in the PR.
-
-## Contracts
-
-- `contracts/*.schema.json` will define `court.json`, `ball.parquet`,
-  `players.parquet` and `events.json` (v1). Changing them requires a version
-  bump and approval from both partners.
-- Every detected event carries `conf` (0-1). Human corrections are stored as
-  patches on top of model output, never by overwriting it.
-- Stats are pure functions of the event log. Each one gets a unit test built from
-  a hand-written event log.
-
-## Accuracy rules
-
-- Any change to a model, threshold or heuristic: put held-out-court eval scores
-  (before and after) in the PR description.
-- Never train or tune on the held-out court. Split data by match or court, never by rally.
-
-## Data
-
-- Never commit videos, frames, checkpoints or labels. They live in `FILL-IN: bucket or drive`.
-- `data/`, `ckpts/`, `keypoints/`, `prediction/`, `out/`, videos, model weights and
-  `*.parquet` (outside `tests/fixtures/`) are gitignored. Scripts take paths as arguments.
-
-## Platform
-
-- Must run on Windows and macOS (development) and on Linux + CUDA (cloud GPU workers).
-- Use `pathlib`; no hardcoded path separators. Pick the device automatically (cuda, mps, cpu).
-- No file or model loading at import time.
-- Processing runs on cloud GPUs from a Docker image. Keep the image runnable
-  locally on CPU for small clips.
+Docs, comments, issues and PRs follow the unslop rules:
+- Write plain, active sentences, one idea each.
+- No AI filler words (crucial, delve, leverage, robust, seamless).
+- No em dashes, arrows in prose, or inline-header lists.
+- Say what something does or give the number, not how it feels.
 
 ## Known problems
 
-`docs/FAILURE-LOG.md` lists known bugs and design mistakes in the prototype.
-Check it before working in an area, and add to it when you find a new one.
+`docs/KNOWN-ISSUES.md` lists known bugs. Check it before working in an area, and add to it when
+you find a new one. ADR 0001 lists the prototype's lessons.
 
 ## Agent skills
+
+We build with Matt Pocock's skills (`mattpocock-skills` plugin): `/grill-with-docs`, `/to-spec`,
+`/to-tickets`, `/implement` (one ticket per fresh session, test-first), `/code-review`, `/pr`
+and `/retro`. `docs/DESIGN.md` section 12.2 describes the flow.
 
 ### Issue tracker
 
@@ -145,6 +114,6 @@ Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents
 - **Never:** commit secrets, `.env` files, data or checkpoints · push to `main` ·
   change `contracts/` alone · disable tests or lint rules to make a check pass ·
   put footage, personal data or client details in code, commits, issues, PRs or logs
-- **Ask first:** new dependencies · contract or schema changes · the other
-  partner's area · CI or eval config · changing a stat definition
-- **Go ahead:** everything else inside the task
+- **Ask first:** new dependencies · contract or schema changes · the other owner's area ·
+  CI or eval config · changing a stat definition · spending beyond the monthly budget
+- **Go ahead:** everything else inside the ticket

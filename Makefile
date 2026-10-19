@@ -1,5 +1,5 @@
 # Shortcuts for the common commands. Run `make check` before opening a PR.
-.PHONY: setup lint typecheck test check
+.PHONY: setup lint typecheck test hooks check design-pdf
 
 setup:  ## install dependencies (CPU torch) and the git hooks
 	uv sync --extra cpu
@@ -15,4 +15,10 @@ typecheck:  ## pyright (basic mode)
 test:  ## unit tests, skipping GPU and real-data tests
 	uv run pytest -q -m "not gpu and not data"
 
-check: lint typecheck test  ## everything CI runs, before a PR
+hooks:  ## every pre-commit hook on every file, including the frame / 30 check
+	uv run pre-commit run --all-files
+
+check: lint typecheck test hooks  ## everything CI runs, before a PR
+
+design-pdf:  ## rebuild docs/DinkData-Design.pdf from docs/DESIGN.md (needs Chrome or Chromium)
+	uv run --no-project --with markdown-it-py --with mdit-py-plugins --with pymupdf python scripts/render_design.py
