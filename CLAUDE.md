@@ -5,14 +5,18 @@
 
 ## Project
 
-DinkData computes per-player pickleball stats from single-camera PickleCam
-video. A Python pipeline turns a game video into an event log (rallies, hits,
-bounces, players), and pure functions turn the event log into stats.
+DinkData turns a PickleCam doubles recording into per-player stats and a
+per-player highlight reel. A Python pipeline turns a game video into an event log
+(rallies, hits, bounces, players, score), and pure functions turn the event log
+into stats and reels.
 
-Stage: **P0 (foundations)**. `legacy/` holds the prototype: a TrackNetV3 fork
-retrained to track the ball, plus a rally-segmentation notebook.
-New code goes under `pipeline/`, `stats/`, `contracts/` and `eval/` (see Layout).
-A web app comes later (P3).
+**`docs/DESIGN.md` (v1.5) is the source of truth** for the product, architecture,
+ownership and roadmap. Where this file or another doc disagrees with it, follow
+DESIGN.md and flag the conflict.
+
+Stage: **Setup, then M0 (foundations)**. The setup phase (DESIGN §14.2) replaces this
+layout with `src/dinkdata/`, deletes `legacy/` and rewrites this file. Until then,
+new code goes under `pipeline/`, `stats/`, `contracts/` and `eval/` (see Layout).
 
 ## Commands
 
@@ -35,23 +39,27 @@ run them; don't claim you did.
 
 ## Layout and ownership
 
-Partner A is Robby (`@roberto-cantero`, label `owner:Robby`). Partner B is Marti
-(`@probablynotmarti`, label `owner:Marti`).
+Ownership follows the two v1 priorities (DESIGN §5). **Robby** (`@roberto-cantero`,
+label `owner:Robby`) leads stats: intake, video I/O, court, ball, event spotter, rally
+grammar, stats and report. **Marti** (`@probablynotmarti`, label `owner:Marti`) leads
+highlights: players, serve states, game mode and rallies, score decoder and highlights.
 
 | Path | What | Owner |
 |---|---|---|
-| `pipeline/court/` | calibration, homography, court lines | Partner A |
-| `pipeline/ball/` | TrackNet ball tracking, bounces, in/out | Partner A |
-| `pipeline/players/` | player detection, tracking, IDs, pose | Partner B |
-| `pipeline/events/` | hits, rallies, score tracker, `events.json` | Partner B |
-| `stats/` | pure `events -> stats` functions | Partner B |
-| `contracts/` | JSON Schemas for the four handoff files | both |
+| `pipeline/court/` | calibration, court mapping, visibility mask | Robby |
+| `pipeline/ball/` | background, ball tracking | Robby |
+| `pipeline/players/` | player detection, tracking, ids, pose, serve states, rallies | Marti |
+| `pipeline/events/` | event spotter, rally grammar decoder | Robby |
+| `stats/` | pure `events -> stats` functions | Robby |
+| `contracts/` | handoff file formats (DESIGN §7) | both |
 | `eval/` | gold-set scoring harness | both |
 | `tests/` | mirrors the packages; synthetic fixtures in `tests/fixtures/` | both |
-| `legacy/` | prototype, being ported (paths in FAILURE-LOG predate the move) | both |
+| `legacy/` | prototype, deleted in setup; reference only | both |
 
-Ask before changing code owned by the other partner. When porting prototype
-code, move it into the new layout with tests; don't build on it in place.
+The score decoder and highlights have no folder yet; they arrive as `src/dinkdata/score`
+and `src/dinkdata/highlights` (Marti) in the setup phase. The studio and docs are shared.
+
+Ask before changing code owned by the other partner. Don't port or reuse `legacy/` code (DESIGN §13).
 
 ## Court geometry
 
