@@ -5,7 +5,7 @@
       "Bash(uv sync:*)", "Bash(make check)", "Bash(make test)", "Bash(make lint)", "Bash(make typecheck)", "Bash(uv run dink:*)",
       "Bash(git status)", "Bash(git diff:*)", "Bash(git log:*)", "Bash(gh pr view:*)", "Bash(gh pr checks:*)"
     ],
-    "ask": ["Bash(git push:*)", "Bash(gh pr merge:*)", "Bash(uv add:*)", "Edit(contracts/**)", "Edit(.github/**)"],
+    "ask": ["Bash(git push:*)", "Bash(gh pr merge:*)", "Bash(uv add:*)", "Edit(contracts/**)", "Edit(src/dinkdata/contracts/**)", "Edit(.github/**)"],
     "deny": [
       "Read(./.env)", "Read(./.env.*)", "Read(./data/**)", "Read(./ckpts/**)",
       "Bash(git push origin main:*)", "Bash(git push --force:*)", "Bash(git push -f:*)",

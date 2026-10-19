@@ -12,11 +12,14 @@ build/
 .env
 .env.*
 
-# Data, models and outputs never go in git (docs/DATA.md)
-data/
-ckpts/
-out/
-runs/
+# Data, models and outputs never go in git (docs/DATA.md). Folder patterns are anchored to
+# the repo root, so they don't hide code packages such as src/dinkdata/data/.
+/data/
+/ckpts/
+/out/
+/runs/
+/labels/
+/frames/
 *.mp4
 *.mov
 *.pt

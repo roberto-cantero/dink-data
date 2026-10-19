@@ -22,7 +22,7 @@ Closes #
 ## Contract change?
 
 - [ ] No
-- [ ] Yes: version bumped, and both partners approve
+- [ ] Yes: version bumped, and both owners approve
 
 ## Overlay clip
 
