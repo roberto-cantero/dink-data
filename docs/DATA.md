@@ -46,7 +46,17 @@ PickleCam backend developer exposes two read-only calls, protected by a token ke
 | `GET /dinkdata/videos/{session_id}/links` | Short-lived `original_url`, `mp4_url` and `hls_url` |
 
 The calls return no personal data. Until they exist, we develop against a recorded sample
-response, or download the first games from the dashboard by hand.
+response.
+
+## Before the endpoint and R2 exist
+
+1. Both owners pick the held-out test facilities first, at least one per camera setup, and
+   write them into the catalog notes. Nobody downloads, labels or trains on those facilities
+   except for test labels.
+2. Robby downloads the first games by hand from the PickleCam dashboard, only from training
+   facilities, and strips the audio with `ffmpeg -i in.mp4 -map 0:v -c copy out.mp4`.
+3. Until the R2 bucket exists, these games live on the owners' machines and on the cloud GPU
+   pod's disk, never in the repo. They move to R2 as soon as it exists.
 
 Fetch prefers the original upload, then the MP4, then remuxes the HLS stream with
 `ffmpeg -c copy`. It drops the audio track with `-map 0:v`, saves every frame's timestamp with

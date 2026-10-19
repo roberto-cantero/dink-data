@@ -25,6 +25,12 @@ PCs aren't part of the plan.
   cheap interruptible GPUs are fine.
 - Every eval run records its GPU cost, and accuracy PRs show it.
 
+## Who pays
+
+Robby's accounts and card pay for RunPod, Vast.ai, Modal and Cloudflare R2 for now, and Marti
+pays Robby back for his share. Spending alerts go to Robby's email, and both owners look at the
+month's spend together at the start of each month.
+
 ## Guardrails
 
 - RunPod and Vast.ai use prepaid credit, topped up $25 at a time, so spending can't pass the

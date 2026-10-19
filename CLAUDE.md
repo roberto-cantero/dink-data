@@ -10,9 +10,10 @@ highlight reels. The pipeline finds the court, ball and players, builds a game l
 hits, bounces and the score, and pure functions turn the game log into stats and reels.
 
 `docs/DESIGN.md` is the source of truth for what we build and why. Read the section for your
-area before starting. `GLOSSARY.md` fixes the words we use. `docs/adr/` records decisions.
+area before starting. If another doc disagrees with it, follow `DESIGN.md` and flag the
+conflict in your PR. `GLOSSARY.md` fixes the words we use. `docs/adr/` records decisions.
 
-Stage: setup is done, M0 is next (`docs/DESIGN.md` section 14).
+Stage: setup phase. M0 starts once its tickets are on the board (`docs/DESIGN.md` section 14).
 
 ## Commands
 
@@ -21,11 +22,11 @@ Rows marked _planned_ don't exist yet. If you couldn't run something, say so.
 | Purpose | Command |
 |---|---|
 | Install with CPU PyTorch and git hooks | `make setup` |
-| Install on a GPU machine | `uv sync --extra cv --extra cu126` |
+| Install on a GPU machine (always pair `cv` with `cpu` or `cu126`) | `uv sync --extra cv --extra cu126` |
 | Lint and format check | `make lint` |
 | Type check | `make typecheck` |
 | Unit tests | `make test` |
-| Full pre-PR check | `make check` |
+| Full pre-PR check: lint, types, tests and pre-commit hooks | `make check` |
 | CLI | `uv run dink --help` |
 | Rebuild the design PDF after editing `docs/DESIGN.md` | `make design-pdf` |
 | Run the pipeline on a recording | _planned_ `uv run dink run <video_id>` |
@@ -64,15 +65,18 @@ Ask before changing the other owner's area.
 - **Stats.** Definitions live in `docs/STATS.md`. Code must match them, and every rule gets a
   unit test from a hand-written game log.
 - **Accuracy.** Any change to a model, threshold or rule puts the `dink eval` table, before
-  and after, in the PR (`docs/EVAL.md`). Never train or tune on test data. Gold labels never
-  train.
-- **Data and privacy.** Never commit videos, frames, checkpoints, labels or `.env`. No emails,
-  facility names, session ids or Bunny ids in code, commits, issues, PRs or logs
-  (`docs/DATA.md`).
+  and after, in the PR (`docs/EVAL.md`). Test sets are whole held-out facilities. Never train
+  or tune on test data. Gold labels never train.
+- **Data and privacy.** Data lives in the Cloudflare R2 bucket `dinkdata` (`docs/DATA.md`).
+  Never commit videos, frames, checkpoints, labels or `.env`. No emails, facility names,
+  session ids or Bunny ids in code, commits, issues, PRs or logs.
 - **Cost.** GPU work runs on cloud GPUs in one Docker image. Use the cheapest GPU that gives
   the same result, but never cut quality to save money (`docs/OPERATIONS.md`).
-- **Platform.** Code runs on macOS and Linux. Use `pathlib`. Pick the device automatically
-  (cuda, mps, cpu). Load no files or models at import time.
+- **Platform.** Code runs on macOS for development and Linux for GPU work, not Windows. Use
+  `pathlib`. Pick the device automatically (cuda, mps, cpu). Load no files or models at
+  import time.
+- **No legacy code.** Don't reuse code from the `legacy-prototype` tag or TrackNetV3. Write
+  from the papers and `docs/DESIGN.md` (ADR 0001).
 
 ## Writing
 
