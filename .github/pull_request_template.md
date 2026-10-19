@@ -10,9 +10,10 @@ Closes #
 
 <!-- Commands you ran (e.g. `make check`) and what you looked at. -->
 
-## Held-out eval before/after
+## Eval before and after
 
-<!-- Required when a model, threshold or heuristic changes (add the `accuracy-change` label). Otherwise: n/a -->
+<!-- Required when a model, threshold or rule changes (add the `accuracy-change` label): paste the
+`dink eval` table for both, with GPU cost. Otherwise: n/a -->
 
 | Metric | Before | After |
 |---|---|---|

@@ -1,16 +1,24 @@
-# Who reviews what. Later lines win over earlier ones.
-# Ownership follows docs/DESIGN.md section 5.
-# Robby: intake, video, court, ball, events, stats, report.
-# Marti: players, serve states and rallies, score, highlights.
+# Who reviews what. Later lines win over earlier ones. docs/DESIGN.md section 5 explains the split:
+# Robby leads stats, Marti leads highlights.
 
-/pipeline/court/     @roberto-cantero
-/pipeline/ball/      @roberto-cantero
-/pipeline/players/   @probablynotmarti
-/pipeline/events/    @roberto-cantero
-/stats/              @roberto-cantero
+*                              @roberto-cantero @probablynotmarti
 
-/contracts/          @roberto-cantero @probablynotmarti
-/eval/               @roberto-cantero @probablynotmarti
-/docs/               @roberto-cantero @probablynotmarti
-/.github/            @roberto-cantero @probablynotmarti
-/CLAUDE.md           @roberto-cantero @probablynotmarti
+/src/dinkdata/data/            @roberto-cantero
+/src/dinkdata/video/           @roberto-cantero
+/src/dinkdata/court/           @roberto-cantero
+/src/dinkdata/ball/            @roberto-cantero
+/src/dinkdata/events/          @roberto-cantero
+/src/dinkdata/stats/           @roberto-cantero
+/src/dinkdata/report/          @roberto-cantero
+
+/src/dinkdata/players/         @probablynotmarti
+/src/dinkdata/score/           @probablynotmarti
+/src/dinkdata/highlights/      @probablynotmarti
+
+/src/dinkdata/contracts/       @roberto-cantero @probablynotmarti
+/src/dinkdata/eval/            @roberto-cantero @probablynotmarti
+/src/dinkdata/studio/          @roberto-cantero @probablynotmarti
+/contracts/                    @roberto-cantero @probablynotmarti
+/docs/                         @roberto-cantero @probablynotmarti
+/.github/                      @roberto-cantero @probablynotmarti
+/CLAUDE.md                     @roberto-cantero @probablynotmarti

@@ -1,30 +1,28 @@
 [project]
 name = "dinkdata"
 version = "0.1.0"
-description = "Per-player pickleball stats from single-camera PickleCam video."
+description = "Per-player pickleball stats and highlight reels from PickleCam video."
 readme = "README.md"
-license = "MIT"
+license = "AGPL-3.0-only"
 requires-python = ">=3.11,<3.13"
+# Core: enough for contracts, stats, eval and the CLI, with no PyTorch.
 dependencies = [
-    "torch>=2.6",
-    "torchvision>=0.21",
-    "opencv-python-headless>=4.10",
     "numpy>=2.0",
-    "pandas>=2.2",
     "pyarrow>=17",
     "pydantic>=2.8",
     "typer>=0.12",
 ]
 
 [project.optional-dependencies]
-# Pick one torch build: `--extra cpu` (CI, laptops; Macs still get MPS) or
-# `--extra cu126` (NVIDIA GPU machines). Without either, torch comes from PyPI.
+# Computer vision. Player models (RF-DETR, RTMPose, ByteTrack) are added by the M0 player spike.
+cv = ["torch>=2.6", "torchvision>=0.21", "opencv-python-headless>=4.10"]
+# Pick one PyTorch build with `cv`: `--extra cpu` (CI, Macs, which still get MPS) or
+# `--extra cu126` (NVIDIA GPUs).
 cpu = ["torch>=2.6", "torchvision>=0.21"]
 cu126 = ["torch>=2.6", "torchvision>=0.21"]
-players = ["ultralytics>=8.3"]
 
 [project.scripts]
-dink-cv = "pipeline.cli:app"
+dink = "dinkdata.cli:app"
 
 [dependency-groups]
 dev = [
@@ -41,7 +39,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["pipeline", "stats", "eval"]
+packages = ["src/dinkdata"]
 
 [tool.uv]
 conflicts = [[{ extra = "cpu" }, { extra = "cu126" }]]
@@ -69,17 +67,16 @@ explicit = true
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-extend-exclude = ["legacy"]
 force-exclude = true
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "PTH", "NPY"]
 
 [tool.pyright]
-typeCheckingMode = "basic"
+typeCheckingMode = "standard"
 pythonVersion = "3.11"
-include = ["pipeline", "stats", "eval", "tests"]
-exclude = ["legacy", ".venv"]
+include = ["src", "tests"]
+exclude = [".venv"]
 venvPath = "."
 venv = ".venv"
 
@@ -93,4 +90,4 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["pipeline", "stats", "eval"]
+source = ["dinkdata"]

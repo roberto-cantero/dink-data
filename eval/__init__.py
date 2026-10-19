@@ -1,1 +1,0 @@
-"""Gold-set scoring harness."""

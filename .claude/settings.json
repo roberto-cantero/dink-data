@@ -2,7 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(uv run pytest:*)", "Bash(uv run ruff:*)", "Bash(uv run pyright:*)",
-      "Bash(uv sync:*)", "Bash(make check)", "Bash(make test)", "Bash(make lint)",
+      "Bash(uv sync:*)", "Bash(make check)", "Bash(make test)", "Bash(make lint)", "Bash(make typecheck)", "Bash(uv run dink:*)",
       "Bash(git status)", "Bash(git diff:*)", "Bash(git log:*)", "Bash(gh pr view:*)", "Bash(gh pr checks:*)"
     ],
     "ask": ["Bash(git push:*)", "Bash(gh pr merge:*)", "Bash(uv add:*)", "Edit(contracts/**)", "Edit(.github/**)"],
