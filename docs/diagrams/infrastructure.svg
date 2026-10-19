@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 470" width="960" height="470" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="960" height="470" fill="#ffffff"/>
+
+  <!-- PickleCam side -->
+  <rect x="20" y="20" width="240" height="300" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="6 4"/>
+  <text x="140" y="44" text-anchor="middle" font-size="12" font-weight="bold" fill="#475569">PICKLECAM (not ours)</text>
+  <g font-size="12" fill="#0f172a">
+    <rect x="38" y="60" width="204" height="96" rx="8" fill="#ffffff" stroke="#64748b"/>
+    <text x="140" y="86" text-anchor="middle" font-weight="bold">Bunny Stream</text>
+    <text x="140" y="106" text-anchor="middle" font-size="11">one library per facility</text>
+    <text x="140" y="124" text-anchor="middle" font-size="11">videos deleted after 14 days</text>
+    <text x="140" y="142" text-anchor="middle" font-size="11">keys can delete, so they stay here</text>
+
+    <rect x="38" y="200" width="204" height="96" rx="8" fill="#ffffff" stroke="#64748b"/>
+    <text x="140" y="226" text-anchor="middle" font-weight="bold">Read-only endpoint</text>
+    <text x="140" y="246" text-anchor="middle" font-size="11">built by the backend developer</text>
+    <text x="140" y="264" text-anchor="middle" font-size="11">video list and download links</text>
+    <text x="140" y="282" text-anchor="middle" font-size="11">no personal data</text>
+  </g>
+  <line x1="140" y1="156" x2="140" y2="198" stroke="#475569" stroke-width="2" marker-end="url(#b)"/>
+
+  <g font-size="12" fill="#0f172a">
+    <!-- GitHub -->
+    <rect x="310" y="20" width="270" height="96" rx="10" fill="#faf5ff" stroke="#a855f7"/>
+    <text x="445" y="46" text-anchor="middle" font-weight="bold">GitHub (public repo)</text>
+    <text x="445" y="66" text-anchor="middle" font-size="11">issues, PRs, CI on Ubuntu (macOS weekly)</text>
+    <text x="445" y="84" text-anchor="middle" font-size="11">scheduled workflow: daily fetch</text>
+    <text x="445" y="102" text-anchor="middle" font-size="11">and nightly label backup</text>
+
+    <!-- R2 -->
+    <rect x="310" y="170" width="270" height="130" rx="10" fill="#fff7ed" stroke="#f97316"/>
+    <text x="445" y="196" text-anchor="middle" font-weight="bold">Cloudflare R2 bucket</text>
+    <text x="445" y="218" text-anchor="middle" font-size="11">sample videos, timestamps, catalog</text>
+    <text x="445" y="236" text-anchor="middle" font-size="11">cameras, labels, patches, models</text>
+    <text x="445" y="254" text-anchor="middle" font-size="11">results (production keeps results only)</text>
+    <text x="445" y="280" text-anchor="middle" font-size="11">about $1 a month, free downloads</text>
+
+    <!-- Pods -->
+    <rect x="640" y="20" width="300" height="110" rx="10" fill="#eff6ff" stroke="#3b82f6"/>
+    <text x="790" y="46" text-anchor="middle" font-weight="bold">RunPod or Vast.ai pods (RTX 4090)</text>
+    <text x="790" y="68" text-anchor="middle" font-size="11">interactive GPU work and training</text>
+    <text x="790" y="86" text-anchor="middle" font-size="11">started per session, idle shutdown</text>
+    <text x="790" y="104" text-anchor="middle" font-size="11">checkpoints every 30 min, prepaid credit</text>
+
+    <rect x="640" y="160" width="300" height="110" rx="10" fill="#eff6ff" stroke="#3b82f6"/>
+    <text x="790" y="186" text-anchor="middle" font-weight="bold">Modal or RunPod serverless</text>
+    <text x="790" y="208" text-anchor="middle" font-size="11">batch and eval runs over many games</text>
+    <text x="790" y="226" text-anchor="middle" font-size="11">many GPUs at once, then shut down</text>
+    <text x="790" y="244" text-anchor="middle" font-size="11">later: production, by measured cost</text>
+
+    <!-- Macs -->
+    <rect x="640" y="320" width="300" height="110" rx="10" fill="#f0fdf4" stroke="#22c55e"/>
+    <text x="790" y="346" text-anchor="middle" font-weight="bold">2 × MacBook Air</text>
+    <text x="790" y="368" text-anchor="middle" font-size="11">Claude Code, tests, studio, short clips</text>
+    <text x="790" y="386" text-anchor="middle" font-size="11">start pods and batch runs</text>
+    <text x="790" y="404" text-anchor="middle" font-size="11">own R2 key in .env, no Bunny keys</text>
+
+    <rect x="310" y="350" width="270" height="80" rx="10" fill="#f8fafc" stroke="#94a3b8"/>
+    <text x="445" y="378" text-anchor="middle" font-weight="bold">One Linux Docker image</text>
+    <text x="445" y="398" text-anchor="middle" font-size="11">same code and libraries on every GPU,</text>
+    <text x="445" y="414" text-anchor="middle" font-size="11">in development and production</text>
+  </g>
+
+  <!-- Arrows -->
+  <path d="M242,248 C280,248 280,100 308,90" fill="none" stroke="#475569" stroke-width="2" marker-end="url(#b)"/>
+  <text x="246" y="170" font-size="10" fill="#475569">fetch</text>
+  <line x1="445" y1="116" x2="445" y2="168" stroke="#475569" stroke-width="2" marker-end="url(#b)"/>
+  <line x1="638" y1="90" x2="582" y2="200" stroke="#475569" stroke-width="2" marker-start="url(#b)" marker-end="url(#b)"/>
+  <line x1="638" y1="215" x2="582" y2="235" stroke="#475569" stroke-width="2" marker-start="url(#b)" marker-end="url(#b)"/>
+  <line x1="638" y1="350" x2="582" y2="280" stroke="#475569" stroke-width="2" marker-start="url(#b)" marker-end="url(#b)"/>
+  <path d="M940,330 C958,260 958,140 942,110" fill="none" stroke="#22c55e" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#b)"/>
+  <text x="896" y="296" font-size="10" fill="#15803d">start, stop</text>
+  <path d="M640,380 C600,300 600,130 582,80" fill="none" stroke="#a855f7" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#b)"/>
+  <text x="586" y="330" font-size="10" fill="#7e22ce">code</text>
+</svg>
