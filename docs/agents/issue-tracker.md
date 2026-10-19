@@ -16,9 +16,13 @@ Infer the repo from `git remote -v`; `gh` does this automatically when run insid
 
 ## DinkData conventions
 
-- Every new issue gets one triage label (see `triage-labels.md`), one `owner:` label, the matching `area:` label(s) and a `phase:` label. Ownership follows `docs/DESIGN.md` section 5: `owner:Robby` for intake, video, court, ball, events, stats and report; `owner:Marti` for players, serve states and rallies, score and highlights; both for contracts, eval, studio and docs. Add `accuracy-change` when the work changes a model, threshold or heuristic.
-- The phase is the milestone. DESIGN.md uses Setup and M0–M4; until the setup phase replaces the `phase:P0`–`P3` labels, use `phase:P0` for Setup and M0 work.
-- Labelling tasks are `ready-for-human`. Coding tickets become `ready-for-agent` once specified.
+- Every new issue gets one triage label (see `triage-labels.md`), one or two `owner:` labels, the matching `area:` labels, a `phase:` label and a GitHub milestone.
+  - Ownership follows `docs/DESIGN.md` section 5. `owner:Robby` covers data, video, court, ball, events, stats and report. `owner:Marti` covers players, serve states and rallies, score and highlights.
+  - Shared work (contracts, eval, studio, labelling, docs) gets both owner labels, and the issue body says who does which part.
+  - `area:` labels: `data`, `video`, `court`, `ball`, `players`, `events`, `score`, `stats`, `report`, `highlights`, `contracts`, `eval`, `studio`, `labelling`, `infra`.
+  - `phase:` labels and milestones match `docs/DESIGN.md` section 14: `setup` and `M0` to `M4`.
+- Add `accuracy-change` when the work changes a model, threshold or rule. Its PR must include the `dink eval` table.
+- Labelling tickets are `ready-for-human`. Coding tickets become `ready-for-agent` once their spec is complete.
 - Issues belong on the "DinkData" project board (`gh issue edit <n> --add-project DinkData`).
 - PRs follow `.github/pull_request_template.md` and link the issue they close.
 

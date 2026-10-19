@@ -1,130 +1,61 @@
 # Stat definitions
 
-The single source of truth for what each stat means. Code in `stats/` must match
-these definitions, and each stat gets unit tests built from hand-written event
-logs. To change a definition: update this file, the tests and the code in one PR,
-and get the other partner's approval.
+This file is the authority for stat code in `src/dinkdata/stats/`. A stat's code must match its
+definition here, and each rule has a unit test built from a hand-written game log. Changing a
+definition means updating this file, its tests and its code in one PR that both owners approve.
+`docs/DESIGN.md` section 3 explains why these stats were chosen.
 
-Values marked **(proposal)** are starting points. Confirm them with real data
-before freezing.
+## Rules for every stat
 
-## Terms
+- A stat is a pure function of `events.json`. It reads no video and runs no model.
+- Every stat returns a value, a numerator and denominator where they apply, a confidence, a
+  shipped flag and, when not shipped, a reason.
+- A stat ships only if its confidence passes its threshold and the events it needs were
+  visible. Otherwise it is left out with a reason such as `near_court_not_visible`.
+- Counts are per player per game unless the table says team.
+- Values marked provisional are confirmed on real labelled games before they are frozen.
 
-| Term | Definition |
-|---|---|
-| Rally | From the serve hit to the moment the ball is dead (fault, second bounce, out, net, or hit by a player out of turn) |
-| Shot | One hit event by one player. The serve is shot 1 of the rally |
-| Return | Shot 2. It must be hit after the ball bounces |
-| Third shot | Shot 3, by the serving team. It must also be hit after a bounce (two-bounce rule) |
-| Volley | A shot hit before the ball bounces on the hitter's side |
-| Groundstroke | A shot hit after one bounce |
-| Rally winner | The team that did not cause the rally to end |
-| Point | Scored only by the serving team when it wins a rally (side-out scoring) |
-| Side out | The receiving team wins a rally while the opponents are on their second server (or the first server of the game) and takes the serve |
+## v1 stats
 
-Doubles score is called as serving team score, receiving team score, server
-number (for example `4-3-2`). The first server of the game serves as server 2 (`0-0-2`).
+| Stat | Who | Definition |
+|---|---|---|
+| Final score | Team | The score as played, game by game. Only the serving team scores. A game starts at `0-0-2` |
+| Games won | Team | Games the team won. A game cut off at 45 minutes has no winner |
+| Rallies won | Team | Rallies the team won. Both partners get credit |
+| Points scored | Team | Rallies the team won while serving |
+| Serve in % | Player | Serves whose first bounce lands in the diagonal service court, divided by serves |
+| Serve depth | Player | Feet from the serve's first bounce to the receiver's baseline, bucketed as deep (5 ft or less), medium (over 5 to 10 ft) or short (over 10 ft). Provisional |
+| Return in % | Player | Returns whose first bounce lands in the serving team's half, divided by returns |
+| Return depth | Player | Feet from the return's first bounce to the serving team's baseline, with the same buckets |
+| Net errors | Player | Rally-ending shots by the player that didn't cross the net |
+| Out errors | Player | Rally-ending shots by the player whose first bounce was outside the court |
+| Serve faults | Player | Serves that were net or out errors. Counted separately from net and out errors |
+| Winners | Player | The last shot of a rally the player's team won, which no opponent touched after it |
+| Landing map | Player | The court positions of the player's serve bounces, return bounces and out-error bounces |
 
-## Events each stat needs
+## Edge cases
 
-Every stat is computed from `events.json` (schema: `contracts/events.schema.json`).
+- A serve that touches the kitchen line is a fault. A serve on any other line of its service
+  court is in.
+- A return or third shot hit before it bounced is a fault, under the two-bounce rule.
+- A serve whose first bounce the camera can't see is left out of serve in % and depth. It
+  is not counted as in or out.
+- A net-cord serve that lands in is in.
+- A close call is flagged for review and left out until reviewed.
+- An error belongs only to the shot that ended the rally.
+- A rally with a rule deviation still counts. A team scores when it wins a rally on its own
+  serve, whoever served.
+- A replayed rally doesn't count toward any stat.
 
-| Signal | Fields used |
-|---|---|
-| Rally | `start_frame`, `end_frame`, `server`, `server_number`, `score_before`, `winner_team`, `end_reason` |
-| Hit | `t`, `player`, `shot`, `volley`, `conf` |
-| Bounce | `t`, `court_xy`, `in`, `close_call`, `conf` |
-| Player position | foot point in court feet per frame (`players.parquet`) |
+## Shipping rules
 
-## Phase 1 stats (high confidence)
+- For each stat, each player's count must be off by at most 1 in at least 90% of test
+  player-games where it's shipped, and better than the median-count baseline.
+- Coverage is reported overall and per camera setup. The provisional overall floor is 70% of
+  player-games. Each camera setup gets its own floor after M1.
 
-### Rallies played and rally length
-- **Rallies played:** rallies in which the player was on court.
-- **Rally length:** number of shots, and duration in seconds (`(end_frame - start_frame) / fps`).
-- **Reported as:** average and longest, per game.
+## Later stats
 
-### Rallies won and points scored
-- **Rallies won (team):** rallies with `winner_team` = the player's team. Credited to both partners.
-- **Points scored (team):** rallies won while serving.
-- **Points scored on own serve (player):** rallies won while that player was serving.
-- **Note:** do not report "points won" for an individual. Credit individuals
-  through winners and errors below.
-
-### Serve
-- **Serves:** hits with `shot = serve`.
-- **Serve in %:** serves whose first bounce is inside the correct service court ÷ serves.
-  A bounce on the kitchen line is a fault. Close calls go to review.
-- **Serve depth:** distance in ft from the first bounce to the receiver's baseline.
-  Buckets **(proposal)**: deep ≤ 5 ft, medium 5-10 ft, short > 10 ft.
-
-### Return
-- **Return in %:** returns whose first bounce is in court ÷ returns.
-- **Return depth:** distance from the bounce to the serving team's baseline. Same buckets as serve depth.
-
-### Court coverage
-- **Heatmap:** foot-point positions over the game, in court feet.
-- **Distance moved:** sum of foot-point movement in ft, after smoothing (filter `FILL-IN`).
-
-## Phase 2 stats (medium confidence)
-
-### Shots
-- **Shots hit:** hit events attributed to the player.
-- **Share of team shots:** player's shots ÷ team's shots, excluding serves.
-- **Volley %:** volleys ÷ shots, excluding serves and returns (they can't be volleys).
-
-### Errors
-Only counted on the shot that ended the rally, by the player who hit it.
-
-- **Net error:** the ball didn't cross the net (y = 22) after the hit.
-- **Out error:** the ball's first bounce after the hit was outside the court (or the service court, for a serve).
-- **Serve fault:** a serve that is a net or out error. Report separately from rally errors.
-- **Not computed:** forced vs unforced. Report errors as net or out only.
-
-### Winners
-- **Winner:** the last shot of a rally the player's team won, where no opponent touched the ball after it.
-
-### Third shot
-Classified for every third shot by the serving team:
-
-| Type | Rule (proposal) |
-|---|---|
-| Drop | First bounce in the opponents' kitchen, or a soft arc the opponents must hit upward |
-| Drive | Fast and flat: speed above `FILL-IN`, low apex |
-| Lob | High apex, first bounce within `FILL-IN` ft of the opponents' baseline |
-
-- **Third-shot drop %:** drops ÷ third shots (how often the player chooses a drop).
-- **Drop success % (proposal):** drops that land in the opponents' kitchen, or that the opponents
-  answer without attacking (no drive or speed-up on the next shot), and that don't lose the
-  rally on the next shot ÷ drops.
-
-### Kitchen arrival
-- **Returning team (proposal):** returner's foot point is at the kitchen line before the
-  opponents hit the third shot.
-- **Serving team (proposal):** both players at the kitchen line before the opponents hit the
-  shot after a successful third-shot drop.
-- **Kitchen arrival %:** times arrived ÷ chances.
-- "At the kitchen line" is defined in `docs/COURT.md` › Zones.
-
-### Dinks
-- **Dink:** a soft shot hit from the kitchen line (hitter at the kitchen line) whose first
-  bounce is in the opponents' kitchen.
-- **Dinks hit, dink errors** (a dink that is a net or out error), **longest dink rally**
-  (most consecutive dinks).
-
-## Phase 3 stats (lower confidence, label as such)
-
-- **Speed-ups attempted and won:** in a dink exchange, a shot whose speed jumps
-  above `FILL-IN` × the average of the previous dinks. Won = the speed-up hitter's team wins the rally.
-- **Forehand vs backhand:** from pose, which side of the body the paddle is on at contact.
-- **Ball speed (mph):** from a 3D arc fitted between hit and bounce. Always shown as approximate.
-
-## Not computed
-
-Forced vs unforced errors, spin, automatic calls on balls touching a line, and
-kitchen (foot) faults during volleys until feet tracking is reliable near the line.
-
-## Open questions
-
-- [ ] Confirm or change every **(proposal)** value with the first labelled games.
-- [ ] Which 3 stats do the first beta players care about most?
-- [ ] Should stats exclude rallies with low-confidence events, or include them with a flag?
+In this order unless the beta says otherwise: dink success rate (a dink that lands in the
+opponents' kitchen and isn't an error), an all-shots heat map, unforced errors and forehand
+versus backhand. Both owners approve any other stat first.
