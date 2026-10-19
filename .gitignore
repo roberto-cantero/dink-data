@@ -1,47 +1,34 @@
-.gitignore
-data/
-test/
-ckpts/
-figure/
-__pycache__/
-utils/__pycache__/
-prediction/
-test_prediction/
-dataset_test.py
-fps_exp.py
-fps_exp_1.py
-worker.py
-temp.py
-model_compare.py
-predict_old.py
-*.sh
-*.mp4
-
-/exp/
-/data/
-/data_badminton/
-/TrackNetV2/
-/output/
-/prediction/
-scratch.ipynb
-TrackNetV2.zip
-openh264-1.8.0-win64.dll
-# DinkData
+# Python and tooling
 .venv/
-.env
-.env.*
-*.pt
-*.pth
-*.onnx
-*.mp4
-data/
-ckpts/
-keypoints/
-out/
-*.parquet
-!tests/fixtures/**/*.parquet
+__pycache__/
+*.egg-info/
 .coverage
 .pytest_cache/
 .ruff_cache/
+dist/
+build/
+
+# Secrets
+.env
+.env.*
+
+# Data, models and outputs never go in git (docs/DATA.md). Folder patterns are anchored to
+# the repo root, so they don't hide code packages such as src/dinkdata/data/.
+/data/
+/ckpts/
+/out/
+/runs/
+/labels/
+/frames/
+*.mp4
+*.mov
+*.pt
+*.pth
+*.onnx
+*.engine
+*.parquet
+!tests/fixtures/**/*.parquet
+
+# Local Claude Code state
 .claude/settings.local.json
 .claude/worktrees/

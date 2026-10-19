@@ -1,4 +1,4 @@
-import eval as eval_pkg
+import dinkdata.eval as eval_pkg
 
 
 def test_imports():

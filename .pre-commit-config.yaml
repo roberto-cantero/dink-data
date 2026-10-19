@@ -1,5 +1,4 @@
 # Runs on every commit (after `make setup`) and in CI.
-# legacy/ is the unchanged prototype: style hooks skip it, safety hooks don't.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: 44b5042edab9382aba712eed4f9c7bab7a3d6a3e  # frozen: v0.17.0
@@ -16,7 +15,7 @@ repos:
         exclude: ^docs/DinkData-Design\.pdf$
       - id: check-merge-conflict
       - id: end-of-file-fixer
-        exclude: ^(legacy/|docs/.*\.pdf$)
+        exclude: ^docs/.*\.pdf$
       - id: no-commit-to-branch
         args: [--branch, main]
   - repo: https://github.com/kynan/nbstripout
@@ -27,3 +26,11 @@ repos:
     rev: 2ca41cc1372d1e939a6a879f18cdc19fc1cac1ce  # frozen: v8.30.0
     hooks:
       - id: gitleaks
+  - repo: local
+    hooks:
+      - id: no-frame-over-30
+        name: time comes from frame timestamps, never frame / 30
+        language: pygrep
+        entry: '(?i)(frame\w*|idx|index)\s*/\s*30(\.0)?\b|fps\s*=\s*30(\.0)?\b'
+        files: ^src/
+        types: [python]

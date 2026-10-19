@@ -1,4 +1,4 @@
-import stats
+import dinkdata.stats as stats
 
 
 def test_imports():
