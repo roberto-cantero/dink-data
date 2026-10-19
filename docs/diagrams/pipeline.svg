@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" width="960" height="640" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="960" height="640" fill="#ffffff"/>
+
+  <!-- Intake row -->
+  <g font-size="13" fill="#0f172a">
+    <rect x="20" y="20" width="210" height="64" rx="8" fill="#f1f5f9" stroke="#64748b"/>
+    <text x="125" y="46" text-anchor="middle" font-weight="bold">PickleCam video</text>
+    <text x="125" y="66" text-anchor="middle" font-size="11">Bunny libraries, via read-only endpoint</text>
+
+    <rect x="280" y="20" width="230" height="64" rx="8" fill="#f1f5f9" stroke="#64748b"/>
+    <text x="395" y="46" text-anchor="middle" font-weight="bold">1 · Intake</text>
+    <text x="395" y="66" text-anchor="middle" font-size="11">catalog · sample · fetch · timestamps</text>
+
+    <rect x="560" y="20" width="190" height="64" rx="8" fill="#f1f5f9" stroke="#64748b"/>
+    <text x="655" y="46" text-anchor="middle" font-weight="bold">Cloudflare R2</text>
+    <text x="655" y="66" text-anchor="middle" font-size="11">video.mp4 + frames.parquet</text>
+  </g>
+  <line x1="230" y1="52" x2="278" y2="52" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="510" y1="52" x2="558" y2="52" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- Perception band -->
+  <rect x="20" y="110" width="730" height="160" rx="10" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="34" y="132" font-size="12" font-weight="bold" fill="#1d4ed8">PERCEPTION · what is in each frame</text>
+  <g font-size="12" fill="#0f172a">
+    <rect x="36" y="146" width="160" height="104" rx="8" fill="#ffffff" stroke="#3b82f6"/>
+    <text x="116" y="170" text-anchor="middle" font-weight="bold">2 · Court model</text>
+    <text x="116" y="190" text-anchor="middle" font-size="11">once per camera</text>
+    <text x="116" y="208" text-anchor="middle" font-size="11">lens + pose from clicks</text>
+    <text x="116" y="226" text-anchor="middle" font-size="11">pixel ↔ court feet (floor)</text>
+    <text x="116" y="242" text-anchor="middle" font-size="10" fill="#475569">camera.json</text>
+
+    <rect x="212" y="146" width="150" height="104" rx="8" fill="#ffffff" stroke="#3b82f6"/>
+    <text x="287" y="170" text-anchor="middle" font-weight="bold">3 · Background</text>
+    <text x="287" y="190" text-anchor="middle" font-size="11">empty-court image</text>
+    <text x="287" y="208" text-anchor="middle" font-size="11">median per 2-min window</text>
+    <text x="287" y="242" text-anchor="middle" font-size="10" fill="#475569">backgrounds/</text>
+
+    <rect x="378" y="146" width="170" height="104" rx="8" fill="#ffffff" stroke="#3b82f6"/>
+    <text x="463" y="170" text-anchor="middle" font-weight="bold">4 · Ball tracker</text>
+    <text x="463" y="190" text-anchor="middle" font-size="11">court crop + frames + bg</text>
+    <text x="463" y="208" text-anchor="middle" font-size="11">heat map network</text>
+    <text x="463" y="226" text-anchor="middle" font-size="11">peaks → smooth track</text>
+    <text x="463" y="242" text-anchor="middle" font-size="10" fill="#475569">ball.parquet</text>
+
+    <rect x="564" y="146" width="170" height="104" rx="8" fill="#ffffff" stroke="#3b82f6"/>
+    <text x="649" y="170" text-anchor="middle" font-weight="bold">5 · Players</text>
+    <text x="649" y="190" text-anchor="middle" font-size="10">RF-DETR, RTMPose, ByteTrack</text>
+    <text x="649" y="208" text-anchor="middle" font-size="11">our 4 players, teams, ids</text>
+    <text x="649" y="226" text-anchor="middle" font-size="11">feet on court, wrists</text>
+    <text x="649" y="242" text-anchor="middle" font-size="10" fill="#475569">players.parquet</text>
+  </g>
+  <line x1="655" y1="84" x2="655" y2="108" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="287" y1="146" x2="287" y2="146" stroke="none"/>
+  <line x1="362" y1="198" x2="376" y2="198" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- Structure band -->
+  <rect x="20" y="296" width="730" height="160" rx="10" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="736" y="318" text-anchor="end" font-size="11" font-weight="bold" fill="#15803d">STRUCTURE · what happened (rules as constraints)</text>
+  <g font-size="12" fill="#0f172a">
+    <rect x="36" y="332" width="170" height="104" rx="8" fill="#ffffff" stroke="#22c55e"/>
+    <text x="121" y="356" text-anchor="middle" font-weight="bold">6 · Serves + rallies</text>
+    <text x="121" y="376" text-anchor="middle" font-size="11">which partner serves, from</text>
+    <text x="121" y="394" text-anchor="middle" font-size="11">which side, who receives</text>
+    <text x="121" y="412" text-anchor="middle" font-size="11">+ game mode (play/warm-up)</text>
+
+    <rect x="222" y="332" width="170" height="104" rx="8" fill="#ffffff" stroke="#22c55e"/>
+    <text x="307" y="356" text-anchor="middle" font-weight="bold">7 · Event spotter</text>
+    <text x="307" y="376" text-anchor="middle" font-size="11">candidate hit / bounce / net</text>
+    <text x="307" y="394" text-anchor="middle" font-size="11">+ which player hit it</text>
+    <text x="307" y="412" text-anchor="middle" font-size="11">ball + wrists + court</text>
+
+    <rect x="408" y="332" width="160" height="104" rx="8" fill="#ffffff" stroke="#22c55e"/>
+    <text x="488" y="356" text-anchor="middle" font-weight="bold">8 · Rally grammar</text>
+    <text x="488" y="376" text-anchor="middle" font-size="11">Viterbi over candidates</text>
+    <text x="488" y="394" text-anchor="middle" font-size="11">serve → bounce → return …</text>
+    <text x="488" y="412" text-anchor="middle" font-size="11">end reason per rally</text>
+
+    <rect x="584" y="332" width="150" height="104" rx="8" fill="#ffffff" stroke="#22c55e"/>
+    <text x="659" y="356" text-anchor="middle" font-weight="bold">9 · Score decoder</text>
+    <text x="659" y="376" text-anchor="middle" font-size="11">HMM over game states</text>
+    <text x="659" y="394" text-anchor="middle" font-size="11">side-out rules, games,</text>
+    <text x="659" y="412" text-anchor="middle" font-size="11">winners, rule breaks</text>
+  </g>
+  <path d="M600,250 L600,282 L150,282 L150,330" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#a)"/>
+  <path d="M463,250 L463,276 L290,276 L290,330" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#a)"/>
+  <path d="M690,250 L690,288 L340,288 L340,330" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#a)"/>
+  <line x1="116" y1="250" x2="100" y2="330" stroke="#475569" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#a)"/>
+  <line x1="392" y1="384" x2="406" y2="384" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="568" y1="384" x2="582" y2="384" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M121,436 L121,446 L640,446 L640,438" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <path d="M700,436 L700,470 L111,470 L111,516" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#a)"/>
+  <line x1="500" y1="436" x2="500" y2="470" stroke="#475569" stroke-width="1.6"/>
+  <text x="300" y="465" font-size="10" fill="#475569">rallies, events, games, scores</text>
+  <!-- Outputs band -->
+  <rect x="20" y="482" width="730" height="146" rx="10" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="736" y="504" text-anchor="end" font-size="12" font-weight="bold" fill="#c2410c">OUTPUTS · stats (Robby) and highlights (Marti)</text>
+  <g font-size="12" fill="#0f172a">
+    <rect x="36" y="518" width="150" height="84" rx="8" fill="#ffffff" stroke="#f97316"/>
+    <text x="111" y="546" text-anchor="middle" font-weight="bold">events.json</text>
+    <text x="111" y="566" text-anchor="middle" font-size="11">games · rallies · hits</text>
+    <text x="111" y="584" text-anchor="middle" font-size="11">bounces · confidences</text>
+
+    <rect x="204" y="518" width="150" height="84" rx="8" fill="#ffffff" stroke="#f97316"/>
+    <text x="279" y="546" text-anchor="middle" font-weight="bold">10 · Stats</text>
+    <text x="279" y="566" text-anchor="middle" font-size="11">5 v1 stats + landing map</text>
+    <text x="279" y="584" text-anchor="middle" font-size="11">left out if unsure</text>
+
+    <rect x="372" y="518" width="150" height="84" rx="8" fill="#ffffff" stroke="#f97316"/>
+    <text x="447" y="546" text-anchor="middle" font-weight="bold">11 · Report</text>
+    <text x="447" y="566" text-anchor="middle" font-size="11">stats.json</text>
+    <text x="447" y="584" text-anchor="middle" font-size="11">report.html</text>
+
+    <rect x="540" y="518" width="194" height="84" rx="8" fill="#ffffff" stroke="#f97316"/>
+    <text x="637" y="546" text-anchor="middle" font-weight="bold">12 · Highlights</text>
+    <text x="637" y="566" text-anchor="middle" font-size="11">best rallies per player</text>
+    <text x="637" y="584" text-anchor="middle" font-size="11">cut, mark, join: one reel each</text>
+  </g>
+  <line x1="186" y1="560" x2="202" y2="560" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="354" y1="560" x2="370" y2="560" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M111,602 L111,614 L637,614 L637,604" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- Side column -->
+  <g font-size="12" fill="#0f172a">
+    <rect x="776" y="110" width="166" height="250" rx="10" fill="#faf5ff" stroke="#c084fc"/>
+    <text x="859" y="136" text-anchor="middle" font-weight="bold" fill="#7e22ce">Studio</text>
+    <text x="859" y="156" text-anchor="middle" font-size="11">local web app</text>
+    <text x="792" y="186" font-size="11">• calibrate cameras</text>
+    <text x="792" y="206" font-size="11">• label gold events</text>
+    <text x="792" y="226" font-size="11">• label rally outcomes</text>
+    <text x="792" y="246" font-size="11">• click ball positions</text>
+    <text x="792" y="266" font-size="11">• review pipeline output</text>
+    <text x="792" y="294" font-size="11">corrections saved as</text>
+    <text x="792" y="312" font-size="11">patches → silver labels</text>
+    <text x="792" y="340" font-size="10" fill="#475569">never overwrites model output</text>
+
+    <rect x="776" y="380" width="166" height="248" rx="10" fill="#fefce8" stroke="#facc15"/>
+    <text x="859" y="406" text-anchor="middle" font-weight="bold" fill="#a16207">Eval</text>
+    <text x="859" y="426" text-anchor="middle" font-size="11">dink eval --run … --split test</text>
+    <text x="792" y="456" font-size="11">• scores every stage</text>
+    <text x="792" y="476" font-size="11">  against the gold set</text>
+    <text x="792" y="496" font-size="11">• by camera setup</text>
+    <text x="792" y="516" font-size="11">• accuracy + coverage</text>
+    <text x="792" y="536" font-size="11">• markdown table for</text>
+    <text x="792" y="556" font-size="11">  every PR</text>
+    <text x="792" y="590" font-size="10" fill="#475569">gold set measures,</text>
+    <text x="792" y="606" font-size="10" fill="#475569">never trains</text>
+  </g>
+  <line x1="750" y1="200" x2="774" y2="200" stroke="#a855f7" stroke-width="1.6" stroke-dasharray="4 3"/>
+  <line x1="750" y1="384" x2="774" y2="420" stroke="#a855f7" stroke-width="1.6" stroke-dasharray="4 3"/>
+  <line x1="750" y1="560" x2="774" y2="560" stroke="#ca8a04" stroke-width="1.6" stroke-dasharray="4 3"/>
+</svg>

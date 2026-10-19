@@ -12,6 +12,8 @@ repos:
     hooks:
       - id: check-added-large-files
         args: [--maxkb=500]
+        # The design PDF is generated from docs/DESIGN.md and is about 550 KB.
+        exclude: ^docs/DinkData-Design\.pdf$
       - id: check-merge-conflict
       - id: end-of-file-fixer
         exclude: ^(legacy/|docs/.*\.pdf$)
