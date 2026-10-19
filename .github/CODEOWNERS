@@ -1,13 +1,16 @@
 # Who reviews what. Later lines win over earlier ones.
-# Robby (Partner A): court + ball. Marti (Partner B): players + events + stats.
+# Ownership follows docs/DESIGN.md section 5.
+# Robby: intake, video, court, ball, events, stats, report.
+# Marti: players, serve states and rallies, score, highlights.
 
 /pipeline/court/     @roberto-cantero
 /pipeline/ball/      @roberto-cantero
 /pipeline/players/   @probablynotmarti
-/pipeline/events/    @probablynotmarti
-/stats/              @probablynotmarti
+/pipeline/events/    @roberto-cantero
+/stats/              @roberto-cantero
 
 /contracts/          @roberto-cantero @probablynotmarti
 /eval/               @roberto-cantero @probablynotmarti
+/docs/               @roberto-cantero @probablynotmarti
 /.github/            @roberto-cantero @probablynotmarti
 /CLAUDE.md           @roberto-cantero @probablynotmarti

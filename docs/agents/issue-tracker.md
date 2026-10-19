@@ -16,7 +16,9 @@ Infer the repo from `git remote -v`; `gh` does this automatically when run insid
 
 ## DinkData conventions
 
-- Every new issue gets one `owner:` label (`owner:Robby` for court/ball, `owner:Marti` for players/events/stats), the matching `area:` label(s) and a `phase:` label (P0–P3). Add `accuracy-change` when the work changes a model, threshold or heuristic.
+- Every new issue gets one triage label (see `triage-labels.md`), one `owner:` label, the matching `area:` label(s) and a `phase:` label. Ownership follows `docs/DESIGN.md` section 5: `owner:Robby` for intake, video, court, ball, events, stats and report; `owner:Marti` for players, serve states and rallies, score and highlights; both for contracts, eval, studio and docs. Add `accuracy-change` when the work changes a model, threshold or heuristic.
+- The phase is the milestone. DESIGN.md uses Setup and M0–M4; until the setup phase replaces the `phase:P0`–`P3` labels, use `phase:P0` for Setup and M0 work.
+- Labelling tasks are `ready-for-human`. Coding tickets become `ready-for-agent` once specified.
 - Issues belong on the "DinkData" project board (`gh issue edit <n> --add-project DinkData`).
 - PRs follow `.github/pull_request_template.md` and link the issue they close.
 
