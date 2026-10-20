@@ -37,8 +37,8 @@ month's spend together at the start of each month.
   balance.
 - Modal has a workspace spending limit set to the monthly cap.
 - Pods shut down after 30 minutes idle and have a maximum run time.
-- The development budget is $50 a month, with an alert at $30. The owners agree any month
-  that needs more first, such as a long training run.
+- The development budget is $50 a month, with an alert at $30. A training run that measurably
+  improves accuracy can go over it if both owners agree first.
 
 ## Secrets
 

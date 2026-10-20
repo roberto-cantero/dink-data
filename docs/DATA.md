@@ -25,7 +25,9 @@ models/{name}/{version}/                             checkpoint, config, eval re
 eval/{run_id}.csv                                    metric history
 ```
 
-After the prototype, R2 holds results, not videos. Workers read each video from Bunny, process
+During M0 to M3, R2 is the shared development store for the games, labels, calibrations and
+models. The prototype's `dink run` never reads R2: it reads models from a local folder. After
+the prototype, R2 holds results, not videos. Workers read each video from Bunny, process
 it and keep the JSON outputs and report, about 0.5 MB a video. Per-frame tracks and rendered
 reel MP4s are deleted after 30 days.
 
@@ -52,8 +54,9 @@ PickleCam facility dashboard, which costs PickleCam about $1.50 in Bunny bandwid
    1080p MP4 from its watch page within 14 days of upload, before PickleCam deletes it. We
    asked PickleCam whether a script may download from the dashboard's links instead.
 3. `dink ingest` takes a downloaded MP4. It drops the audio track with `-map 0:v`, saves every
-   frame's timestamp with ffprobe, flags dropped and duplicated frames, gives the game its
-   HMAC id and uploads it to R2.
+   frame's timestamp with ffprobe, and flags dropped and duplicated frames. It asks for the
+   session id, facility and court at a hidden prompt, gives the game its HMAC `video_id` and
+   `camera_id`, adds a catalog row and uploads it to R2.
 4. Until the R2 bucket exists, these games live on the owners' machines and on the cloud GPU
    pod's disk, never in the repo. They move to R2 as soon as it exists.
 

@@ -25,7 +25,7 @@ results to `eval/{run_id}.csv` in R2. A small synthetic version runs in CI.
 | Stats | For each stat, the share of player-games off by at most 1 and the mean error, next to the same numbers for the median-count baseline |
 | Highlights | The share of clips containing the whole rally, and the share with the marker on the right player |
 | Coverage | The share of stats shipped, overall and per camera setup |
-| Cost | GPU-seconds per video for each stage, and the estimated cost per video |
+| GPU time | GPU-seconds per video for each stage, as information. The cost-per-video target waits for M4 |
 
 ## Gates
 
