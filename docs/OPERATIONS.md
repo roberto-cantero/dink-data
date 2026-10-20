@@ -11,7 +11,7 @@ exact commands.
 | Coding, tests, studio, short clips without a GPU | Our MacBooks |
 | Interactive GPU work and training | A RunPod pod with a community RTX 4090, or Vast.ai when cheaper |
 | Batch and eval runs over many games | Modal first, using its free monthly credit, or RunPod serverless |
-| Daily fetch and nightly label backup | Scheduled GitHub Actions workflows |
+| Nightly label backup, and the daily fetch after the prototype | Scheduled GitHub Actions workflows |
 | Production | The provider the M4 benchmark picks |
 
 All GPU work uses one Linux Docker image, the same in development and production. The Windows

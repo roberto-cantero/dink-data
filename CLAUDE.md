@@ -9,6 +9,10 @@ DinkData turns a PickleCam recording of a doubles pickleball game into per-playe
 highlight reels. The pipeline finds the court, ball and players, builds a game log of rallies,
 hits, bounces and the score, and pure functions turn the game log into stats and reels.
 
+The first goal is a prototype accurate enough to impress PickleCam's CEO, built on about 150
+games downloaded by hand. Automatic intake, delivery to players and production cost come after
+it (ADR 0018). Don't build them before then.
+
 `docs/DESIGN.md` is the source of truth for what we build and why. Read the section for your
 area before starting. If another doc disagrees with it, follow `DESIGN.md` and flag the
 conflict in your PR. `GLOSSARY.md` fixes the words we use. `docs/adr/` records decisions.

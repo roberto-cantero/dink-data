@@ -217,3 +217,7 @@ _Avoid_: edit, fix
 
 **Run**:
 One execution of the pipeline over a set of recordings.
+
+**Prototype**:
+The version of DinkData we show PickleCam's CEO: stats and reels that meet their gates on held-out facilities, built on hand-downloaded games (ADR 0018).
+_Avoid_: MVP, demo. The old `legacy-prototype` tag is unrelated
