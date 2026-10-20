@@ -142,14 +142,27 @@ def test_a_winner_against_the_serves_is_flagged():
     assert game.rallies[0].winner_team == "B"
 
 
-def test_giving_up_the_second_serve_has_no_deviation_type():
-    # B loses with server 1, so p4 should serve, but A takes the serve.
+def test_giving_up_the_second_serve_is_early_side_out():
+    # B loses with server 1, so p4 should serve, but A takes the serve with p2 on its right.
     game = replay_game(serves("p1 R", "p1 L", "p3 R", "p2 R"), finished=False)
+    assert game.rallies[3].deviations == ("early_side_out",)
+    assert not game.rallies[3].unexplained
+    assert game.rallies[2].winner_team == "A"
+    assert calls(game)[3] == "1-0-1"
+
+
+def test_an_early_side_out_follows_the_side_out_rules():
+    game = replay_game(serves("p1 R", "p1 L", "p3 R", "p2 L"), finished=False)
+    assert game.rallies[3].deviations == ("early_side_out", "wrong_side")
+
+
+def test_handing_over_the_serve_after_winning_a_point_is_unexplained():
+    # The labeller says B won its own serve, yet A serves next. No deviation type covers it.
+    game = replay_game(serves("p1 R", "p1 L", "p3 R", "p2 R", r3={"winner": "B"}), finished=False)
     rally = game.rallies[3]
     assert rally.unexplained
     assert rally.deviations == ()
     assert not rally.fits
-    assert game.rallies[2].winner_team == "A"
 
 
 def test_positions_are_learnt_at_a_teams_first_serve():

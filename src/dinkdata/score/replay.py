@@ -19,6 +19,10 @@ next serve breaks the fewest rules. When two outcomes tie, it leaves the winner 
 labeller and lists what each choice would mean. Team positions are learnt from the serves:
 a team's first serve shows who stands on its right.
 
+A serve by the wrong team is `missed_side_out` when the serving team kept a serve it should
+have lost, and `early_side_out` when it gave up its second serve. A team that hands over the
+serve after winning a point fits no deviation type, so that rally is marked unexplained.
+
 The score decoder (M2) reuses these rules, and eval uses them to check gold files.
 """
 
@@ -98,6 +102,8 @@ class _Expected:
     whose positions aren't known yet."""
     side: Side
     number: ServerNumber
+    side_out_server: PlayerId | None = None
+    """After a loss with server 1: who would serve if the team gave up the serve early."""
 
 
 @dataclass(frozen=True)
@@ -223,9 +229,11 @@ def _expect(
         return _Expected("replay", team, serve.server, serve.side, number)
     if outcome == "won":
         return _Expected("won", team, serve.server, _FLIP[serve.side], number)
-    if number == 1:
-        return _Expected("lost_with_1", team, _PARTNER[serve.server], _FLIP[serve.side], 2)
     other = _OTHER[team]
+    if number == 1:
+        return _Expected(
+            "lost_with_1", team, _PARTNER[serve.server], _FLIP[serve.side], 2, right[other]
+        )
     return _Expected("side_out", other, right[other], "right", 1)
 
 
@@ -238,6 +246,14 @@ def _check(expected: _Expected, actual: ServeMark, previous: ServeMark | None) -
     if team_of(actual.server) != expected.team:
         if expected.context == "side_out":
             return _Check(("missed_side_out",), number=2, cost=1)
+        if expected.context == "lost_with_1":
+            # The team skipped server 2. The other team's serve follows the side-out rules.
+            other = team_of(actual.server)
+            early = _Expected("side_out", other, expected.side_out_server, "right", 1)
+            check = _check(early, actual, previous)
+            return replace(
+                check, deviations=("early_side_out", *check.deviations), cost=check.cost + 1
+            )
         cost = _UNEXPLAINED_AFTER_A_POINT if expected.context == "won" else _UNEXPLAINED
         return _Check((), number=1, unexplained=True, cost=cost)
 

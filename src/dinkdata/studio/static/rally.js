@@ -3,7 +3,8 @@
 "use strict";
 
 const DEVIATIONS = [
-  "wrong_server", "wrong_side", "extra_serve", "missed_side_out", "game_end_mismatch",
+  "wrong_server", "wrong_side", "extra_serve", "missed_side_out", "early_side_out",
+  "game_end_mismatch",
 ];
 const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
 const PLAYERS = ["p1", "p2", "p3", "p4"];
@@ -231,7 +232,7 @@ function pickerKey(event) {
   const key = event.key.toLowerCase();
   if (key === "escape" || key === "d") {
     pickerOpen = false;
-  } else if (/^[1-5]$/.test(key)) {
+  } else if (/^[1-6]$/.test(key)) {
     const rally = selectedRally();
     const type = DEVIATIONS[Number(key) - 1];
     const at = rally.deviations.indexOf(type);
