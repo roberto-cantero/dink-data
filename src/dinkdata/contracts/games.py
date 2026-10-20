@@ -25,7 +25,12 @@ from dinkdata.contracts.common import (
 )
 
 RuleDeviationType = Literal[
-    "wrong_server", "wrong_side", "extra_serve", "missed_side_out", "game_end_mismatch"
+    "wrong_server",
+    "wrong_side",
+    "extra_serve",
+    "missed_side_out",
+    "early_side_out",
+    "game_end_mismatch",
 ]
 SegmentType = Literal["game", "warmup", "drill", "idle"]
 Target = Literal[11, 15, 21]
@@ -55,6 +60,8 @@ class RuleDeviation(StrictModel):
     extra_serve: the serving team lost as server 1 and served again at the same call.
     missed_side_out: the serving team lost with server 2, or with the only server at 0-0-2,
     and kept the serve.
+    early_side_out: the serving team lost with server 1, outside 0-0-2, and handed the serve to
+    the other team, skipping server 2.
     game_end_mismatch: the players stopped at a score that doesn't end the game, or played on
     past one. Only on a game's last rally.
     """

@@ -201,7 +201,7 @@
     },
     "RuleDeviation": {
       "additionalProperties": false,
-      "description": "A rule break by the players (GLOSSARY: Rule deviation, ADR 0014).\n\nwrong_server: the right team and server number, but the other partner served.\nwrong_side: the right player served from the wrong side.\nextra_serve: the serving team lost as server 1 and served again at the same call.\nmissed_side_out: the serving team lost with server 2, or with the only server at 0-0-2,\nand kept the serve.\ngame_end_mismatch: the players stopped at a score that doesn't end the game, or played on\npast one. Only on a game's last rally.",
+      "description": "A rule break by the players (GLOSSARY: Rule deviation, ADR 0014).\n\nwrong_server: the right team and server number, but the other partner served.\nwrong_side: the right player served from the wrong side.\nextra_serve: the serving team lost as server 1 and served again at the same call.\nmissed_side_out: the serving team lost with server 2, or with the only server at 0-0-2,\nand kept the serve.\nearly_side_out: the serving team lost with server 1, outside 0-0-2, and handed the serve to\nthe other team, skipping server 2.\ngame_end_mismatch: the players stopped at a score that doesn't end the game, or played on\npast one. Only on a game's last rally.",
       "properties": {
         "type": {
           "enum": [
@@ -209,6 +209,7 @@
             "wrong_side",
             "extra_serve",
             "missed_side_out",
+            "early_side_out",
             "game_end_mismatch"
           ],
           "title": "Type",

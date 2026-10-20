@@ -642,8 +642,8 @@ normal, and handles it in four ways.
    counts. When a rule break makes a rally's outcome ambiguous from the serves alone, the
    ball-based winner decides, once it exists in M3. Until then the rally gets a low confidence.
 3. **Record and show each deviation.** Each rule break becomes a `rule_deviation` entry on its
-   rally, with a type (`wrong_server`, `missed_side_out`, `wrong_side`, `extra_serve`,
-   `game_end_mismatch`) and a confidence. The report states it plainly, for example "Team B
+   rally, with a type (`wrong_server`, `missed_side_out`, `early_side_out`, `wrong_side`,
+   `extra_serve`, `game_end_mismatch`) and a confidence. The report states it plainly, for example "Team B
    served twice at 6-4-1. The score shown counts each rally as it was played."
 4. **Follow the players at the end of a game.** We don't hear score calls, so a game ends
    when the players stop and reset. If our count says 10-8 when they stopped, the report shows

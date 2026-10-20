@@ -1,11 +1,13 @@
 """rallies.json: rally-level gold labels from the browser rally labeller."""
 
 import json
+from typing import get_args
 
 import pytest
 from pydantic import ValidationError
 
 from dinkdata.contracts.common import dump, load
+from dinkdata.contracts.games import RuleDeviation, RuleDeviationType
 from dinkdata.contracts.rallies import RallyLabels
 from tests.contracts.examples import example
 
@@ -40,6 +42,11 @@ def test_an_unknown_winner_allows_either_next_score():
     labels = example("rallies")
     rally(labels, 10)["winner_team"] = None  # the next call, 4-1-1, says team A won it
     RallyLabels.model_validate(labels)
+
+
+@pytest.mark.parametrize("kind", get_args(RuleDeviationType))
+def test_every_deviation_type_is_accepted(kind):
+    assert RuleDeviation.model_validate({"type": kind, "conf": 1.0}).type == kind
 
 
 def truncate_g1_to_8_rallies(labels: dict) -> None:
