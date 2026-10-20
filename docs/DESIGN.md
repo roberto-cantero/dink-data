@@ -4,7 +4,7 @@ The product requirements, technical design and system design for DinkData. This 
 
 | | |
 |---|---|
-| Version | 1.7 |
+| Version | 1.8 |
 | Date | 20 October 2026 |
 | Owners | Robby (`@roberto-cantero`) and Marti (`@probablynotmarti`) |
 | Prepared with | Claude Code, after a review session with Robby and review comments from Marti |
@@ -218,8 +218,9 @@ versus backhand. The owners approve any other stat first.
 ### 3.3 Highlights (Marti)
 
 A highlight reel is a short MP4 for one player, built from clips of rallies in that game.
-PickleCam already has a highlights feature, since its recordings show a highlight count.
-Appendix B asks how it works. DinkData's reels need no action from the players.
+PickleCam's own highlights are fixed 30-second clips that a command at the court creates, and
+few recordings have one. Nothing picks highlights automatically (`docs/DATA.md`). DinkData's
+reels need no action from the players.
 
 DinkData scores every rally for each player and keeps the best ones. The v1 rules are below.
 
@@ -444,15 +445,17 @@ testing, at least one per camera setup and more for low down-the-line cameras. I
 rest across cameras, court colours and game lengths, and skips recordings under 5 minutes.
 The split never changes once labels exist.
 
-`dink fetch` gets each video's download links and prefers the original upload, then the MP4,
-then the HLS stream, which it remuxes with `ffmpeg -c copy` without quality loss. It drops the
+`dink fetch` downloads each video's 1080p MP4. Where a library has no MP4, it takes the
+original upload, and otherwise remuxes the HLS stream with `ffmpeg -c copy` without quality
+loss (ADR 0017). It drops the
 audio track with `-map 0:v`. It saves every frame's timestamp with ffprobe and flags dropped
 and duplicated frames. It uploads the results to R2 and skips files already there. A scheduled
 GitHub Actions workflow runs fetch daily, so selected games are copied before PickleCam deletes
 them.
 
-Until PickleCam builds the endpoint, we develop against a recorded sample response. If the
-host fills dropped frames with duplicates, the duplicate check finds them.
+Until PickleCam builds the endpoint, we develop against a recorded sample response. Bunny's
+MP4 keeps dropped-frame gaps, and the duplicate check stays in case a camera or encoder fills
+them.
 
 In production, fetch doesn't copy videos into R2. Catalog sync puts each new video on a job
 queue, and a GPU worker reads the video from Bunny, processes it and stores only the results
@@ -816,16 +819,17 @@ still needing a second store for labels and models.
 ### 8.2 The read-only endpoint, a spec for the PickleCam backend developer
 
 Bunny Stream has one key per library, and every key can also delete videos. No Bunny key
-leaves PickleCam. Instead, the backend developer adds two read-only calls protected by a token.
+leaves PickleCam. Instead, the backend developer adds one read-only call protected by a token
+(ADR 0017).
 
 | Call | Returns |
 |---|---|
-| `GET /dinkdata/videos?since=&page=` | A paged list across libraries with `session_id`, `facility_id`, `camera`, `uploaded_at`, `length_s`, `framerate`, `width`, `height`, `size_bytes`, `expires_at`, from Bunny's List Videos call |
-| `GET /dinkdata/videos/{session_id}/links` | Short-lived `original_url`, `mp4_url` and `hls_url`, from Bunny's Get Video play data call |
+| `GET /dinkdata/recordings?since=&page=` | A paged list across facilities with `session_id`, `facility_id`, `camera_id`, `started_at`, `stopped_at`, `uploaded_at`, `expires_at`, `library_id`, `video_id` and `mp4_url`, the download link for the 1080p MP4 |
 
-The calls return no personal data, and they take about 50 to 100 lines of code on PickleCam's
-side. Until they exist we use a recorded response, or download the first games from the
-dashboard by hand.
+The call returns no personal data, and the facility dashboard already loads the same fields.
+PickleCam builds `mp4_url`, so a change to its link format or pull zone needs no change on our
+side. Frame rate, resolution and size come from the file at fetch time. Until the call exists
+we use a recorded response, or download the first games from the dashboard by hand.
 
 ### 8.3 Privacy rules
 
@@ -1014,11 +1018,11 @@ M2 and M3 each report GPU-seconds per video by stage in the eval output.
    reliably wins. Batch jobs can retry an interrupted video, so cheap interruptible GPUs are fine.
 
 **Bunny bandwidth was the second biggest line, at up to $2,000 a month.** It lands on PickleCam's
-Bunny bill. Appendix B asks PickleCam for a separate Bunny pull zone on the volume network for
-DinkData's downloads, which costs $0.005 per GB instead of $0.03, with our workers placed near
-one of its locations. It also asks whether Bunny can keep a 720p copy of each video, which would
-more than halve the bytes. M2 tests whether 720p keeps the ball tracker accurate enough, since
-the far ball is already small.
+Bunny bill. Appendix B asks PickleCam who pays it and for a separate Bunny pull zone on the
+volume network for DinkData's downloads, which costs $0.005 per GB instead of $0.03, with our
+workers placed near one of its locations. No library has a 720p version today. A 720p copy
+would more than halve the bytes, so we ask for one only if M2 shows that 720p keeps the ball
+tracker accurate enough, since the far ball is already small.
 
 **Copying every production video into R2 would add about $1,000 every month, forever.** In
 production, workers read each video from Bunny while PickleCam still has it, process it, and
@@ -1231,21 +1235,20 @@ The M2 to M4 issues are written when those milestones start.
 | Cheap GPUs get interrupted mid-run | Checkpoints at least every 30 minutes, and jobs that resume |
 | Personal data leaks into the public repo | Hashed ids, gitleaks, the rules in `CLAUDE.md` and review |
 | Production costs grow with volume, from about 4,500 videos a day | The optimizations and provider benchmark in section 11.5, a target under $0.01 a video, and cost per video reported in every eval |
-| Bunny bandwidth costs PickleCam up to $2,000 a month | A volume-network pull zone and a 720p copy, as Appendix B asks |
+| Bunny bandwidth costs PickleCam up to $2,000 a month | A volume-network pull zone, as Appendix B asks, and a 720p copy if M2 shows it is accurate enough |
 | A closed PickleCam version is wanted later | Every model and library is permissively licensed, and only the owners contribute, so PickleCam can relicense its own code |
 
 These questions are still open.
 1. When will the read-only endpoint exist?
-2. Are originals kept, and do dropped frames survive Bunny's processing?
-3. Which camera models are installed, and where?
-4. How common are stacking, rule breaks and mid-game end switches? The rally-level gold set will tell.
-5. How well do two people agree on hits and bounces? We'll measure it in M1.
-6. What reprojection error can we reach? The first 20 calibrations will tell.
-7. How do beta players receive reports and reels, through PickleCam with the video or from the owners directly?
-8. Is a 70% coverage floor right?
-9. Which stats and which kinds of clips do beta players value most?
-10. Will PickleCam set up a volume-network pull zone and a 720p copy for us, and who pays the Bunny bandwidth?
-11. Does PickleCam run on AWS or another cloud, and how fast does it expect to grow beyond 4,500 videos a day?
+2. Which camera models are installed, and where?
+3. How common are stacking, rule breaks and mid-game end switches? The rally-level gold set will tell.
+4. How well do two people agree on hits and bounces? We'll measure it in M1.
+5. What reprojection error can we reach? The first 20 calibrations will tell.
+6. How do beta players receive reports and reels, through PickleCam with the video or from the owners directly?
+7. Is a 70% coverage floor right?
+8. Which stats and which kinds of clips do beta players value most?
+9. Will PickleCam set up a volume-network pull zone for us, and who pays the Bunny bandwidth?
+10. How fast does PickleCam expect to grow beyond 4,500 videos a day?
 
 ## 16. Sources
 
@@ -1301,18 +1304,16 @@ review.
 | 27 | Full human review only in the beta, then spot checks | Reviewing 4,500 games a day would take 750 hours |
 | 28 | Labels made in a browser store time as `t`, and `frame` is filled later | A browser player reports `currentTime` but can't land on exact frames. Contracts v1 grilling |
 | 29 | Hand-downloaded games get their `video_id` from the same HMAC function as the catalog | Labels made before `dink catalog sync` exists keep their ids. Contracts v1 grilling |
+| 30 | One read-only call, a recording list with each MP4's download link, replaces the list and links calls | The dashboard already has the fields, and PickleCam owns the link format. ADR 0017 |
+| 31 | Fetch prefers Bunny's 1080p MP4 over the original upload | Only 1 of 6 libraries keeps originals, they are about 4 times larger, and the MP4 keeps dropped-frame gaps. ADR 0017 |
 
 ## Appendix B: Questions for the PickleCam backend developer
 
-1. Can you add the two read-only calls in section 8.2, with a token for us and no personal data?
-2. Do the Bunny libraries keep original uploads, so `originalUrl` returns the camera's own file?
-3. Is MP4 download enabled on all libraries, and at what resolution?
-4. Which camera models are installed, and where?
-5. Is the title format `court<N>_<sessionId>` the same at every facility?
-6. Do dropped frames survive Bunny's processing, or are they filled with duplicates?
-7. How does PickleCam's existing highlights feature work?
-8. Do PickleCam's systems run on AWS or another cloud?
-9. For the beta, could PickleCam send our report and reels with the video to players who opt in?
-10. Can you add a Bunny pull zone on the volume network for DinkData's downloads? It costs $0.005 per GB instead of $0.03 on the Asian standard network.
-11. Can Bunny keep a 720p copy of each video for us, and does encoding it cost extra?
-12. Who pays the Bunny bandwidth for DinkData's downloads, and what are your busiest hours?
+We sent these on 20 October 2026, each with a short reason. We answered the other questions
+from an earlier draft ourselves from the facility dashboard, and `docs/DATA.md` records the
+findings.
+
+1. Can you add one read-only call, protected by a token, that lists recordings across all facilities with the fields in section 8.2 and no personal data?
+2. Which camera models are installed, and at which facilities?
+3. Can you turn on MP4 fallback for the one library we found with it off?
+4. Who pays the Bunny bandwidth for our downloads, and can you add a pull zone on the volume network that only we use? It costs $0.005 per GB instead of $0.03 on the standard network in Asia.

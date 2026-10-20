@@ -1,7 +1,7 @@
 # Data, storage and privacy
 
 Where data lives, how we get it, and the rules that keep personal data out. `docs/DESIGN.md`
-sections 8 and 11 have the reasoning, and ADRs 0006 and 0007 record the decisions.
+sections 8 and 11 have the reasoning, and ADRs 0006, 0007 and 0017 record the decisions.
 
 ## Storage
 
@@ -42,15 +42,41 @@ are deleted after 30 days.
 ## Getting videos: the read-only endpoint
 
 Every Bunny Stream library key can also delete videos, so no Bunny key leaves PickleCam. The
-PickleCam backend developer exposes two read-only calls, protected by a token kept in `.env`.
+PickleCam backend developer exposes one read-only call, protected by a token kept in `.env`
+(ADR 0017).
 
 | Call | Returns |
 |---|---|
-| `GET /dinkdata/videos?since=&page=` | A paged list across libraries: `session_id`, `facility_id`, `camera`, `uploaded_at`, `length_s`, `framerate`, `width`, `height`, `size_bytes`, `expires_at` |
-| `GET /dinkdata/videos/{session_id}/links` | Short-lived `original_url`, `mp4_url` and `hls_url` |
+| `GET /dinkdata/recordings?since=&page=` | A paged list across facilities: `session_id`, `facility_id`, `camera_id`, `started_at`, `stopped_at`, `uploaded_at`, `expires_at`, `library_id`, `video_id` and `mp4_url`, the download link for the 1080p MP4 |
 
-The calls return no personal data. Until they exist, we develop against a recorded sample
-response.
+The call returns no personal data. PickleCam builds `mp4_url`, so a change to its link format
+or pull zone needs no change on our side. Until the call exists, we develop against a recorded
+sample response.
+
+We sent the spec and four questions on 20 October 2026: the call itself, the camera models,
+MP4 fallback for one library that has it off, and who pays for our download bandwidth with a
+volume-network pull zone. `docs/DESIGN.md` Appendix B has them. The answers go here.
+
+## What the dashboard showed
+
+On 20 October 2026 we answered the other backend questions ourselves from the PickleCam
+facility dashboard and Bunny's file headers, across six facilities. We read headers and each
+MP4's index only, never a whole video.
+
+| Question | Finding |
+|---|---|
+| Are original uploads kept? | At 1 of 6 libraries. The original there is about 4 times the size of the MP4 |
+| Is MP4 download on, and at what resolution? | On at 5 of 6 libraries, at 1080p only. No library has a 720p version |
+| Is the title format the same everywhere? | Yes. Every title is `court<N>_<sessionId>` |
+| Do dropped frames survive Bunny's encoding? | Yes. Bunny rounds each frame time to a 1/30 s grid but keeps the gaps. One MP4 had 7 double-length gaps, and one original had 7 drops in 25 minutes |
+| How long do videos stay? | 14 days after upload, at every facility |
+| When are the courts busiest? | From about 10 AM to 10 PM local time, most of all from 6 to 10 PM. Our fetch runs overnight |
+| What size is a game? | 0.14 to 0.43 GB for 10 to 15 minutes of 1080p MP4 |
+| Which camera models are installed? | Not visible. The dashboard shows only `court1`, `court2` and so on, and the files name only the recording software |
+
+PickleCam also has a small highlights feature. A highlight is a fixed 30-second clip that a
+command at the court creates, and 3 of 250 recordings we checked had one. Nothing picks
+highlights automatically, so DinkData's reels are new.
 
 ## Before the endpoint and R2 exist
 
@@ -62,8 +88,8 @@ response.
 3. Until the R2 bucket exists, these games live on the owners' machines and on the cloud GPU
    pod's disk, never in the repo. They move to R2 as soon as it exists.
 
-Fetch prefers the original upload, then the MP4, then remuxes the HLS stream with
-`ffmpeg -c copy`. It drops the audio track with `-map 0:v`, saves every frame's timestamp with
+Fetch downloads the 1080p MP4. Where a library has no MP4, it takes the original upload, and
+otherwise remuxes the HLS stream with `ffmpeg -c copy` (ADR 0017). It drops the audio track with `-map 0:v`, saves every frame's timestamp with
 ffprobe, flags dropped and duplicated frames, and uploads to R2. PickleCam deletes videos 14
 days after upload, so a scheduled workflow fetches selected games daily.
 
