@@ -13,6 +13,7 @@ from dinkdata.contracts.common import PlayerId
 GOLD_RALLIES = "gold-rallies"
 
 _VERSION = re.compile(r"v([1-9][0-9]*)")
+_CROP_FOLDERS: dict[str, str] = {"p1": "p1", "p2": "p2", "p3": "p3", "p4": "p4"}
 
 
 def rally_folder(labels: Path, video_id: str, labeller: str) -> Path:
@@ -20,7 +21,12 @@ def rally_folder(labels: Path, video_id: str, labeller: str) -> Path:
 
 
 def crop_folder(labels: Path, video_id: str, labeller: str, player: PlayerId) -> Path:
-    return rally_folder(labels, video_id, labeller) / "crops" / player
+    """The crops folder for one player. `player` often comes from a request, so the folder
+    name is looked up in a fixed table instead of being built from it."""
+    name = _CROP_FOLDERS.get(player)
+    if name is None:
+        raise ValueError(f"not a player id: {player!r}")
+    return rally_folder(labels, video_id, labeller) / "crops" / name
 
 
 def versions(folder: Path, suffix: str) -> list[int]:

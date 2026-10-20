@@ -1,5 +1,7 @@
 """Versioned label files never overwrite each other."""
 
+import pytest
+
 from dinkdata.studio import store
 
 
@@ -23,3 +25,16 @@ def test_versions_sort_by_number_and_ignore_other_files(tmp_path):
 def test_no_folder_means_no_versions(tmp_path):
     assert store.versions(tmp_path / "missing", ".json") == []
     assert store.latest(tmp_path / "missing", ".json") is None
+
+
+@pytest.mark.parametrize("player", ["../../etc", "p5", "", "p1/../p2"])
+def test_crop_folders_exist_only_for_the_4_players(tmp_path, player):
+    with pytest.raises(ValueError, match="player"):
+        store.crop_folder(tmp_path, "v_5eed00000000a001", "marti", player)  # type: ignore[arg-type]
+
+
+def test_crop_folders_sit_beside_the_labels(tmp_path):
+    folder = store.crop_folder(tmp_path, "v_5eed00000000a001", "marti", "p3")
+    assert (
+        folder.relative_to(tmp_path).as_posix() == "gold-rallies/v_5eed00000000a001/marti/crops/p3"
+    )
