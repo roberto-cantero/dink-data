@@ -34,6 +34,10 @@ are deleted after 30 days.
 - `video_id`, `camera_id` and `facility_id` are HMAC-SHA256 hashes of PickleCam's ids, keyed
   with a secret in `.env`. Nobody without the key can recompute or reverse them.
 - The map back to PickleCam session ids lives only in `catalog/id_map.parquet` in R2.
+- An id is a prefix (`v_`, `c_` or `f_`) and the first 16 hex characters of the HMAC. The key
+  is `DINKDATA_ID_KEY` in `.env`. For a game downloaded by hand, run
+  `uv run --env-file .env dink id video` and paste the session id at the hidden prompt. It
+  prints only the id, and `dink catalog sync` gives the same id later (ADR 0016).
 
 ## Getting videos: the read-only endpoint
 

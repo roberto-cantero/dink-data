@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/roberto-cantero/dink-data/contracts/highlights.schema.json",
+  "title": "DinkData highlight reels (highlights.json)",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$defs": {
+    "Clip": {
+      "additionalProperties": false,
+      "description": "One rally's stretch of video, with padding (DESIGN 3.3).",
+      "properties": {
+        "id": {
+          "pattern": "^g[1-9][0-9]*_p[1-4]_c[1-9][0-9]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "rally_id": {
+          "description": "g1_r1: game, then rally.",
+          "pattern": "^g[1-9][0-9]*_r[1-9][0-9]*$",
+          "title": "Rally Id",
+          "type": "string"
+        },
+        "start_t": {
+          "description": "Seconds from the first frame's timestamp.",
+          "minimum": 0,
+          "title": "Start T",
+          "type": "number"
+        },
+        "end_t": {
+          "description": "Seconds from the first frame's timestamp.",
+          "minimum": 0,
+          "title": "End T",
+          "type": "number"
+        },
+        "start_frame": {
+          "anyOf": [
+            {
+              "description": "0-based index of a decoded frame.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Frame"
+        },
+        "end_frame": {
+          "anyOf": [
+            {
+              "description": "0-based index of a decoded frame.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Frame"
+        },
+        "reasons": {
+          "items": {
+            "enum": [
+              "long_rally",
+              "serve_point",
+              "game_point",
+              "final_rally",
+              "winner",
+              "ace",
+              "dink_exchange"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Reasons",
+          "type": "array"
+        },
+        "score": {
+          "description": "The selector's score.",
+          "minimum": 0,
+          "title": "Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "rally_id",
+        "start_t",
+        "end_t",
+        "reasons",
+        "score"
+      ],
+      "title": "Clip",
+      "type": "object"
+    },
+    "Mp4": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "description": "Relative path of the rendered MP4 in the bucket.",
+          "title": "Path",
+          "type": "string"
+        },
+        "rendered_at": {
+          "format": "date-time",
+          "title": "Rendered At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "rendered_at"
+      ],
+      "title": "Mp4",
+      "type": "object"
+    },
+    "Reel": {
+      "additionalProperties": false,
+      "properties": {
+        "game_id": {
+          "description": "g1, g2, ... in time order.",
+          "pattern": "^g[1-9][0-9]*$",
+          "title": "Game Id",
+          "type": "string"
+        },
+        "player_id": {
+          "enum": [
+            "p1",
+            "p2",
+            "p3",
+            "p4"
+          ],
+          "title": "Player Id",
+          "type": "string"
+        },
+        "clips": {
+          "description": "In time order.",
+          "items": {
+            "$ref": "#/$defs/Clip"
+          },
+          "minItems": 1,
+          "title": "Clips",
+          "type": "array"
+        },
+        "mp4": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Mp4"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null until a player asks for the MP4."
+        }
+      },
+      "required": [
+        "game_id",
+        "player_id",
+        "clips",
+        "mp4"
+      ],
+      "title": "Reel",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The reels of one recording.",
+  "properties": {
+    "schema": {
+      "const": "dinkdata.highlights/v1",
+      "title": "Schema",
+      "type": "string"
+    },
+    "video_id": {
+      "description": "Opaque video id (dinkdata.contracts.ids).",
+      "pattern": "^v_[0-9a-f]{16}$",
+      "title": "Video Id",
+      "type": "string"
+    },
+    "reels": {
+      "items": {
+        "$ref": "#/$defs/Reel"
+      },
+      "title": "Reels",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "video_id",
+    "reels"
+  ],
+  "type": "object"
+}

@@ -1,0 +1,337 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/roberto-cantero/dink-data/contracts/rallies.schema.json",
+  "title": "DinkData rally-level gold labels (rallies.json)",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$defs": {
+    "FinalScore": {
+      "additionalProperties": false,
+      "properties": {
+        "A": {
+          "minimum": 0,
+          "title": "A",
+          "type": "integer"
+        },
+        "B": {
+          "minimum": 0,
+          "title": "B",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "A",
+        "B"
+      ],
+      "title": "FinalScore",
+      "type": "object"
+    },
+    "LabelGame": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "g1, g2, ... in time order.",
+          "pattern": "^g[1-9][0-9]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "start_t": {
+          "description": "Where the labeller marked the game's start.",
+          "minimum": 0,
+          "title": "Start T",
+          "type": "number"
+        },
+        "end_t": {
+          "description": "Where the game ended or the recording cut it off.",
+          "minimum": 0,
+          "title": "End T",
+          "type": "number"
+        },
+        "target": {
+          "enum": [
+            11,
+            15,
+            21
+          ],
+          "title": "Target",
+          "type": "integer"
+        },
+        "finished": {
+          "description": "false when the recording cut the game off.",
+          "title": "Finished",
+          "type": "boolean"
+        },
+        "winner_team": {
+          "anyOf": [
+            {
+              "enum": [
+                "A",
+                "B"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Winner Team"
+        },
+        "final_score": {
+          "$ref": "#/$defs/FinalScore"
+        },
+        "rallies": {
+          "items": {
+            "$ref": "#/$defs/LabelRally"
+          },
+          "title": "Rallies",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "start_t",
+        "end_t",
+        "target",
+        "finished",
+        "winner_team",
+        "final_score",
+        "rallies"
+      ],
+      "title": "LabelGame",
+      "type": "object"
+    },
+    "LabelRally": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "g1_r1: game, then rally.",
+          "pattern": "^g[1-9][0-9]*_r[1-9][0-9]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "start_t": {
+          "description": "When the serve is hit.",
+          "minimum": 0,
+          "title": "Start T",
+          "type": "number"
+        },
+        "end_t": {
+          "description": "When the ball is dead.",
+          "minimum": 0,
+          "title": "End T",
+          "type": "number"
+        },
+        "serve": {
+          "$ref": "#/$defs/Serve"
+        },
+        "score_before": {
+          "description": "Score call before the serve: serving team, receiving team, server number.",
+          "pattern": "^[0-9]+-[0-9]+-[12]$",
+          "title": "Score Before",
+          "type": "string"
+        },
+        "winner_team": {
+          "anyOf": [
+            {
+              "enum": [
+                "A",
+                "B"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null when unknown, and for a replay.",
+          "title": "Winner Team"
+        },
+        "replay": {
+          "description": "The rally is replayed: same server, side and score.",
+          "title": "Replay",
+          "type": "boolean"
+        },
+        "rule_deviations": {
+          "items": {
+            "$ref": "#/$defs/RuleDeviation"
+          },
+          "title": "Rule Deviations",
+          "type": "array"
+        },
+        "start_frame": {
+          "anyOf": [
+            {
+              "description": "0-based index of a decoded frame.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Frame"
+        },
+        "end_frame": {
+          "anyOf": [
+            {
+              "description": "0-based index of a decoded frame.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Frame"
+        }
+      },
+      "required": [
+        "id",
+        "start_t",
+        "end_t",
+        "serve",
+        "score_before",
+        "winner_team",
+        "replay",
+        "rule_deviations"
+      ],
+      "title": "LabelRally",
+      "type": "object"
+    },
+    "RuleDeviation": {
+      "additionalProperties": false,
+      "description": "A rule break by the players (GLOSSARY: Rule deviation, ADR 0014).\n\nwrong_server: the right team and server number, but the other partner served.\nwrong_side: the right player served from the wrong side.\nextra_serve: the serving team lost as server 1 and served again at the same call.\nmissed_side_out: the serving team lost with server 2, or with the only server at 0-0-2,\nand kept the serve.\nearly_side_out: the serving team lost with server 1, outside 0-0-2, and handed the serve to\nthe other team, skipping server 2.\ngame_end_mismatch: the players stopped at a score that doesn't end the game, or played on\npast one. Only on a game's last rally.",
+      "properties": {
+        "type": {
+          "enum": [
+            "wrong_server",
+            "wrong_side",
+            "extra_serve",
+            "missed_side_out",
+            "early_side_out",
+            "game_end_mismatch"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "conf": {
+          "description": "Confidence, 0 to 1. Gold labels use 1.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Conf",
+          "type": "number"
+        }
+      },
+      "required": [
+        "type",
+        "conf"
+      ],
+      "title": "RuleDeviation",
+      "type": "object"
+    },
+    "Serve": {
+      "additionalProperties": false,
+      "description": "Who served, from where, and to whom. In gold labels `conf` is 1.",
+      "properties": {
+        "server": {
+          "enum": [
+            "p1",
+            "p2",
+            "p3",
+            "p4"
+          ],
+          "title": "Server",
+          "type": "string"
+        },
+        "server_number": {
+          "description": "1 or 2, as played.",
+          "enum": [
+            1,
+            2
+          ],
+          "title": "Server Number",
+          "type": "integer"
+        },
+        "side": {
+          "description": "The side of the court the server stood on.",
+          "enum": [
+            "left",
+            "right"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "receiver": {
+          "anyOf": [
+            {
+              "enum": [
+                "p1",
+                "p2",
+                "p3",
+                "p4"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null when not visible.",
+          "title": "Receiver"
+        },
+        "conf": {
+          "description": "Confidence, 0 to 1. Gold labels use 1.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Conf",
+          "type": "number"
+        }
+      },
+      "required": [
+        "server",
+        "server_number",
+        "side",
+        "receiver",
+        "conf"
+      ],
+      "title": "Serve",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Rally-level gold for one recording, by one labeller.",
+  "properties": {
+    "schema": {
+      "const": "dinkdata.rallies/v1",
+      "title": "Schema",
+      "type": "string"
+    },
+    "video_id": {
+      "description": "Opaque video id (dinkdata.contracts.ids).",
+      "pattern": "^v_[0-9a-f]{16}$",
+      "title": "Video Id",
+      "type": "string"
+    },
+    "labeller": {
+      "description": "The labeller's short handle, as in labels/gold-rallies/{video_id}/{labeller}.",
+      "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+      "title": "Labeller",
+      "type": "string"
+    },
+    "games": {
+      "items": {
+        "$ref": "#/$defs/LabelGame"
+      },
+      "title": "Games",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "video_id",
+    "labeller",
+    "games"
+  ],
+  "type": "object"
+}

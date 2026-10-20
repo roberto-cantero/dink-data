@@ -53,7 +53,7 @@ _Avoid_: service box
 A rule break that ends the rally, such as a serve out, a volleyed return, a kitchen volley, the ball hitting a player or a foot fault.
 
 **Rule deviation**:
-A rally where the players broke the serving rules, such as the wrong partner serving or a missed side-out.
+A rally where the players broke the serving rules. The types are `wrong_server` (the other partner served), `wrong_side`, `extra_serve` (the team lost as server 1 and served again at the same call), `missed_side_out`, `early_side_out` (the team lost as server 1 and handed the serve over, skipping server 2) and `game_end_mismatch` (the players stopped at a score that doesn't end the game, or played on past one).
 _Avoid_: error (errors are shots)
 
 **Net-cord serve**:
@@ -183,6 +183,9 @@ _Avoid_: highlight video, montage
 
 **Clip**:
 One rally's stretch of video inside a reel.
+
+**Clip reason**:
+Why the selector picked a clip: `long_rally`, `serve_point`, `game_point`, `final_rally`, `winner`, `ace` or `dink_exchange`.
 
 ## Labels and evaluation
 

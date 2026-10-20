@@ -28,6 +28,8 @@ Rows marked _planned_ don't exist yet. If you couldn't run something, say so.
 | Unit tests | `make test` |
 | Full pre-PR check: lint, types, tests and pre-commit hooks | `make check` |
 | CLI | `uv run dink --help` |
+| Regenerate `contracts/*.schema.json` after changing a contract model | `uv run dink contracts export` |
+| Opaque id for a hand-downloaded game | `uv run --env-file .env dink id video` |
 | Rebuild the design PDF after editing `docs/DESIGN.md` | `make design-pdf` |
 | Run the pipeline on a recording | _planned_ `uv run dink run <video_id>` |
 | Accuracy eval | _planned_ `uv run dink eval --run <run_id> --split test` |

@@ -4,8 +4,8 @@ The product requirements, technical design and system design for DinkData. This 
 
 | | |
 |---|---|
-| Version | 1.6 |
-| Date | 19 October 2026 |
+| Version | 1.7 |
+| Date | 20 October 2026 |
 | Owners | Robby (`@roberto-cantero`) and Marti (`@probablynotmarti`) |
 | Prepared with | Claude Code, after a review session with Robby and review comments from Marti |
 | Replaces | `docs/DinkDataRebuildPlan.pdf` and every doc based on the `legacy/` prototype |
@@ -642,8 +642,8 @@ normal, and handles it in four ways.
    counts. When a rule break makes a rally's outcome ambiguous from the serves alone, the
    ball-based winner decides, once it exists in M3. Until then the rally gets a low confidence.
 3. **Record and show each deviation.** Each rule break becomes a `rule_deviation` entry on its
-   rally, with a type (`wrong_server`, `missed_side_out`, `wrong_side`, `extra_serve`,
-   `game_end_mismatch`) and a confidence. The report states it plainly, for example "Team B
+   rally, with a type (`wrong_server`, `missed_side_out`, `early_side_out`, `wrong_side`,
+   `extra_serve`, `game_end_mismatch`) and a confidence. The report states it plainly, for example "Team B
    served twice at 6-4-1. The score shown counts each rally as it was played."
 4. **Follow the players at the end of a game.** We don't hear score calls, so a game ends
    when the players stop and reset. If our count says 10-8 when they stopped, the report shows
@@ -722,7 +722,8 @@ are generated from them, and CI fails if the committed schemas differ from fresh
 ones. Parquet tables have pyarrow schemas. Every stage validates what it reads and writes at
 run time. Each file has a versioned `schema` name, and a breaking change needs both owners.
 Every detection has `conf`. Times are given as `frame`, for lookups, and `t`, in seconds from
-the timestamps. Court positions are in feet, and `null` means not visible. No contract holds
+the first frame's timestamp. Files written in a browser, `rallies.json` and the clip times in
+`highlights.json`, store `t` and leave `frame` null until a later step fills it. Court positions are in feet, and `null` means not visible. No contract holds
 personal data.
 
 | File | Contents |
@@ -731,12 +732,12 @@ personal data.
 | `{video_id}.frames.parquet` | `frame`, `t`, `dropped_before`, `duplicate` |
 | `camera.json` | Camera id and model, image size, intrinsics, distortion, rotation, translation, reprojection error, visible region, overlay masks, source, version |
 | `ball.parquet` | `frame`, `t`, `x`, `y`, `visible`, `conf`, `interpolated`, the top 3 `peaks` |
-| `players.parquet` | `frame`, `t`, `player_id`, `track_id`, `team`, `box`, 17 `keypoints`, `foot_court`, `estimated_foot`, `conf` |
+| `players.parquet` | One row per frame per track: `frame`, `t`, `player_id`, `track_id`, `team`, `box`, 17 `keypoints`, `foot_court`, `estimated_foot`, `conf`, `foot_conf`. Tracks that aren't players have a null `player_id` |
 | `candidates.parquet` | For each candidate, `frame`, `t`, event probabilities and hitter probabilities |
 | `events.json` | The game log, shown below |
 | `stats.json` | For each player and stat, value, num, den, conf, shipped and reason |
-| `highlights.json` | For each player, the clips with start, end, reason and score, and the reel file |
-| `rallies.json` | Rally-level gold labels: games, and for each rally the server, side, receiver, winner, score as played and any rule deviation |
+| `highlights.json` | One reel per game per player: the clips with rally, start, end, reasons and score, and the MP4 once rendered |
+| `rallies.json` | Rally-level gold labels: games, and for each rally the server, side, receiver, winner, score as played and any rule deviation. Times are `t` only, because the browser labeller can't know frames |
 | `ball_labels.parquet` | Ball clicks: `frame`, `t`, `x`, `y`, `visible`, `clicked`, `split` |
 | `patch.json` | Corrections to one pipeline run, with its `run_id`. Add, change and delete operations by id, with author and time. The patched `events.json` is saved next to it |
 
@@ -745,12 +746,12 @@ personal data.
  "video": {"id": "v_9c1e…", "fps_nominal": 30, "frames": "videos/v_9c1e….frames.parquet", "dropped_frames": 14},
  "camera": {"id": "c_41ab…", "version": 2},
  "players": [{"id": "p1", "team": "A", "label": "Player 1", "crop": "crops/p1.jpg"}],
- "segments": [{"type": "warmup", "start_frame": 0, "end_frame": 5400, "conf": 0.9}],
+ "segments": [{"type": "warmup", "start_frame": 0, "end_frame": 5400, "start_t": 0.0, "end_t": 180.43, "conf": 0.9}],
  "games": [{"id": "g1", "format": "sideout", "target": 11, "finished": true,
    "winner_team": "A", "final_score": {"A": 11, "B": 7},
    "rallies": [{"id": "g1_r1", "start_frame": 5520, "end_frame": 5910, "start_t": 184.47, "end_t": 197.47,
      "serve": {"server": "p1", "server_number": 2, "side": "right", "receiver": "p3", "conf": 0.96},
-     "score_before": "0-0-2", "winner_team": "A", "winner_source": "serve_state",
+     "score_before": "0-0-2", "winner_team": "A", "winner_source": "serve_state", "replay": false,
      "end_reason": null, "rule_deviations": [], "reviewed": false, "conf": 0.94,
      "events": [
        {"id": "e1", "type": "hit", "frame": 5531, "t": 184.83, "player": "p1", "shot_index": 1, "volley": false, "conf": 0.97},
@@ -1298,6 +1299,8 @@ review.
 | 25 | Production reads videos from Bunny and stores only results | Copying videos would add about $1,000 a month every month |
 | 26 | Reels are clip lists played over PickleCam's video, with MP4s on request | Storing every reel would add about 10 TB a month |
 | 27 | Full human review only in the beta, then spot checks | Reviewing 4,500 games a day would take 750 hours |
+| 28 | Labels made in a browser store time as `t`, and `frame` is filled later | A browser player reports `currentTime` but can't land on exact frames. Contracts v1 grilling |
+| 29 | Hand-downloaded games get their `video_id` from the same HMAC function as the catalog | Labels made before `dink catalog sync` exists keep their ids. Contracts v1 grilling |
 
 ## Appendix B: Questions for the PickleCam backend developer
 

@@ -1,0 +1,3 @@
+# Labels made in a browser store time, and frames are filled later
+
+The rally labeller and the reel web player run in a browser, which reports `video.currentTime` but can't land on exact frames. `rallies.json` and the clip times in `highlights.json` therefore store `t`, in seconds from the first frame's timestamp, and leave `start_frame` and `end_frame` null. A later step fills the frames by matching each `t` to the nearest frame in the video's frames.parquet. `t` has one definition for every contract, `(pts - first_pts) * time_base`, in `dinkdata.contracts.common`. Pipeline outputs such as `events.json` still require both `frame` and `t`.

@@ -1,0 +1,382 @@
+{
+  "schema": "dinkdata.rallies/v1",
+  "video_id": "v_5eed00000000a001",
+  "labeller": "marti",
+  "games": [
+    {
+      "id": "g1",
+      "start_t": 121.03,
+      "end_t": 598.76,
+      "target": 11,
+      "finished": true,
+      "winner_team": "A",
+      "final_score": {
+        "A": 11,
+        "B": 1
+      },
+      "rallies": [
+        {
+          "id": "g1_r1",
+          "start_t": 125.37,
+          "end_t": 135.57,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p1",
+            "server_number": 2,
+            "side": "right",
+            "receiver": "p3",
+            "conf": 1.0
+          },
+          "score_before": "0-0-2",
+          "winner_team": "A",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r2",
+          "start_t": 151.28,
+          "end_t": 166.22,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p1",
+            "server_number": 2,
+            "side": "left",
+            "receiver": "p4",
+            "conf": 1.0
+          },
+          "score_before": "1-0-2",
+          "winner_team": "B",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r3",
+          "start_t": 184.23,
+          "end_t": 190.7,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p3",
+            "server_number": 1,
+            "side": "right",
+            "receiver": "p2",
+            "conf": 1.0
+          },
+          "score_before": "0-1-1",
+          "winner_team": "B",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r4",
+          "start_t": 211.01,
+          "end_t": 214.48,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p3",
+            "server_number": 1,
+            "side": "left",
+            "receiver": "p1",
+            "conf": 1.0
+          },
+          "score_before": "1-1-1",
+          "winner_team": null,
+          "replay": true,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r5",
+          "start_t": 227.89,
+          "end_t": 250.29,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p3",
+            "server_number": 1,
+            "side": "left",
+            "receiver": "p1",
+            "conf": 1.0
+          },
+          "score_before": "1-1-1",
+          "winner_team": "A",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r6",
+          "start_t": 266.0,
+          "end_t": 277.04,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p4",
+            "server_number": 2,
+            "side": "right",
+            "receiver": "p2",
+            "conf": 1.0
+          },
+          "score_before": "1-1-2",
+          "winner_team": "A",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r7",
+          "start_t": 295.05,
+          "end_t": 303.92,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p2",
+            "server_number": 1,
+            "side": "right",
+            "receiver": "p4",
+            "conf": 1.0
+          },
+          "score_before": "1-1-1",
+          "winner_team": "A",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r8",
+          "start_t": 324.23,
+          "end_t": 337.9,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p2",
+            "server_number": 1,
+            "side": "left",
+            "receiver": "p3",
+            "conf": 1.0
+          },
+          "score_before": "2-1-1",
+          "winner_team": "B",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r9",
+          "start_t": 351.31,
+          "end_t": 368.62,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p2",
+            "server_number": 1,
+            "side": "left",
+            "receiver": "p3",
+            "conf": 1.0
+          },
+          "score_before": "2-1-1",
+          "winner_team": "A",
+          "replay": false,
+          "rule_deviations": [
+            {
+              "type": "extra_serve",
+              "conf": 1.0
+            }
+          ]
+        },
+        {
+          "id": "g1_r10",
+          "start_t": 384.33,
+          "end_t": 394.53,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p2",
+            "server_number": 1,
+            "side": "right",
+            "receiver": "p4",
+            "conf": 1.0
+          },
+          "score_before": "3-1-1",
+          "winner_team": "A",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r11",
+          "start_t": 412.54,
+          "end_t": 427.48,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p2",
+            "server_number": 1,
+            "side": "left",
+            "receiver": "p3",
+            "conf": 1.0
+          },
+          "score_before": "4-1-1",
+          "winner_team": "A",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r12",
+          "start_t": 447.79,
+          "end_t": 454.26,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p2",
+            "server_number": 1,
+            "side": "right",
+            "receiver": "p4",
+            "conf": 1.0
+          },
+          "score_before": "5-1-1",
+          "winner_team": "A",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r13",
+          "start_t": 467.67,
+          "end_t": 471.14,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p2",
+            "server_number": 1,
+            "side": "left",
+            "receiver": "p3",
+            "conf": 1.0
+          },
+          "score_before": "6-1-1",
+          "winner_team": "A",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r14",
+          "start_t": 486.85,
+          "end_t": 509.25,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p2",
+            "server_number": 1,
+            "side": "right",
+            "receiver": "p4",
+            "conf": 1.0
+          },
+          "score_before": "7-1-1",
+          "winner_team": "A",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r15",
+          "start_t": 527.26,
+          "end_t": 538.3,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p2",
+            "server_number": 1,
+            "side": "left",
+            "receiver": "p3",
+            "conf": 1.0
+          },
+          "score_before": "8-1-1",
+          "winner_team": "A",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r16",
+          "start_t": 558.61,
+          "end_t": 567.48,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p2",
+            "server_number": 1,
+            "side": "right",
+            "receiver": "p4",
+            "conf": 1.0
+          },
+          "score_before": "9-1-1",
+          "winner_team": "A",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g1_r17",
+          "start_t": 580.89,
+          "end_t": 594.56,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p2",
+            "server_number": 1,
+            "side": "left",
+            "receiver": "p3",
+            "conf": 1.0
+          },
+          "score_before": "10-1-1",
+          "winner_team": "A",
+          "replay": false,
+          "rule_deviations": []
+        }
+      ]
+    },
+    {
+      "id": "g2",
+      "start_t": 1798.6,
+      "end_t": 1845.37,
+      "target": 11,
+      "finished": false,
+      "winner_team": null,
+      "final_score": {
+        "A": 0,
+        "B": 1
+      },
+      "rallies": [
+        {
+          "id": "g2_r1",
+          "start_t": 1804.52,
+          "end_t": 1814.72,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p3",
+            "server_number": 2,
+            "side": "right",
+            "receiver": "p1",
+            "conf": 1.0
+          },
+          "score_before": "0-0-2",
+          "winner_team": "B",
+          "replay": false,
+          "rule_deviations": []
+        },
+        {
+          "id": "g2_r2",
+          "start_t": 1830.43,
+          "end_t": 1845.37,
+          "start_frame": null,
+          "end_frame": null,
+          "serve": {
+            "server": "p3",
+            "server_number": 2,
+            "side": "left",
+            "receiver": "p2",
+            "conf": 1.0
+          },
+          "score_before": "1-0-2",
+          "winner_team": null,
+          "replay": false,
+          "rule_deviations": []
+        }
+      ]
+    }
+  ]
+}

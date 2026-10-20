@@ -1,207 +1,796 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/roberto-cantero/dink-data/contracts/events.schema.json",
-  "title": "DinkData event log v1 (events.json)",
-  "description": "One game: who played, and every rally with its hits and bounces. Made by pipeline/events (Partner B) with Partner A's bounces; read by stats/ and later the app. Stat definitions: docs/STATS.md. Court coordinates: docs/COURT.md. Rules JSON Schema can't express are listed under $comment.",
-  "$comment": "Also required, checked in code: player ids are unique; rally and event ids are unique in the file; every `server` and hit `player` is a listed player id; within a rally, events are sorted by `t` and every `t` is between `start_frame` and `end_frame`; rallies are sorted by `start_frame` and don't overlap. Human corrections are stored as a separate patch file that refers to rally and event ids, never by editing this file.",
-  "type": "object",
-  "required": ["schema", "video", "court", "players", "rallies"],
-  "additionalProperties": false,
-  "properties": {
-    "schema": {
-      "description": "Format and version of this file. A breaking change bumps the version.",
-      "const": "dinkdata.events/v1"
-    },
-    "video": {
-      "type": "object",
-      "required": ["id", "fps", "width", "height"],
+  "title": "DinkData game log (events.json)",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$defs": {
+    "Bounce": {
       "additionalProperties": false,
       "properties": {
         "id": {
-          "description": "Opaque video id. Never a player name, location or original file name.",
-          "type": "string",
-          "minLength": 1
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
         },
-        "fps": { "type": "number", "exclusiveMinimum": 0 },
-        "width": { "type": "integer", "minimum": 1 },
-        "height": { "type": "integer", "minimum": 1 }
-      }
-    },
-    "court": {
-      "description": "Which calibration produced the court positions. The homography itself lives in court.json.",
-      "type": "object",
-      "required": ["units", "source"],
-      "additionalProperties": false,
-      "properties": {
-        "units": { "const": "ft" },
-        "source": { "enum": ["auto", "manual"] },
-        "camera_id": {
-          "description": "The camera_id of the court.json used.",
-          "type": "string",
-          "minLength": 1
-        }
-      }
-    },
-    "players": {
-      "description": "Everyone on court: 4 for doubles, 2 for singles.",
-      "type": "array",
-      "minItems": 2,
-      "maxItems": 4,
-      "items": { "$ref": "#/$defs/player" }
-    },
-    "rallies": {
-      "type": "array",
-      "items": { "$ref": "#/$defs/rally" }
-    },
-    "tracks": {
-      "description": "Where the per-frame tracks for this video are stored (URIs or paths).",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "ball": { "type": "string", "minLength": 1 },
-        "players": { "type": "string", "minLength": 1 }
-      }
-    }
-  },
-  "$defs": {
-    "id": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9_]*$"
-    },
-    "player_id": {
-      "type": "string",
-      "pattern": "^p[0-9]+$"
-    },
-    "team": { "enum": ["A", "B"] },
-    "frame": {
-      "description": "Frame index in the video, from 0.",
-      "type": "integer",
-      "minimum": 0
-    },
-    "conf": {
-      "description": "Model confidence, 0 to 1. Human-entered events use 1.",
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1
-    },
-    "player": {
-      "type": "object",
-      "required": ["id", "team", "label", "track_ids"],
-      "additionalProperties": false,
-      "properties": {
-        "id": { "$ref": "#/$defs/player_id" },
-        "team": { "$ref": "#/$defs/team" },
-        "label": {
-          "description": "Display name. Generic ('Player 1') unless the player has agreed to more.",
-          "type": "string",
-          "minLength": 1
+        "type": {
+          "const": "bounce",
+          "title": "Type",
+          "type": "string"
         },
-        "track_ids": {
-          "description": "Tracker ids in players.parquet that belong to this player.",
-          "type": "array",
-          "items": { "type": "integer", "minimum": 0 },
-          "uniqueItems": true
+        "frame": {
+          "description": "0-based index of a decoded frame.",
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "t": {
+          "description": "Seconds from the first frame's timestamp.",
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        },
+        "image_xy": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Pixels. null when out of frame.",
+          "title": "Image Xy"
+        },
+        "court_xy": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Feet (docs/COURT.md). null when not visible.",
+          "title": "Court Xy"
+        },
+        "in": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null when not visible.",
+          "title": "In"
+        },
+        "close_call": {
+          "title": "Close Call",
+          "type": "boolean"
+        },
+        "conf": {
+          "description": "Confidence, 0 to 1. Gold labels use 1.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Conf",
+          "type": "number"
         }
-      }
-    },
-    "rally": {
-      "type": "object",
+      },
       "required": [
         "id",
-        "start_frame",
-        "end_frame",
-        "server",
-        "server_number",
-        "score_before",
-        "winner_team",
-        "end_reason",
-        "reviewed",
-        "events"
+        "type",
+        "frame",
+        "t",
+        "image_xy",
+        "court_xy",
+        "in",
+        "close_call",
+        "conf"
       ],
+      "title": "Bounce",
+      "type": "object"
+    },
+    "Camera": {
       "additionalProperties": false,
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "start_frame": { "$ref": "#/$defs/frame" },
-        "end_frame": { "$ref": "#/$defs/frame" },
-        "server": { "$ref": "#/$defs/player_id" },
-        "server_number": {
-          "description": "1 or 2 in doubles. Singles always uses 1.",
-          "enum": [1, 2]
+        "id": {
+          "description": "Opaque camera id (dinkdata.contracts.ids).",
+          "pattern": "^c_[0-9a-f]{16}$",
+          "title": "Id",
+          "type": "string"
         },
-        "score_before": {
-          "description": "Score called before the serve: serving-team-receiving-team-server, e.g. '4-3-2'. Singles omits the server number: '4-3'.",
-          "type": "string",
-          "pattern": "^[0-9]+-[0-9]+(-[12])?$"
+        "version": {
+          "description": "Calibration version in cameras/{id}/v{n}/.",
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "Camera",
+      "type": "object"
+    },
+    "FinalScore": {
+      "additionalProperties": false,
+      "properties": {
+        "A": {
+          "minimum": 0,
+          "title": "A",
+          "type": "integer"
+        },
+        "B": {
+          "minimum": 0,
+          "title": "B",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "A",
+        "B"
+      ],
+      "title": "FinalScore",
+      "type": "object"
+    },
+    "Game": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "g1, g2, ... in time order.",
+          "pattern": "^g[1-9][0-9]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "format": {
+          "const": "sideout",
+          "title": "Format",
+          "type": "string"
+        },
+        "target": {
+          "enum": [
+            11,
+            15,
+            21
+          ],
+          "title": "Target",
+          "type": "integer"
+        },
+        "finished": {
+          "description": "false when the recording cut the game off.",
+          "title": "Finished",
+          "type": "boolean"
         },
         "winner_team": {
-          "description": "Team that won the rally. null when the pipeline can't tell; review fills it in.",
-          "oneOf": [{ "$ref": "#/$defs/team" }, { "type": "null" }]
+          "anyOf": [
+            {
+              "enum": [
+                "A",
+                "B"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Winner Team"
+        },
+        "final_score": {
+          "$ref": "#/$defs/FinalScore"
+        },
+        "rallies": {
+          "items": {
+            "$ref": "#/$defs/Rally"
+          },
+          "title": "Rallies",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "format",
+        "target",
+        "finished",
+        "winner_team",
+        "final_score",
+        "rallies"
+      ],
+      "title": "Game",
+      "type": "object"
+    },
+    "Hit": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "hit",
+          "title": "Type",
+          "type": "string"
+        },
+        "frame": {
+          "description": "0-based index of a decoded frame.",
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "t": {
+          "description": "Seconds from the first frame's timestamp.",
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        },
+        "player": {
+          "anyOf": [
+            {
+              "enum": [
+                "p1",
+                "p2",
+                "p3",
+                "p4"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null when the hitter is unknown.",
+          "title": "Player"
+        },
+        "shot_index": {
+          "description": "1 is the serve, 2 the return.",
+          "minimum": 1,
+          "title": "Shot Index",
+          "type": "integer"
+        },
+        "volley": {
+          "title": "Volley",
+          "type": "boolean"
+        },
+        "conf": {
+          "description": "Confidence, 0 to 1. Gold labels use 1.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Conf",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "frame",
+        "t",
+        "player",
+        "shot_index",
+        "volley",
+        "conf"
+      ],
+      "title": "Hit",
+      "type": "object"
+    },
+    "Net": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "net",
+          "title": "Type",
+          "type": "string"
+        },
+        "frame": {
+          "description": "0-based index of a decoded frame.",
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "t": {
+          "description": "Seconds from the first frame's timestamp.",
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        },
+        "conf": {
+          "description": "Confidence, 0 to 1. Gold labels use 1.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Conf",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "frame",
+        "t",
+        "conf"
+      ],
+      "title": "Net",
+      "type": "object"
+    },
+    "Player": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "enum": [
+            "p1",
+            "p2",
+            "p3",
+            "p4"
+          ],
+          "title": "Id",
+          "type": "string"
+        },
+        "team": {
+          "enum": [
+            "A",
+            "B"
+          ],
+          "title": "Team",
+          "type": "string"
+        },
+        "label": {
+          "description": "Generic, such as 'Player 1'.",
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "crop": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Path of the photo crop, or null if none.",
+          "title": "Crop"
+        }
+      },
+      "required": [
+        "id",
+        "team",
+        "label",
+        "crop"
+      ],
+      "title": "Player",
+      "type": "object"
+    },
+    "Rally": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "g1_r1: game, then rally.",
+          "pattern": "^g[1-9][0-9]*_r[1-9][0-9]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "start_t": {
+          "description": "When the serve is hit.",
+          "minimum": 0,
+          "title": "Start T",
+          "type": "number"
+        },
+        "end_t": {
+          "description": "When the ball is dead.",
+          "minimum": 0,
+          "title": "End T",
+          "type": "number"
+        },
+        "serve": {
+          "$ref": "#/$defs/Serve"
+        },
+        "score_before": {
+          "description": "Score call before the serve: serving team, receiving team, server number.",
+          "pattern": "^[0-9]+-[0-9]+-[12]$",
+          "title": "Score Before",
+          "type": "string"
+        },
+        "winner_team": {
+          "anyOf": [
+            {
+              "enum": [
+                "A",
+                "B"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null when unknown, and for a replay.",
+          "title": "Winner Team"
+        },
+        "replay": {
+          "description": "The rally is replayed: same server, side and score.",
+          "title": "Replay",
+          "type": "boolean"
+        },
+        "rule_deviations": {
+          "items": {
+            "$ref": "#/$defs/RuleDeviation"
+          },
+          "title": "Rule Deviations",
+          "type": "array"
+        },
+        "start_frame": {
+          "description": "Frame of the serve.",
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "end_frame": {
+          "description": "Frame when the ball is dead.",
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "winner_source": {
+          "anyOf": [
+            {
+              "enum": [
+                "serve_state",
+                "ball",
+                "label"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null when winner_team is null.",
+          "title": "Winner Source"
         },
         "end_reason": {
-          "description": "Why the ball died. net: last shot didn't cross the net. out: first bounce after the last shot was out. double_bounce: the ball bounced twice on one side. unreturned: a player touched it but didn't get it back over. fault: any other rule fault (e.g. two-bounce rule, kitchen volley). null when unknown.",
-          "enum": ["net", "out", "double_bounce", "unreturned", "fault", null]
+          "anyOf": [
+            {
+              "enum": [
+                "net",
+                "out",
+                "double_bounce",
+                "unreturned",
+                "fault",
+                "unexplained"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null when unknown.",
+          "title": "End Reason"
         },
         "reviewed": {
           "description": "true once a person has checked this rally.",
+          "title": "Reviewed",
           "type": "boolean"
+        },
+        "conf": {
+          "description": "Confidence, 0 to 1. Gold labels use 1.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Conf",
+          "type": "number"
         },
         "events": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/event" }
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "bounce": "#/$defs/Bounce",
+                "hit": "#/$defs/Hit",
+                "net": "#/$defs/Net"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/Hit"
+              },
+              {
+                "$ref": "#/$defs/Bounce"
+              },
+              {
+                "$ref": "#/$defs/Net"
+              }
+            ]
+          },
+          "title": "Events",
+          "type": "array"
         }
-      }
+      },
+      "required": [
+        "id",
+        "start_t",
+        "end_t",
+        "serve",
+        "score_before",
+        "winner_team",
+        "replay",
+        "rule_deviations",
+        "start_frame",
+        "end_frame",
+        "winner_source",
+        "end_reason",
+        "reviewed",
+        "conf",
+        "events"
+      ],
+      "title": "Rally",
+      "type": "object"
     },
-    "event": {
-      "oneOf": [{ "$ref": "#/$defs/hit" }, { "$ref": "#/$defs/bounce" }]
+    "RuleDeviation": {
+      "additionalProperties": false,
+      "description": "A rule break by the players (GLOSSARY: Rule deviation, ADR 0014).\n\nwrong_server: the right team and server number, but the other partner served.\nwrong_side: the right player served from the wrong side.\nextra_serve: the serving team lost as server 1 and served again at the same call.\nmissed_side_out: the serving team lost with server 2, or with the only server at 0-0-2,\nand kept the serve.\nearly_side_out: the serving team lost with server 1, outside 0-0-2, and handed the serve to\nthe other team, skipping server 2.\ngame_end_mismatch: the players stopped at a score that doesn't end the game, or played on\npast one. Only on a game's last rally.",
+      "properties": {
+        "type": {
+          "enum": [
+            "wrong_server",
+            "wrong_side",
+            "extra_serve",
+            "missed_side_out",
+            "early_side_out",
+            "game_end_mismatch"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "conf": {
+          "description": "Confidence, 0 to 1. Gold labels use 1.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Conf",
+          "type": "number"
+        }
+      },
+      "required": [
+        "type",
+        "conf"
+      ],
+      "title": "RuleDeviation",
+      "type": "object"
     },
-    "hit": {
-      "type": "object",
-      "required": ["id", "t", "type", "player", "shot", "volley", "conf"],
+    "Segment": {
+      "additionalProperties": false,
+      "description": "A stretch of the recording with one game mode.",
+      "properties": {
+        "type": {
+          "enum": [
+            "game",
+            "warmup",
+            "drill",
+            "idle"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "start_frame": {
+          "description": "0-based index of a decoded frame.",
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "end_frame": {
+          "description": "0-based index of a decoded frame.",
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "start_t": {
+          "description": "Seconds from the first frame's timestamp.",
+          "minimum": 0,
+          "title": "Start T",
+          "type": "number"
+        },
+        "end_t": {
+          "description": "Seconds from the first frame's timestamp.",
+          "minimum": 0,
+          "title": "End T",
+          "type": "number"
+        },
+        "conf": {
+          "description": "Confidence, 0 to 1. Gold labels use 1.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Conf",
+          "type": "number"
+        }
+      },
+      "required": [
+        "type",
+        "start_frame",
+        "end_frame",
+        "start_t",
+        "end_t",
+        "conf"
+      ],
+      "title": "Segment",
+      "type": "object"
+    },
+    "Serve": {
+      "additionalProperties": false,
+      "description": "Who served, from where, and to whom. In gold labels `conf` is 1.",
+      "properties": {
+        "server": {
+          "enum": [
+            "p1",
+            "p2",
+            "p3",
+            "p4"
+          ],
+          "title": "Server",
+          "type": "string"
+        },
+        "server_number": {
+          "description": "1 or 2, as played.",
+          "enum": [
+            1,
+            2
+          ],
+          "title": "Server Number",
+          "type": "integer"
+        },
+        "side": {
+          "description": "The side of the court the server stood on.",
+          "enum": [
+            "left",
+            "right"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "receiver": {
+          "anyOf": [
+            {
+              "enum": [
+                "p1",
+                "p2",
+                "p3",
+                "p4"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null when not visible.",
+          "title": "Receiver"
+        },
+        "conf": {
+          "description": "Confidence, 0 to 1. Gold labels use 1.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Conf",
+          "type": "number"
+        }
+      },
+      "required": [
+        "server",
+        "server_number",
+        "side",
+        "receiver",
+        "conf"
+      ],
+      "title": "Serve",
+      "type": "object"
+    },
+    "Video": {
       "additionalProperties": false,
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "t": { "$ref": "#/$defs/frame" },
-        "type": { "const": "hit" },
-        "player": {
-          "description": "Who hit it. null when the hit is detected but not attributed.",
-          "oneOf": [{ "$ref": "#/$defs/player_id" }, { "type": "null" }]
+        "id": {
+          "description": "Opaque video id (dinkdata.contracts.ids).",
+          "pattern": "^v_[0-9a-f]{16}$",
+          "title": "Id",
+          "type": "string"
         },
-        "shot": {
-          "description": "serve and return are shots 1 and 2. Later shots are classified as drop, drive, lob, dink or speedup (docs/STATS.md), or other. null until the shot classifier exists.",
-          "enum": ["serve", "return", "drop", "drive", "lob", "dink", "speedup", "other", null]
+        "fps_nominal": {
+          "description": "The container's frame rate. Never use it for time.",
+          "exclusiveMinimum": 0,
+          "title": "Fps Nominal",
+          "type": "number"
         },
-        "volley": {
-          "description": "true if hit before the ball bounced on the hitter's side.",
-          "type": "boolean"
+        "frames": {
+          "description": "Path of the video's frames.parquet.",
+          "minLength": 1,
+          "title": "Frames",
+          "type": "string"
         },
-        "conf": { "$ref": "#/$defs/conf" }
-      }
-    },
-    "bounce": {
-      "type": "object",
-      "required": ["id", "t", "type", "court_xy", "in", "close_call", "conf"],
-      "additionalProperties": false,
-      "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "t": { "$ref": "#/$defs/frame" },
-        "type": { "const": "bounce" },
-        "court_xy": {
-          "description": "Bounce position in court feet (docs/COURT.md). Can be outside 0-20 x 0-44 for out balls.",
-          "type": "array",
-          "prefixItems": [{ "type": "number" }, { "type": "number" }],
-          "items": false,
-          "minItems": 2
-        },
-        "in": {
-          "description": "Inside the court, or for a serve's first bounce, inside the correct service court. A serve on the kitchen line is not in.",
-          "type": "boolean"
-        },
-        "close_call": {
-          "description": "Within the close-call distance of a line (docs/COURT.md > Zones). Goes to review instead of being trusted.",
-          "type": "boolean"
-        },
-        "conf": { "$ref": "#/$defs/conf" }
-      }
+        "dropped_frames": {
+          "minimum": 0,
+          "title": "Dropped Frames",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "fps_nominal",
+        "frames",
+        "dropped_frames"
+      ],
+      "title": "Video",
+      "type": "object"
     }
-  }
+  },
+  "additionalProperties": false,
+  "description": "The game log of one recording. Rules JSON Schema can't express are checked in code.",
+  "properties": {
+    "schema": {
+      "const": "dinkdata.events/v1",
+      "title": "Schema",
+      "type": "string"
+    },
+    "video": {
+      "$ref": "#/$defs/Video"
+    },
+    "camera": {
+      "$ref": "#/$defs/Camera"
+    },
+    "players": {
+      "items": {
+        "$ref": "#/$defs/Player"
+      },
+      "maxItems": 4,
+      "minItems": 4,
+      "title": "Players",
+      "type": "array"
+    },
+    "segments": {
+      "items": {
+        "$ref": "#/$defs/Segment"
+      },
+      "title": "Segments",
+      "type": "array"
+    },
+    "games": {
+      "items": {
+        "$ref": "#/$defs/Game"
+      },
+      "title": "Games",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "video",
+    "camera",
+    "players",
+    "segments",
+    "games"
+  ],
+  "type": "object"
 }

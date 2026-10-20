@@ -1,0 +1,161 @@
+{
+  "schema": "dinkdata.highlights/v1",
+  "video_id": "v_5eed00000000a001",
+  "reels": [
+    {
+      "game_id": "g1",
+      "player_id": "p1",
+      "clips": [
+        {
+          "id": "g1_p1_c1",
+          "rally_id": "g1_r1",
+          "start_t": 124.37,
+          "end_t": 137.07,
+          "start_frame": null,
+          "end_frame": null,
+          "reasons": [
+            "serve_point"
+          ],
+          "score": 1.0
+        },
+        {
+          "id": "g1_p1_c2",
+          "rally_id": "g1_r5",
+          "start_t": 226.89,
+          "end_t": 251.79,
+          "start_frame": null,
+          "end_frame": null,
+          "reasons": [
+            "long_rally"
+          ],
+          "score": 1.8
+        },
+        {
+          "id": "g1_p1_c3",
+          "rally_id": "g1_r17",
+          "start_t": 579.89,
+          "end_t": 596.06,
+          "start_frame": null,
+          "end_frame": null,
+          "reasons": [
+            "game_point",
+            "final_rally"
+          ],
+          "score": 2.0
+        }
+      ],
+      "mp4": {
+        "path": "runs/run_synthetic/v_5eed00000000a001/highlights/g1_p1.mp4",
+        "rendered_at": "2026-10-20T09:15:00Z"
+      }
+    },
+    {
+      "game_id": "g1",
+      "player_id": "p2",
+      "clips": [
+        {
+          "id": "g1_p2_c1",
+          "rally_id": "g1_r9",
+          "start_t": 350.31,
+          "end_t": 370.12,
+          "start_frame": null,
+          "end_frame": null,
+          "reasons": [
+            "serve_point"
+          ],
+          "score": 1.0
+        },
+        {
+          "id": "g1_p2_c2",
+          "rally_id": "g1_r14",
+          "start_t": 485.85,
+          "end_t": 510.75,
+          "start_frame": null,
+          "end_frame": null,
+          "reasons": [
+            "long_rally",
+            "serve_point"
+          ],
+          "score": 2.6
+        },
+        {
+          "id": "g1_p2_c3",
+          "rally_id": "g1_r17",
+          "start_t": 579.89,
+          "end_t": 596.06,
+          "start_frame": null,
+          "end_frame": null,
+          "reasons": [
+            "serve_point",
+            "game_point",
+            "final_rally"
+          ],
+          "score": 3.0
+        }
+      ],
+      "mp4": null
+    },
+    {
+      "game_id": "g1",
+      "player_id": "p3",
+      "clips": [
+        {
+          "id": "g1_p3_c1",
+          "rally_id": "g1_r3",
+          "start_t": 183.23,
+          "end_t": 192.2,
+          "start_frame": null,
+          "end_frame": null,
+          "reasons": [
+            "serve_point"
+          ],
+          "score": 1.0
+        },
+        {
+          "id": "g1_p3_c2",
+          "rally_id": "g1_r5",
+          "start_t": 226.89,
+          "end_t": 251.79,
+          "start_frame": null,
+          "end_frame": null,
+          "reasons": [
+            "long_rally"
+          ],
+          "score": 1.8
+        }
+      ],
+      "mp4": null
+    },
+    {
+      "game_id": "g1",
+      "player_id": "p4",
+      "clips": [
+        {
+          "id": "g1_p4_c1",
+          "rally_id": "g1_r5",
+          "start_t": 226.89,
+          "end_t": 251.79,
+          "start_frame": null,
+          "end_frame": null,
+          "reasons": [
+            "long_rally"
+          ],
+          "score": 1.8
+        },
+        {
+          "id": "g1_p4_c2",
+          "rally_id": "g1_r17",
+          "start_t": 579.89,
+          "end_t": 596.06,
+          "start_frame": null,
+          "end_frame": null,
+          "reasons": [
+            "final_rally"
+          ],
+          "score": 1.0
+        }
+      ],
+      "mp4": null
+    }
+  ]
+}
