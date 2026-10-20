@@ -25,7 +25,6 @@ PLACEHOLDERS = {
     "calibrate": "Calibrate a camera from clicked court points.",
     "run": "Run the pipeline on recordings.",
     "eval": "Score a pipeline run against the gold set.",
-    "studio": "Open the labelling and review studio.",
     "report": "Build the one-page report for a game.",
     "highlights": "Build the highlight reels for a game.",
 }
@@ -95,6 +94,47 @@ def make_id(kind: IdKind) -> None:
     except ValueError as error:
         typer.echo(str(error), err=True)
         raise typer.Exit(code=1) from None
+
+
+@app.command()
+def studio(
+    rallies: Annotated[
+        str | None,
+        typer.Option(
+            help="Video id to label in rally mode, from `dink id video`.", show_default=False
+        ),
+    ] = None,
+    labeller: Annotated[str | None, typer.Option(help="Your short handle, such as marti.")] = None,
+    videos: Annotated[
+        Path, typer.Option(help="Local folder of videos named <video_id>.mp4, as in R2.")
+    ] = Path("data/videos"),
+    labels: Annotated[Path, typer.Option(help="Local folder for label files.")] = Path("labels"),
+    port: Annotated[int, typer.Option(help="Port on 127.0.0.1.")] = 8765,
+) -> None:
+    """Open the labelling and review studio. Only rally mode is built so far.
+
+    Videos are found by id, so a file name with a session id never reaches the command line.
+    """
+    if rallies is None or labeller is None:
+        typer.echo(
+            "Only rally mode is built: dink studio --rallies <video_id> --labeller <handle>",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    try:
+        import uvicorn
+
+        from dinkdata.studio.server import create_app
+    except ImportError:
+        typer.echo("The studio needs its extra: uv sync --extra studio", err=True)
+        raise typer.Exit(code=1) from None
+    try:
+        studio_app = create_app(videos / f"{rallies}.mp4", rallies, labeller, labels)
+    except ValueError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(f"Rally mode for {rallies}: http://127.0.0.1:{port}")
+    uvicorn.run(studio_app, host="127.0.0.1", port=port)
 
 
 @app.callback()

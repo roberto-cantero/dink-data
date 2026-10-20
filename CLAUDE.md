@@ -30,6 +30,7 @@ Rows marked _planned_ don't exist yet. If you couldn't run something, say so.
 | CLI | `uv run dink --help` |
 | Regenerate `contracts/*.schema.json` after changing a contract model | `uv run dink contracts export` |
 | Opaque id for a hand-downloaded game | `uv run --env-file .env dink id video` |
+| Label rallies in the browser (video in `data/videos/<video_id>.mp4`) | `uv run dink studio --rallies <video_id> --labeller <handle>` |
 | Rebuild the design PDF after editing `docs/DESIGN.md` | `make design-pdf` |
 | Run the pipeline on a recording | _planned_ `uv run dink run <video_id>` |
 | Accuracy eval | _planned_ `uv run dink eval --run <run_id> --split test` |

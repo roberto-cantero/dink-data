@@ -28,15 +28,31 @@ Every save goes to a versioned path with the labeller's name, such as
 
 ## Rally-level gold, about 10 minutes a game
 
-Use the minimal rally labeller, a local web page.
+Use the studio's rally mode, a local web page. Get the video's id with
+`uv run --env-file .env dink id video`, and save the video as `data/videos/<video_id>.mp4`,
+the same name it has in R2. Then open it by id, so no file name reaches your shell history:
 
-1. Open the recording and play it.
-2. At each serve, press the serve key, then pick the server and the side they serve from.
-3. When the ball is dead, press the end key. Then pick the winning team, or mark a replay.
-4. Mark where each game starts and ends, whether the last game was cut off, and any rule
-   deviation, such as the wrong partner serving.
-5. Save. The tool stores times in seconds, not frames (ADR 0015). It checks the file against the contract and shows the score it computes, so
-   you can compare it with the score the players played.
+```
+uv run dink studio --rallies <video_id> --labeller <your handle>
+```
+
+1. Press G where the first game starts.
+2. Press C and click p1, p2, p3 and p4 once each. The page keeps a crop of each player beside
+   the timeline, so you can tell partners apart later. Crops stay in your local `labels/`
+   folder, never in the repo.
+3. Play the game. At each serve press S, the server (1 to 4) and the side they stand on
+   (L or R).
+4. When the ball is dead, press E. The next serve shows most winners, so the page fills them
+   in. Press A or B only when it asks, and P for a replay.
+5. A red rally doesn't fit the rules. Fix your marks, or press D and pick the rule deviation
+   the players made. The page suggests one when it can.
+6. Press G where the game ends, or Shift+G if the recording cut it off. Pick the target if it
+   isn't 11.
+7. Save with the Save button or Cmd+S. The server checks the file against the contract and
+   writes `labels/gold-rallies/<video_id>/<handle>/v<n>.json`. Each save is a new version.
+
+The page stores times in seconds, not frames (ADR 0015). Python owns every rule: the score
+replay is `dinkdata.score.replay`, and the checks and the file are `dinkdata.studio.rally`.
 
 ## Ball clicks in CVAT
 

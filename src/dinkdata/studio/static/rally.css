@@ -1,0 +1,124 @@
+:root {
+  --bg: #f6f6f4;
+  --panel: #ffffff;
+  --text: #1d1d1b;
+  --muted: #6b6b66;
+  --line: #d9d9d4;
+  --accent: #2f6f4f;
+  --game: #cfe5d8;
+  --select: #fff3c4;
+  --red: #b3261e;
+  --red-bg: #fbe4e2;
+  --amber: #8a5a00;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+h1 { font-size: 16px; margin: 0; }
+#who { color: var(--muted); font-family: ui-monospace, monospace; }
+#status { flex: 1; color: var(--muted); }
+#status.error { color: var(--red); }
+button {
+  font: inherit;
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  cursor: pointer;
+}
+button#save { background: var(--accent); color: white; border-color: var(--accent); }
+
+main {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(360px, 2fr);
+  gap: 16px;
+  padding: 16px;
+}
+@media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+
+#stage { position: relative; background: black; }
+video { display: block; width: 100%; max-height: 70vh; }
+#stage.picking video { cursor: crosshair; }
+#hint {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border-radius: 4px;
+}
+
+#timeline {
+  position: relative;
+  height: 28px;
+  margin-top: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+#timeline .game { position: absolute; top: 0; bottom: 0; background: var(--game); }
+#timeline .game.open { opacity: 0.5; }
+#timeline .tick { position: absolute; top: 4px; bottom: 4px; width: 2px; background: var(--accent); }
+#timeline .tick.red { background: var(--red); width: 3px; }
+#timeline .tick.selected { outline: 2px solid var(--text); }
+#cursor { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--text); z-index: 1; }
+#clock { margin-top: 4px; font-family: ui-monospace, monospace; color: var(--muted); }
+
+#crops { display: flex; gap: 8px; margin-top: 8px; }
+#crops figure { margin: 0; text-align: center; }
+#crops img { height: 96px; border: 1px solid var(--line); background: var(--panel); }
+#crops figcaption { font-family: ui-monospace, monospace; }
+
+#side { min-width: 0; overflow-x: auto; }
+#games { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.game-card {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  cursor: pointer;
+}
+.game-card.selected { background: var(--select); }
+.game-card select { font: inherit; }
+
+table { width: 100%; border-collapse: collapse; background: var(--panel); }
+th, td { padding: 3px 6px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+th { font-weight: 600; color: var(--muted); }
+td { font-family: ui-monospace, monospace; }
+tbody tr { cursor: pointer; }
+tbody tr.selected { background: var(--select); }
+tbody tr.red td:first-child { box-shadow: inset 4px 0 var(--red); }
+tbody tr.red { background: var(--red-bg); }
+tbody tr.red.selected { background: var(--select); }
+.auto { color: var(--muted); }
+.missing { color: var(--red); font-weight: 600; }
+.todo { color: var(--amber); }
+
+#notes { margin: 8px 0; }
+#notes p { margin: 4px 0; }
+#notes .problem { color: var(--red); }
+#notes .todo { color: var(--amber); }
+
+#picker { padding: 8px; border: 1px solid var(--line); background: var(--panel); }
+#picker p { margin: 0 0 4px; color: var(--muted); }
+#picker li.on { font-weight: 600; }
+#picker li.suggested::after { content: "  suggested"; color: var(--red); }
+
+#keys { margin-top: 12px; color: var(--muted); }
+#keys dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 8px 0; }
+#keys dt { font-family: ui-monospace, monospace; color: var(--text); }
+#keys dd { margin: 0; }
