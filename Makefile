@@ -1,8 +1,8 @@
 # Shortcuts for the common commands. Run `make check` before opening a PR.
 .PHONY: setup lint typecheck test hooks check design-pdf
 
-setup:  ## install dependencies (CPU PyTorch) and the git hooks
-	uv sync --extra cv --extra cpu
+setup:  ## install dependencies (CPU PyTorch, the studio) and the git hooks
+	uv sync --extra cv --extra cpu --extra studio
 	uv run pre-commit install
 
 lint:  ## ruff lint + format check

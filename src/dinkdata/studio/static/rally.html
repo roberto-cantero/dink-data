@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rally labeller</title>
+  <link rel="stylesheet" href="/static/rally.css">
+</head>
+<body>
+  <header>
+    <h1>Rally labeller</h1>
+    <span id="who"></span>
+    <span id="status" role="status"></span>
+    <button id="pick" type="button" title="Click p1 to p4 on the video (C)">Pick players</button>
+    <button id="save" type="button" title="Save a new version (Cmd+S)">Save</button>
+  </header>
+
+  <main>
+    <section id="player">
+      <div id="stage">
+        <video id="video" src="/video" preload="auto" playsinline></video>
+        <div id="hint" hidden></div>
+      </div>
+      <div id="timeline" title="Click to seek"><div id="cursor"></div></div>
+      <div id="clock"><span id="time">0:00.0</span> <span id="rate">1x</span></div>
+      <div id="crops"></div>
+    </section>
+
+    <section id="side">
+      <div id="games"></div>
+      <table id="rallies">
+        <thead>
+          <tr><th>Rally</th><th>Serve</th><th>Server</th><th>Side</th><th>Score</th>
+              <th>Winner</th><th>End</th><th>Deviations</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div id="notes"></div>
+      <div id="picker" hidden>
+        <p>Toggle a deviation on the selected rally. D or Esc closes.</p>
+        <ol></ol>
+      </div>
+      <details id="keys" open>
+        <summary>Keys</summary>
+        <dl>
+          <dt>Space</dt><dd>Play or pause</dd>
+          <dt>Left, Right</dt><dd>Back or forward 2 s, with Shift for 10 s</dd>
+          <dt>[ and ]</dt><dd>Slower or faster</dd>
+          <dt>S</dt><dd>Mark a serve here and pause</dd>
+          <dt>1 to 4</dt><dd>Server p1 to p4</dd>
+          <dt>L, R</dt><dd>Side the server stands on</dd>
+          <dt>E</dt><dd>The ball is dead: end the rally here</dd>
+          <dt>A, B</dt><dd>Winner, when the next serve can't show it</dd>
+          <dt>P</dt><dd>The rally is replayed</dd>
+          <dt>G</dt><dd>Start or end a game. Shift+G ends it as cut off</dd>
+          <dt>D</dt><dd>Add a rule deviation to the selected rally</dd>
+          <dt>Up, Down</dt><dd>Select the rally before or after</dd>
+          <dt>Delete</dt><dd>Remove the selected mark</dd>
+          <dt>C</dt><dd>Pick the 4 players for the reference crops</dd>
+        </dl>
+      </details>
+    </section>
+  </main>
+  <script src="/static/rally.js"></script>
+</body>
+</html>

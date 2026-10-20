@@ -20,6 +20,10 @@ cv = ["torch>=2.6", "torchvision>=0.21", "opencv-python-headless>=4.10"]
 # `--extra cu126` (NVIDIA GPUs).
 cpu = ["torch>=2.6", "torchvision>=0.21"]
 cu126 = ["torch>=2.6", "torchvision>=0.21"]
+studio = [
+    "fastapi>=0.150.0",
+    "uvicorn>=0.54.0",
+]
 
 [project.scripts]
 dink = "dinkdata.cli:app"
@@ -32,6 +36,7 @@ dev = [
     "pyright>=1.1.380",
     "pre-commit>=4",
     "jsonschema>=4.23",
+    "httpx>=0.28.1",
 ]
 
 [build-system]
