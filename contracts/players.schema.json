@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/roberto-cantero/dink-data/contracts/players.schema.json",
+  "title": "DinkData player tracks (players.parquet rows)",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$defs": {
+    "PlayerRow": {
+      "additionalProperties": false,
+      "description": "One row of players.parquet.",
+      "properties": {
+        "frame": {
+          "description": "0-based index of a decoded frame.",
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "t": {
+          "description": "Seconds from the first frame's timestamp.",
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "enum": [
+                "p1",
+                "p2",
+                "p3",
+                "p4"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null for a track that isn't a player.",
+          "title": "Player Id"
+        },
+        "track_id": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Track Id",
+          "type": "integer"
+        },
+        "team": {
+          "anyOf": [
+            {
+              "enum": [
+                "A",
+                "B"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Follows player_id: p1 and p2 are A.",
+          "title": "Team"
+        },
+        "box": {
+          "description": "x1, y1, x2, y2 in pixels.",
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Box",
+          "type": "array"
+        },
+        "keypoints": {
+          "items": {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "description": "Confidence, 0 to 1. Gold labels use 1.",
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "maxItems": 17,
+          "minItems": 17,
+          "title": "Keypoints",
+          "type": "array"
+        },
+        "foot_court": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Foot point in court feet. null when off the floor mapping or not visible.",
+          "title": "Foot Court"
+        },
+        "estimated_foot": {
+          "description": "true when the foot point came from the hips.",
+          "title": "Estimated Foot",
+          "type": "boolean"
+        },
+        "conf": {
+          "description": "Detection confidence.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Conf",
+          "type": "number"
+        },
+        "foot_conf": {
+          "anyOf": [
+            {
+              "description": "Confidence, 0 to 1. Gold labels use 1.",
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Foot point confidence. null with foot_court.",
+          "title": "Foot Conf"
+        }
+      },
+      "required": [
+        "frame",
+        "t",
+        "player_id",
+        "track_id",
+        "team",
+        "box",
+        "keypoints",
+        "foot_court",
+        "estimated_foot",
+        "conf",
+        "foot_conf"
+      ],
+      "title": "PlayerRow",
+      "type": "object"
+    }
+  },
+  "items": {
+    "$ref": "#/$defs/PlayerRow"
+  },
+  "type": "array"
+}

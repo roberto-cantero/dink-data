@@ -32,10 +32,10 @@ Use the minimal rally labeller, a local web page.
 
 1. Open the recording and play it.
 2. At each serve, press the serve key, then pick the server and the side they serve from.
-3. After each rally, pick the winning team.
+3. When the ball is dead, press the end key. Then pick the winning team, or mark a replay.
 4. Mark where each game starts and ends, whether the last game was cut off, and any rule
    deviation, such as the wrong partner serving.
-5. Save. The tool checks the file against the contract and shows the score it computes, so
+5. Save. The tool stores times in seconds, not frames (ADR 0015). It checks the file against the contract and shows the score it computes, so
    you can compare it with the score the players played.
 
 ## Ball clicks in CVAT
