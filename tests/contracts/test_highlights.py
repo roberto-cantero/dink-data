@@ -33,7 +33,7 @@ def test_a_game_log_works_as_the_timeline_too():
     r1 = log.games[0].rallies[0]
     highlights = Highlights.model_validate(
         {
-            "schema": "dinkdata.highlights/v1",
+            "schema": "dinkdata.highlights/v2",
             "video_id": log.video.id,
             "reels": [
                 {
@@ -47,7 +47,7 @@ def test_a_game_log_works_as_the_timeline_too():
                             "end_t": r1.end_t + 1.5,
                             "start_frame": None,
                             "end_frame": None,
-                            "reasons": ["serve_point"],
+                            "reasons": ["serve_won"],
                             "score": 1.0,
                         }
                     ],
@@ -117,10 +117,12 @@ def test_rules_within_the_file(change, message):
 @pytest.mark.parametrize(
     "change",
     [
-        pytest.param(lambda d: d.update(schema="dinkdata.highlights/v2"), id="wrong version"),
+        pytest.param(lambda d: d.update(schema="dinkdata.highlights/v1"), id="wrong version"),
         pytest.param(lambda d: d["reels"][0].update(clips=[]), id="empty reel"),
         pytest.param(lambda d: clip(d, 0, 1).update(reasons=[]), id="no reason"),
         pytest.param(lambda d: clip(d, 0, 1).update(reasons=["cool"]), id="unknown reason"),
+        pytest.param(lambda d: clip(d, 0, 1).update(reasons=["game_point"]), id="game point"),
+        pytest.param(lambda d: clip(d, 0, 1).update(reasons=["serve_point"]), id="serve point"),
         pytest.param(lambda d: clip(d, 0, 1).update(score=-1), id="negative score"),
         pytest.param(lambda d: d["reels"][0]["mp4"].update(path="/etc/x.mp4"), id="absolute path"),
         pytest.param(lambda d: d["reels"][0]["mp4"].update(path="../x.mp4"), id="parent path"),

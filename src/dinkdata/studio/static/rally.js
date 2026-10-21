@@ -367,9 +367,10 @@ function renderRallies() {
       : rally.winner
         ? rally.winner
         : view.winner_team
-          ? `<span class="auto">${view.winner_team}</span>`
-          : view.winner_options && Object.keys(view.winner_options).length
-            ? `<span class="missing">A or B?</span>`
+          // The next serve's suggestion, shown grey. The labeller still has to press A or B.
+          ? `<span class="auto">${view.winner_team}?</span>`
+          : (view.todo || []).some((note) => note.includes("A or B"))
+            ? `<span class="todo">A or B?</span>`
             : "";
     const marked = rally.deviations.join(", ");
     const missing = (view.missing || []).map((d) => `<span class="missing">${d}?</span>`).join(" ");

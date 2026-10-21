@@ -21,7 +21,7 @@ results to `eval/{run_id}.csv` in R2. A small synthetic version runs in CI.
 | Hits, bounces, net | Precision, recall and F1 within 2 frames, about 67 ms |
 | Attribution | Hitter accuracy among matched hits |
 | Bounces | Position error in feet, in/out accuracy and close-call rate |
-| Score | Exact final score per game, per-rally score accuracy and rule deviations found, reported separately for games with and without deviations |
+| Rally winners | The share of rallies whose winning team matches gold, reported separately for games with and without rule deviations in the gold labels |
 | Stats | For each stat, the share of player-games off by at most 1 and the mean error, next to the same numbers for the median-count baseline |
 | Highlights | The share of clips containing the whole rally, and the share with the marker on the right player |
 | Coverage | The share of stats shipped, overall and per camera setup |
@@ -32,7 +32,8 @@ results to `eval/{run_id}.csv` in R2. A small synthetic version runs in CI.
 | Gate | Requirement | Milestone |
 |---|---|---|
 | Partner identity | Measured for near and far teams, with a target agreed before M2 starts | M0 spike |
-| Score ships | Exact in at least 90% of test games | M2 |
+| Serve states | Server identity at or above the target set after the M0 spike, for near and far teams | M2 |
+| Rally winners | The winning team matches gold on at least 95% of test rallies, provisionally | M2 |
 | Rally reels ship | At least 95% of clips contain the whole rally | M2 |
 | Ball v1 | Recall and precision of at least 90% at 10 px on test clicks | M2 to M3 |
 | Ball stats ship | Each stat off by at most 1 in at least 90% of test player-games, better than the baseline, and at or above the coverage floor for each setup | M3 |

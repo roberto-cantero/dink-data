@@ -7,8 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from dinkdata.contracts.common import dump, load
-from dinkdata.contracts.games import RuleDeviation, RuleDeviationType
-from dinkdata.contracts.rallies import RallyLabels
+from dinkdata.contracts.rallies import RallyLabels, RuleDeviation, RuleDeviationType
 from tests.contracts.examples import example
 
 
@@ -121,14 +120,14 @@ def test_rules_across_rallies(change, message):
 @pytest.mark.parametrize(
     "change",
     [
-        pytest.param(lambda d: d.update(schema="dinkdata.rallies/v2"), id="wrong version"),
+        pytest.param(lambda d: d.update(schema="dinkdata.rallies/v1"), id="wrong version"),
         pytest.param(lambda d: d.update(video_id="session-1234"), id="raw session id"),
         pytest.param(lambda d: d.update(labeller="Marti L"), id="labeller not a handle"),
         pytest.param(lambda d: d.update(notes="x"), id="unknown top-level field"),
         pytest.param(lambda d: rally(d, 1).update(comment="x"), id="unknown rally field"),
         pytest.param(lambda d: rally(d, 1)["serve"].update(server="p5"), id="fifth player"),
         pytest.param(lambda d: rally(d, 1)["serve"].update(side="middle"), id="unknown side"),
-        pytest.param(lambda d: rally(d, 1)["serve"].update(server_number=3), id="server 3"),
+        pytest.param(lambda d: rally(d, 2).update(score_before="1-0-3"), id="server 3"),
         pytest.param(lambda d: rally(d, 1)["serve"].update(conf=1.5), id="conf above 1"),
         pytest.param(lambda d: rally(d, 1).update(start_t=-1.0), id="negative t"),
         pytest.param(lambda d: rally(d, 1).update(end_t=float("nan")), id="nan t"),

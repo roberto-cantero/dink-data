@@ -9,7 +9,7 @@ record the decisions.
 | Set | Purpose | Size | Tool |
 |---|---|---|---|
 | Full-event gold | Measure events and per-player stats. Never trains | 12 games: 4 dev, 8 test from held-out facilities, split 6 each | Studio events mode, from M1 |
-| Rally-level gold | Measure the score, game boundaries, rule deviations and reel clip edges | About 50 more games: 20 dev, 30 test | Minimal rally labeller, from M0 |
+| Rally-level gold | Measure rally winners, serve states, game boundaries and reel clip edges, and how often players break the serving rules | About 50 more games: 20 dev, 30 test | Minimal rally labeller, from M0 |
 | Ball clicks | Train the ball tracker (about 4,000 frames) and measure it (about 1,000 test frames) | 2-second clips | CVAT, from M0 |
 | Foot clicks | Measure foot position error | About 200 test serve frames | Studio |
 | Silver | Train the event spotter | About 10 corrected training games in M3, then beta corrections | Studio |
@@ -42,8 +42,9 @@ uv run dink studio --rallies <video_id> --labeller <your handle>
    folder, never in the repo.
 3. Play the game. At each serve press S, the server (1 to 4) and the side they stand on
    (L or R).
-4. When the ball is dead, press E. The next serve shows most winners, so the page fills them
-   in. Press A or B only when it asks, and P for a replay.
+4. When the ball is dead, press E, then A or B for the team that won the rally, or P for a
+   replay. Every rally needs a winner, except a last rally the recording cuts off. Players often break the serving rules, so the page
+   never decides a winner from the next serve. It only checks yours against it.
 5. A red rally doesn't fit the rules. Fix your marks, or press D and pick the rule deviation
    the players made. The page suggests one when it can.
 6. Press G where the game ends, or Shift+G if the recording cut it off. Pick the target if it
@@ -51,8 +52,11 @@ uv run dink studio --rallies <video_id> --labeller <your handle>
 7. Save with the Save button or Cmd+S. The server checks the file against the contract and
    writes `labels/gold-rallies/<video_id>/<handle>/v<n>.json`. Each save is a new version.
 
-The page stores times in seconds, not frames (ADR 0015). Python owns every rule: the score
-replay is `dinkdata.score.replay`, and the checks and the file are `dinkdata.studio.rally`.
+The page shows the score as played so you can spot rule breaks. The score and deviations stay
+in the gold labels, where they measure how often players get the score wrong, and never reach
+a player (ADR 0019). The page stores times in seconds, not frames (ADR 0015). Files saved before 21 October 2026
+use `dinkdata.rallies/v1` and no longer load. Tell both owners if you have one. Python owns every rule: the score
+replay is `dinkdata.serves.replay`, and the checks and the file are `dinkdata.studio.rally`.
 
 ## Ball clicks in CVAT
 

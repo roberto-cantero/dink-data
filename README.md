@@ -2,8 +2,8 @@
 
 DinkData turns a PickleCam recording of a doubles pickleball game into per-player stats and
 highlight reels. A Python pipeline finds the court, the ball and the four players, builds a
-game log of rallies, hits, bounces and the score, and turns that log into stats, a one-page
-report and a short reel for each player.
+game log of rallies, hits, bounces and rally winners, and turns that log into stats, a
+one-page report and a short reel for each player. It doesn't report the score (ADR 0019).
 
 PickleCam records about 4,500 games a day at about 140 facilities in the Philippines. DinkData
 runs on its own for now. Sending stats and reels with PickleCam's video emails comes later.

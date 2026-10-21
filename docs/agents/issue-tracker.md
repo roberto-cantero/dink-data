@@ -17,9 +17,9 @@ Infer the repo from `git remote -v`; `gh` does this automatically when run insid
 ## DinkData conventions
 
 - Every new issue gets one triage label (see `triage-labels.md`), one or two `owner:` labels, the matching `area:` labels, a `phase:` label and a GitHub milestone.
-  - Ownership follows `docs/DESIGN.md` section 5. `owner:Robby` covers data, video, court, ball, events, stats and report. `owner:Marti` covers players, serve states and rallies, score and highlights.
+  - Ownership follows `docs/DESIGN.md` section 5. `owner:Robby` covers data, video, court, ball, events, stats and report. `owner:Marti` covers players, serve states, rallies, the serve sequence and highlights.
   - Shared work (contracts, eval, studio, labelling, docs) gets both owner labels, and the issue body says who does which part.
-  - `area:` labels: `data`, `video`, `court`, `ball`, `players`, `events`, `score`, `stats`, `report`, `highlights`, `contracts`, `eval`, `studio`, `labelling`, `infra`.
+  - `area:` labels: `data`, `video`, `court`, `ball`, `players`, `events`, `serves`, `stats`, `report`, `highlights`, `contracts`, `eval`, `studio`, `labelling`, `infra`.
   - `phase:` labels and milestones match `docs/DESIGN.md` section 14: `setup` and `M0` to `M4`.
 - Add `accuracy-change` when the work changes a model, threshold or rule. Its PR must include the `dink eval` table.
 - Labelling tickets are `ready-for-human`. Coding tickets become `ready-for-agent` once their spec is complete.

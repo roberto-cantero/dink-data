@@ -25,7 +25,7 @@ from dinkdata.contracts.stats import Stats
 BASE_URL = "https://github.com/roberto-cantero/dink-data/contracts"
 COMMENT = (
     "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by "
-    "hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked "
+    "hand. Rules JSON Schema can't express, such as ordering, ids and the gold score, are checked "
     "by the pydantic models."
 )
 

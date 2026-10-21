@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/roberto-cantero/dink-data/contracts/rallies.schema.json",
   "title": "DinkData rally-level gold labels (rallies.json)",
-  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the gold score, are checked by the pydantic models.",
   "$defs": {
     "FinalScore": {
       "additionalProperties": false,
@@ -123,12 +123,6 @@
         "serve": {
           "$ref": "#/$defs/Serve"
         },
-        "score_before": {
-          "description": "Score call before the serve: serving team, receiving team, server number.",
-          "pattern": "^[0-9]+-[0-9]+-[12]$",
-          "title": "Score Before",
-          "type": "string"
-        },
         "winner_team": {
           "anyOf": [
             {
@@ -146,16 +140,9 @@
           "title": "Winner Team"
         },
         "replay": {
-          "description": "The rally is replayed: same server, side and score.",
+          "description": "The rally is replayed: same server and side.",
           "title": "Replay",
           "type": "boolean"
-        },
-        "rule_deviations": {
-          "items": {
-            "$ref": "#/$defs/RuleDeviation"
-          },
-          "title": "Rule Deviations",
-          "type": "array"
         },
         "start_frame": {
           "anyOf": [
@@ -184,6 +171,19 @@
           ],
           "default": null,
           "title": "End Frame"
+        },
+        "score_before": {
+          "description": "The score as played, with the server number.",
+          "pattern": "^[0-9]+-[0-9]+-[12]$",
+          "title": "Score Before",
+          "type": "string"
+        },
+        "rule_deviations": {
+          "items": {
+            "$ref": "#/$defs/RuleDeviation"
+          },
+          "title": "Rule Deviations",
+          "type": "array"
         }
       },
       "required": [
@@ -191,9 +191,9 @@
         "start_t",
         "end_t",
         "serve",
-        "score_before",
         "winner_team",
         "replay",
+        "score_before",
         "rule_deviations"
       ],
       "title": "LabelRally",
@@ -201,7 +201,7 @@
     },
     "RuleDeviation": {
       "additionalProperties": false,
-      "description": "A rule break by the players (GLOSSARY: Rule deviation, ADR 0014).\n\nwrong_server: the right team and server number, but the other partner served.\nwrong_side: the right player served from the wrong side.\nextra_serve: the serving team lost as server 1 and served again at the same call.\nmissed_side_out: the serving team lost with server 2, or with the only server at 0-0-2,\nand kept the serve.\nearly_side_out: the serving team lost with server 1, outside 0-0-2, and handed the serve to\nthe other team, skipping server 2.\ngame_end_mismatch: the players stopped at a score that doesn't end the game, or played on\npast one. Only on a game's last rally.",
+      "description": "A rule break by the players (GLOSSARY: Rule deviation). Gold labels only.\n\nwrong_server: the right team and server number, but the other partner served.\nwrong_side: the right player served from the wrong side.\nextra_serve: the serving team lost as server 1 and served again at the same call.\nmissed_side_out: the serving team lost with server 2, or with the only server at 0-0-2,\nand kept the serve.\nearly_side_out: the serving team lost with server 1, outside 0-0-2, and handed the serve to\nthe other team, skipping server 2.\ngame_end_mismatch: the players stopped at a score that doesn't end the game, or played on\npast one. Only on a game's last rally.",
       "properties": {
         "type": {
           "enum": [
@@ -244,15 +244,6 @@
           "title": "Server",
           "type": "string"
         },
-        "server_number": {
-          "description": "1 or 2, as played.",
-          "enum": [
-            1,
-            2
-          ],
-          "title": "Server Number",
-          "type": "integer"
-        },
         "side": {
           "description": "The side of the court the server stood on.",
           "enum": [
@@ -290,7 +281,6 @@
       },
       "required": [
         "server",
-        "server_number",
         "side",
         "receiver",
         "conf"
@@ -303,7 +293,7 @@
   "description": "Rally-level gold for one recording, by one labeller.",
   "properties": {
     "schema": {
-      "const": "dinkdata.rallies/v1",
+      "const": "dinkdata.rallies/v2",
       "title": "Schema",
       "type": "string"
     },

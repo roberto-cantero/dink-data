@@ -1,5 +1,5 @@
 {
-  "schema": "dinkdata.rallies/v1",
+  "schema": "dinkdata.rallies/v2",
   "video_id": "v_5eed00000000a001",
   "labeller": "marti",
   "games": [
@@ -23,7 +23,6 @@
           "end_frame": null,
           "serve": {
             "server": "p1",
-            "server_number": 2,
             "side": "right",
             "receiver": "p3",
             "conf": 1.0
@@ -41,7 +40,6 @@
           "end_frame": null,
           "serve": {
             "server": "p1",
-            "server_number": 2,
             "side": "left",
             "receiver": "p4",
             "conf": 1.0
@@ -59,7 +57,6 @@
           "end_frame": null,
           "serve": {
             "server": "p3",
-            "server_number": 1,
             "side": "right",
             "receiver": "p2",
             "conf": 1.0
@@ -77,7 +74,6 @@
           "end_frame": null,
           "serve": {
             "server": "p3",
-            "server_number": 1,
             "side": "left",
             "receiver": "p1",
             "conf": 1.0
@@ -95,7 +91,6 @@
           "end_frame": null,
           "serve": {
             "server": "p3",
-            "server_number": 1,
             "side": "left",
             "receiver": "p1",
             "conf": 1.0
@@ -113,7 +108,6 @@
           "end_frame": null,
           "serve": {
             "server": "p4",
-            "server_number": 2,
             "side": "right",
             "receiver": "p2",
             "conf": 1.0
@@ -131,7 +125,6 @@
           "end_frame": null,
           "serve": {
             "server": "p2",
-            "server_number": 1,
             "side": "right",
             "receiver": "p4",
             "conf": 1.0
@@ -149,7 +142,6 @@
           "end_frame": null,
           "serve": {
             "server": "p2",
-            "server_number": 1,
             "side": "left",
             "receiver": "p3",
             "conf": 1.0
@@ -167,7 +159,6 @@
           "end_frame": null,
           "serve": {
             "server": "p2",
-            "server_number": 1,
             "side": "left",
             "receiver": "p3",
             "conf": 1.0
@@ -190,7 +181,6 @@
           "end_frame": null,
           "serve": {
             "server": "p2",
-            "server_number": 1,
             "side": "right",
             "receiver": "p4",
             "conf": 1.0
@@ -208,7 +198,6 @@
           "end_frame": null,
           "serve": {
             "server": "p2",
-            "server_number": 1,
             "side": "left",
             "receiver": "p3",
             "conf": 1.0
@@ -226,7 +215,6 @@
           "end_frame": null,
           "serve": {
             "server": "p2",
-            "server_number": 1,
             "side": "right",
             "receiver": "p4",
             "conf": 1.0
@@ -244,7 +232,6 @@
           "end_frame": null,
           "serve": {
             "server": "p2",
-            "server_number": 1,
             "side": "left",
             "receiver": "p3",
             "conf": 1.0
@@ -262,7 +249,6 @@
           "end_frame": null,
           "serve": {
             "server": "p2",
-            "server_number": 1,
             "side": "right",
             "receiver": "p4",
             "conf": 1.0
@@ -280,7 +266,6 @@
           "end_frame": null,
           "serve": {
             "server": "p2",
-            "server_number": 1,
             "side": "left",
             "receiver": "p3",
             "conf": 1.0
@@ -298,7 +283,6 @@
           "end_frame": null,
           "serve": {
             "server": "p2",
-            "server_number": 1,
             "side": "right",
             "receiver": "p4",
             "conf": 1.0
@@ -316,7 +300,6 @@
           "end_frame": null,
           "serve": {
             "server": "p2",
-            "server_number": 1,
             "side": "left",
             "receiver": "p3",
             "conf": 1.0
@@ -348,7 +331,6 @@
           "end_frame": null,
           "serve": {
             "server": "p3",
-            "server_number": 2,
             "side": "right",
             "receiver": "p1",
             "conf": 1.0
@@ -366,7 +348,6 @@
           "end_frame": null,
           "serve": {
             "server": "p3",
-            "server_number": 2,
             "side": "left",
             "receiver": "p2",
             "conf": 1.0

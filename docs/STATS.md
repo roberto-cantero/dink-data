@@ -12,17 +12,16 @@ definition means updating this file, its tests and its code in one PR that both 
   shipped flag and, when not shipped, a reason.
 - A stat ships only if its confidence passes its threshold and the events it needs were
   visible. Otherwise it is left out with a reason such as `near_court_not_visible`.
-- Counts are per player per game unless the table says team.
+- Counts are per player per game.
+- No stat reports the score or a number players could check against it: no final score,
+  games won, points scored or rallies won (ADR 0019). Many players lose track of side-out
+  scoring, so a correct count would still look wrong to them.
 - Values marked provisional are confirmed on real labelled games before they are frozen.
 
 ## v1 stats
 
 | Stat | Who | Definition |
 |---|---|---|
-| Final score | Team | The score as played, game by game. Only the serving team scores. A game starts at `0-0-2` |
-| Games won | Team | Games the team won. A game cut off at 45 minutes has no winner |
-| Rallies won | Team | Rallies the team won. Both partners get credit |
-| Points scored | Team | Rallies the team won while serving |
 | Serve in % | Player | Serves whose first bounce lands in the diagonal service court, divided by serves |
 | Serve depth | Player | Feet from the serve's first bounce to the receiver's baseline, bucketed as deep (5 ft or less), medium (over 5 to 10 ft) or short (over 10 ft). Provisional |
 | Return in % | Player | Returns whose first bounce lands in the serving team's half, divided by returns |
@@ -43,8 +42,8 @@ definition means updating this file, its tests and its code in one PR that both 
 - A net-cord serve that lands in is in.
 - A close call is flagged for review and left out until reviewed.
 - An error belongs only to the shot that ended the rally.
-- A rally with a rule deviation still counts. A team scores when it wins a rally on its own
-  serve, whoever served.
+- A rally where the players broke the serving rules still counts. Its winner comes from what
+  happened on court, never from the score.
 - A replayed rally doesn't count toward any stat.
 
 ## Shipping rules

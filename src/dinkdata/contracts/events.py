@@ -14,7 +14,7 @@ from dinkdata.contracts.common import Conf, Frame, PlayerId, Seconds, StrictMode
 
 EventId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$")]
 EndReason = Literal["net", "out", "double_bounce", "unreturned", "fault", "unexplained"]
-WinnerSource = Literal["serve_state", "ball", "label"]
+WinnerSource = Literal["next_serve", "ball", "label"]
 Point = tuple[float, float]
 
 

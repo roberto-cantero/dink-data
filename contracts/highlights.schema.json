@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/roberto-cantero/dink-data/contracts/highlights.schema.json",
   "title": "DinkData highlight reels (highlights.json)",
-  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the gold score, are checked by the pydantic models.",
   "$defs": {
     "Clip": {
       "additionalProperties": false,
@@ -63,8 +63,7 @@
           "items": {
             "enum": [
               "long_rally",
-              "serve_point",
-              "game_point",
+              "serve_won",
               "final_rally",
               "winner",
               "ace",
@@ -169,7 +168,7 @@
   "description": "The reels of one recording.",
   "properties": {
     "schema": {
-      "const": "dinkdata.highlights/v1",
+      "const": "dinkdata.highlights/v2",
       "title": "Schema",
       "type": "string"
     },
