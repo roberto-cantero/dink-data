@@ -32,7 +32,8 @@ uv run dink --help
 
 `make setup` installs the dependencies with CPU PyTorch and the git hooks. `make check` runs
 lint, type checks and tests. GPU work runs on cloud GPUs, described in
-[`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+[`docs/OPERATIONS.md`](docs/OPERATIONS.md). To reach the R2 bucket from your Mac, run
+`scripts/r2-setup.sh` ([`docs/DATA.md`](docs/DATA.md), "Setting up R2").
 
 ## How we work
 
