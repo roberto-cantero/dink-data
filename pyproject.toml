@@ -14,8 +14,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Computer vision. Player models (RF-DETR, RTMPose, ByteTrack) are added by the M0 player spike.
-cv = ["torch>=2.6", "torchvision>=0.21", "opencv-python-headless>=4.10"]
+# Computer vision, and PyAV for frame-accurate reading. Player models (RF-DETR, RTMPose,
+# ByteTrack) are added by the M0 player spike.
+cv = ["torch>=2.6", "torchvision>=0.21", "opencv-python-headless>=4.10", "av>=18.1"]
 # Pick one PyTorch build with `cv`: `--extra cpu` (CI, Macs, which still get MPS) or
 # `--extra cu126` (NVIDIA GPUs).
 cpu = ["torch>=2.6", "torchvision>=0.21"]
