@@ -173,7 +173,10 @@ highlights automatically, so DinkData's reels are new.
 1. No emails, facility names, session ids or Bunny ids go into the repo, issues, PRs, logs or labels.
 2. No footage or frames go into the repo. Test fixtures are synthetic.
 3. No audio is stored.
-4. Player photos and reels stay in `runs/` and go only to the players in that game.
+4. Player photos and reels stay in `runs/` and go only to the players in that game. The rally
+   labeller's reference crops, one photo per player per game, are the one exception. They stay
+   next to their labels in the private `labels/` folder in R2 and its backup, and never go into
+   the repo.
 5. DinkData stores no contact details.
 6. Agents work only from issues the two owners wrote.
 7. Robby confirmed for PickleCam on 17 October 2026 that all games may be used for this project.
