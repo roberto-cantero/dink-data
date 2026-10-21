@@ -1,0 +1,8 @@
+[
+  {"frame": 5531, "t": 184.83, "x": 640.5, "y": 412.0, "visible": true, "conf": 0.93, "interpolated": false,
+   "peaks": [[640.5, 412.0, 0.93], [1210.0, 88.5, 0.21]]},
+  {"frame": 5532, "t": 184.87, "x": 652.0, "y": 398.5, "visible": true, "conf": 0.6, "interpolated": true,
+   "peaks": []},
+  {"frame": 5533, "t": 184.9, "x": null, "y": null, "visible": false, "conf": 0.88, "interpolated": false,
+   "peaks": [[300.0, 50.0, 0.12]]}
+]

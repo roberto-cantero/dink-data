@@ -10,10 +10,17 @@ from typing import Any
 
 from pydantic import TypeAdapter
 
+from dinkdata.contracts.ball import BallLabelRow, BallRow
+from dinkdata.contracts.camera import CameraCalibration
+from dinkdata.contracts.candidates import CandidateRow
+from dinkdata.contracts.catalog import CatalogRow
+from dinkdata.contracts.frames import FrameRow
 from dinkdata.contracts.game_log import EventLog
 from dinkdata.contracts.highlights import Highlights
+from dinkdata.contracts.patch import Patch
 from dinkdata.contracts.players import PlayerRow
 from dinkdata.contracts.rallies import RallyLabels
+from dinkdata.contracts.stats import Stats
 
 BASE_URL = "https://github.com/roberto-cantero/dink-data/contracts"
 COMMENT = (
@@ -27,6 +34,14 @@ SOURCES: dict[str, tuple[Any, str]] = {
     "rallies": (RallyLabels, "DinkData rally-level gold labels (rallies.json)"),
     "highlights": (Highlights, "DinkData highlight reels (highlights.json)"),
     "players": (list[PlayerRow], "DinkData player tracks (players.parquet rows)"),
+    "catalog": (list[CatalogRow], "DinkData video catalog (catalog.parquet rows)"),
+    "frames": (list[FrameRow], "DinkData frame timestamps (frames.parquet rows)"),
+    "camera": (CameraCalibration, "DinkData camera calibration (camera.json)"),
+    "ball": (list[BallRow], "DinkData ball track (ball.parquet rows)"),
+    "candidates": (list[CandidateRow], "DinkData event candidates (candidates.parquet rows)"),
+    "ball_labels": (list[BallLabelRow], "DinkData ball clicks (ball_labels.parquet rows)"),
+    "stats": (Stats, "DinkData per-player stats (stats.json)"),
+    "patch": (Patch, "DinkData corrections to a run (patch.json)"),
 }
 
 

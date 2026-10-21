@@ -1,0 +1,13 @@
+{
+  "schema": "dinkdata.patch/v1",
+  "run_id": "2026-10-21_ball-v1",
+  "video_id": "v_5eed00000000e001",
+  "ops": [
+    {"op": "change", "target": "event", "id": "e2", "author": "robby", "at": "2026-10-21T18:02:11Z",
+     "set": {"close_call": true}, "old": {"close_call": false}},
+    {"op": "add", "target": "event", "id": "e10", "author": "robby", "at": "2026-10-21T18:03:40Z",
+     "parent": "g1_r1", "value": {"id": "e10", "type": "net", "frame": 5700, "t": 190.47, "conf": 1.0}},
+    {"op": "delete", "target": "event", "id": "e9", "author": "marti", "at": "2026-10-21T18:05:02Z",
+     "old": {"id": "e9", "type": "net", "frame": 6433, "t": 214.9, "conf": 0.86}}
+  ]
+}

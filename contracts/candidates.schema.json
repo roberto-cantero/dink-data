@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/roberto-cantero/dink-data/contracts/candidates.schema.json",
+  "title": "DinkData event candidates (candidates.parquet rows)",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$defs": {
+    "CandidateRow": {
+      "additionalProperties": false,
+      "description": "One row of candidates.parquet.",
+      "properties": {
+        "frame": {
+          "description": "0-based index of a decoded frame.",
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "t": {
+          "description": "Seconds from the first frame's timestamp.",
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        },
+        "conf": {
+          "description": "Probability that any event happens at this frame.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Conf",
+          "type": "number"
+        },
+        "p_hit": {
+          "description": "Confidence, 0 to 1. Gold labels use 1.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "P Hit",
+          "type": "number"
+        },
+        "p_bounce": {
+          "description": "Confidence, 0 to 1. Gold labels use 1.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "P Bounce",
+          "type": "number"
+        },
+        "p_net": {
+          "description": "Confidence, 0 to 1. Gold labels use 1.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "P Net",
+          "type": "number"
+        },
+        "hitter": {
+          "anyOf": [
+            {
+              "maxItems": 4,
+              "minItems": 4,
+              "prefixItems": [
+                {
+                  "description": "Confidence, 0 to 1. Gold labels use 1.",
+                  "maximum": 1,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "description": "Confidence, 0 to 1. Gold labels use 1.",
+                  "maximum": 1,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "description": "Confidence, 0 to 1. Gold labels use 1.",
+                  "maximum": 1,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "description": "Confidence, 0 to 1. Gold labels use 1.",
+                  "maximum": 1,
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Probability that p1, p2, p3 or p4 hit it. Sums to 1. null if not a hit.",
+          "title": "Hitter"
+        }
+      },
+      "required": [
+        "frame",
+        "t",
+        "conf",
+        "p_hit",
+        "p_bounce",
+        "p_net",
+        "hitter"
+      ],
+      "title": "CandidateRow",
+      "type": "object"
+    }
+  },
+  "items": {
+    "$ref": "#/$defs/CandidateRow"
+  },
+  "type": "array"
+}

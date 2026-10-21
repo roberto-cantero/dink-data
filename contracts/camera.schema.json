@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/roberto-cantero/dink-data/contracts/camera.schema.json",
+  "title": "DinkData camera calibration (camera.json)",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$defs": {
+    "Distortion": {
+      "additionalProperties": false,
+      "properties": {
+        "k1": {
+          "title": "K1",
+          "type": "number"
+        },
+        "k2": {
+          "title": "K2",
+          "type": "number"
+        }
+      },
+      "required": [
+        "k1",
+        "k2"
+      ],
+      "title": "Distortion",
+      "type": "object"
+    },
+    "ImageSize": {
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ],
+      "title": "ImageSize",
+      "type": "object"
+    },
+    "Intrinsics": {
+      "additionalProperties": false,
+      "properties": {
+        "fx": {
+          "description": "Focal length in pixels.",
+          "exclusiveMinimum": 0,
+          "title": "Fx",
+          "type": "number"
+        },
+        "fy": {
+          "description": "Focal length in pixels.",
+          "exclusiveMinimum": 0,
+          "title": "Fy",
+          "type": "number"
+        },
+        "cx": {
+          "description": "Principal point in pixels.",
+          "title": "Cx",
+          "type": "number"
+        },
+        "cy": {
+          "description": "Principal point in pixels.",
+          "title": "Cy",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fx",
+        "fy",
+        "cx",
+        "cy"
+      ],
+      "title": "Intrinsics",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One calibration. Rules JSON Schema can't express are checked in code.",
+  "properties": {
+    "schema": {
+      "const": "dinkdata.camera/v1",
+      "title": "Schema",
+      "type": "string"
+    },
+    "camera_id": {
+      "description": "Opaque camera id (dinkdata.contracts.ids).",
+      "pattern": "^c_[0-9a-f]{16}$",
+      "title": "Camera Id",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "maxLength": 80,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Camera model. null when unknown.",
+      "title": "Model"
+    },
+    "setup": {
+      "enum": [
+        "dtl_low",
+        "dtl_high",
+        "diagonal"
+      ],
+      "title": "Setup",
+      "type": "string"
+    },
+    "image_size": {
+      "$ref": "#/$defs/ImageSize"
+    },
+    "intrinsics": {
+      "$ref": "#/$defs/Intrinsics"
+    },
+    "distortion": {
+      "$ref": "#/$defs/Distortion"
+    },
+    "rotation": {
+      "description": "Rodrigues vector, court to camera.",
+      "maxItems": 3,
+      "minItems": 3,
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "title": "Rotation",
+      "type": "array"
+    },
+    "translation": {
+      "description": "Feet, court to camera.",
+      "maxItems": 3,
+      "minItems": 3,
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "title": "Translation",
+      "type": "array"
+    },
+    "reprojection_error_px": {
+      "description": "Mean error on held-back clicks, in pixels.",
+      "minimum": 0,
+      "title": "Reprojection Error Px",
+      "type": "number"
+    },
+    "visible_region": {
+      "description": "The floor the camera sees, in court feet, clipped at the horizon.",
+      "items": {
+        "maxItems": 2,
+        "minItems": 2,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "type": "array"
+      },
+      "minItems": 3,
+      "title": "Visible Region",
+      "type": "array"
+    },
+    "overlay_masks": {
+      "description": "Image regions to ignore, such as the watermark and logo, in pixels.",
+      "items": {
+        "items": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "minItems": 3,
+        "type": "array"
+      },
+      "title": "Overlay Masks",
+      "type": "array"
+    },
+    "source": {
+      "description": "Hand clicks, or automatic (M4).",
+      "enum": [
+        "clicks",
+        "auto"
+      ],
+      "title": "Source",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "camera_id",
+    "version",
+    "model",
+    "setup",
+    "image_size",
+    "intrinsics",
+    "distortion",
+    "rotation",
+    "translation",
+    "reprojection_error_px",
+    "visible_region",
+    "overlay_masks",
+    "source"
+  ],
+  "type": "object"
+}
