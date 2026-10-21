@@ -1,8 +1,9 @@
 """`stats.json`: the v1 stats of one recording. Owner: Robby (docs/STATS.md).
 
-One entry per game, subject and stat. A subject is a player (p1 to p4) or a team (A or B).
-`games_won` covers the whole recording, so its `game` is null. Every other stat is per game.
-An entry that doesn't ship keeps its `reason` and may have a null `value`.
+One entry per game, player and stat. No stat reports the score or a team number derived from
+it, such as games won, points scored or rallies won, because players check those against the
+score they remember (ADR 0019). An entry that doesn't ship keeps its `reason` and may have a
+null `value`.
 """
 
 from typing import Annotated, Literal
@@ -15,16 +16,11 @@ from dinkdata.contracts.common import (
     PlayerId,
     RunId,
     StrictModel,
-    Team,
     VideoId,
 )
 from dinkdata.contracts.game_log import EventLog
 
 StatName = Literal[
-    "final_score",
-    "games_won",
-    "rallies_won",
-    "points_scored",
     "serve_in_pct",
     "serve_depth",
     "return_in_pct",
@@ -35,8 +31,7 @@ StatName = Literal[
     "winners",
     "landing_map",
 ]
-TEAM_STATS = {"final_score", "games_won", "rallies_won", "points_scored"}
-COUNT_STATS = TEAM_STATS | {"net_errors", "out_errors", "serve_faults", "winners"}
+COUNT_STATS = {"net_errors", "out_errors", "serve_faults", "winners"}
 RATIO_STATS = {"serve_in_pct", "return_in_pct"}
 DEPTH_STATS = {"serve_depth", "return_depth"}
 
@@ -65,8 +60,8 @@ Value = int | float | Depth | LandingMap
 
 
 class Stat(StrictModel):
-    game: GameId | None = Field(description="null for games_won, which covers the recording.")
-    subject: PlayerId | Team
+    game: GameId
+    subject: PlayerId
     stat: StatName
     value: Value | None = Field(description="null only when not shipped.")
     num: int | None = Field(ge=0, description="Numerator, for percentages only.")
@@ -77,12 +72,7 @@ class Stat(StrictModel):
 
     @model_validator(mode="after")
     def _stat_rules(self) -> "Stat":
-        name = f"{self.game or 'recording'} {self.subject} {self.stat}"
-        if (self.subject in ("A", "B")) != (self.stat in TEAM_STATS):
-            kind = "a team" if self.stat in TEAM_STATS else "a player"
-            raise ValueError(f"{name}: {self.stat} is for {kind}")
-        if (self.game is None) != (self.stat == "games_won"):
-            raise ValueError(f"{name}: game is null for games_won only")
+        name = f"{self.game} {self.subject} {self.stat}"
         if self.shipped and (self.value is None or self.reason is not None):
             raise ValueError(f"{name}: a shipped stat has a value and no reason")
         if not self.shipped and self.reason is None:
@@ -118,7 +108,7 @@ class Stat(StrictModel):
 class Stats(StrictModel):
     """The stats of one recording from one pipeline run."""
 
-    schema_: Literal["dinkdata.stats/v1"] = Field(alias="schema")
+    schema_: Literal["dinkdata.stats/v2"] = Field(alias="schema")
     video_id: VideoId
     run_id: RunId
     stats: list[Stat]
@@ -139,5 +129,5 @@ def check_stats(stats: Stats, log: EventLog) -> list[str]:
     return [
         f"{s.game} {s.subject} {s.stat}: no such game in events.json"
         for s in stats.stats
-        if s.game is not None and s.game not in games
+        if s.game not in games
     ]

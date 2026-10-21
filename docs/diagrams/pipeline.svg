@@ -81,10 +81,10 @@
     <text x="488" y="412" text-anchor="middle" font-size="11">end reason per rally</text>
 
     <rect x="584" y="332" width="150" height="104" rx="8" fill="#ffffff" stroke="#22c55e"/>
-    <text x="659" y="356" text-anchor="middle" font-weight="bold">9 · Score decoder</text>
-    <text x="659" y="376" text-anchor="middle" font-size="11">HMM over game states</text>
-    <text x="659" y="394" text-anchor="middle" font-size="11">side-out rules, games,</text>
-    <text x="659" y="412" text-anchor="middle" font-size="11">winners, rule breaks</text>
+    <text x="659" y="356" text-anchor="middle" font-weight="bold">9 · Serve sequence</text>
+    <text x="659" y="376" text-anchor="middle" font-size="11">next-serve hint</text>
+    <text x="659" y="394" text-anchor="middle" font-size="11">games, rally winners,</text>
+    <text x="659" y="412" text-anchor="middle" font-size="11">score kept in memory only</text>
   </g>
   <path d="M600,250 L600,282 L150,282 L150,330" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#a)"/>
   <path d="M463,250 L463,276 L290,276 L290,330" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#a)"/>
@@ -96,7 +96,7 @@
 
   <path d="M700,436 L700,470 L111,470 L111,516" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#a)"/>
   <line x1="500" y1="436" x2="500" y2="470" stroke="#475569" stroke-width="1.6"/>
-  <text x="300" y="465" font-size="10" fill="#475569">rallies, events, games, scores</text>
+  <text x="300" y="465" font-size="10" fill="#475569">rallies, events, games, winners</text>
   <!-- Outputs band -->
   <rect x="20" y="482" width="730" height="146" rx="10" fill="#fff7ed" stroke="#fdba74"/>
   <text x="736" y="504" text-anchor="end" font-size="12" font-weight="bold" fill="#c2410c">OUTPUTS · stats (Robby) and highlights (Marti)</text>

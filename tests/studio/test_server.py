@@ -16,8 +16,8 @@ PNG = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 16).decode()
 MARKS = {
     "games": [{"start_t": 0.1, "end_t": 1.9, "finished": False, "target": 11}],
     "rallies": [
-        {"t": 0.2, "end_t": 0.6, "server": "p1", "side": "right"},
-        {"t": 0.8, "end_t": 1.2, "server": "p1", "side": "left"},
+        {"t": 0.2, "end_t": 0.6, "server": "p1", "side": "right", "winner": "A"},
+        {"t": 0.8, "end_t": 1.2, "server": "p1", "side": "left", "winner": "A"},
     ],
 }
 
@@ -76,7 +76,7 @@ def test_an_incomplete_save_writes_nothing(client, labels):
     marks = {"games": [{"start_t": 0.1}], "rallies": [{"t": 0.2}]}
     response = client.post("/api/save", json=marks)
     assert response.status_code == 422
-    assert len(response.json()["errors"]) == 3
+    assert len(response.json()["errors"]) == 4
     assert not labels.exists()
 
 

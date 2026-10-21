@@ -1,4 +1,4 @@
-"""stats.json: one entry per game, subject and stat."""
+"""stats.json: one entry per game, player and stat."""
 
 import json
 
@@ -25,7 +25,7 @@ def test_example_round_trips(tmp_path):
 def test_values_keep_their_kind():
     stats = Stats.model_validate(example("stats"))
     values = {(s.stat, s.subject): s.value for s in stats.stats}
-    assert values[("final_score", "A")] == 11
+    assert values[("net_errors", "p3")] == 2
     assert isinstance(values[("serve_depth", "p1")], Depth)
     assert isinstance(values[("landing_map", "p1")], LandingMap)
     assert '"return":[]' in stats.model_dump_json(by_alias=True)
@@ -35,12 +35,16 @@ def test_values_keep_their_kind():
     ("change", "message"),
     [
         pytest.param(
-            lambda d: stat(d, "net_errors", "p3").update(subject="A"), "player", id="team net"
+            lambda d: stat(d, "net_errors", "p3").update(subject="A"), "subject", id="team subject"
         ),
         pytest.param(
-            lambda d: stat(d, "final_score", "A").update(subject="p1"), "team", id="player score"
+            lambda d: stat(d, "net_errors", "p3").update(stat="final_score"), "stat", id="score"
         ),
-        pytest.param(lambda d: stat(d, "games_won", "A").update(game="g1"), "game", id="per game"),
+        pytest.param(
+            lambda d: stat(d, "net_errors", "p3").update(stat="rallies_won"),
+            "stat",
+            id="rallies won",
+        ),
         pytest.param(lambda d: stat(d, "net_errors", "p3").update(game=None), "game", id="no game"),
         pytest.param(
             lambda d: stat(d, "net_errors", "p3").update(reason="x"), "reason", id="shipped reason"

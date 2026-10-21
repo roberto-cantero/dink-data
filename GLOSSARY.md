@@ -11,7 +11,7 @@ Play from the serve until the ball is dead.
 _Avoid_: point (a point is scored only by the serving team), exchange
 
 **Game**:
-One game of side-out scoring inside a recording, from `0-0-2` until a team wins or the recording ends.
+One game inside a recording, from its first serve until the players stop and reset, or the recording ends. DinkData finds games from breaks in play, not from the score.
 _Avoid_: match, set
 
 **Side-out scoring**:
@@ -19,10 +19,10 @@ The scoring system in which only the serving team scores, each team has two serv
 _Avoid_: traditional scoring
 
 **Rally scoring**:
-A scoring system in which either team can score on any rally. Not supported in v1.
+A scoring system in which either team can score on any rally. Supported, because no stat reads the score.
 
 **Score call**:
-The score as serving team score, receiving team score and server number, such as `4-3-2`.
+The score as serving team score, receiving team score and server number, such as `4-3-2`. Only rally-level gold labels store it. No output shows it (ADR 0019).
 _Avoid_: score line
 
 **Server number**:
@@ -33,7 +33,7 @@ The moment the serving team loses the serve to the other team.
 _Avoid_: turnover, change of serve
 
 **Starting positions**:
-The sides of the court a team's players stand on at the start of a game. They stand there again whenever that team's score is even.
+The sides of the court a team's players stand on at the start of a game. They stand there again whenever that team's score is even. Players who lose track of the score and teams that stack break this, so DinkData uses it only as a tiebreak.
 
 **Stacking**:
 Partners lining up on non-standard sides, usually to keep a forehand in the middle.
@@ -54,7 +54,11 @@ A rule break that ends the rally, such as a serve out, a volleyed return, a kitc
 
 **Rule deviation**:
 A rally where the players broke the serving rules. The types are `wrong_server` (the other partner served), `wrong_side`, `extra_serve` (the team lost as server 1 and served again at the same call), `missed_side_out`, `early_side_out` (the team lost as server 1 and handed the serve over, skipping server 2) and `game_end_mismatch` (the players stopped at a score that doesn't end the game, or played on past one).
+Recorded only in rally-level gold labels, never in outputs.
 _Avoid_: error (errors are shots)
+
+**Next-serve hint**:
+Weak evidence for a rally's winner from the serve after it: the other team serving means the serving team lost, and the same player serving again means it won. The partner serving can mean either, so the ball decides. It looks at one pair of serves, so a scoring mistake by the players changes at most one rally.
 
 **Net-cord serve**:
 A serve that clips the net and lands in. It is live.
@@ -185,7 +189,7 @@ _Avoid_: highlight video, montage
 One rally's stretch of video inside a reel.
 
 **Clip reason**:
-Why the selector picked a clip: `long_rally`, `serve_point`, `game_point`, `final_rally`, `winner`, `ace` or `dink_exchange`.
+Why the selector picked a clip: `long_rally`, `serve_won`, `final_rally`, `winner`, `ace` or `dink_exchange`.
 
 ## Labels and evaluation
 
@@ -197,7 +201,7 @@ _Avoid_: ground truth, test data
 Gold labels with every hit, bounce, hitter and rally outcome of a game.
 
 **Rally-level gold**:
-Gold labels with only each rally's server, side and winner.
+Gold labels with each rally's server, side and winner, plus the score as played and any rule deviation.
 
 **Silver labels**:
 Model output corrected by a person, used for training.

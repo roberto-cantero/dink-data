@@ -60,7 +60,10 @@ ScoreCall = Annotated[
     str,
     Field(
         pattern=r"^[0-9]+-[0-9]+-[12]$",
-        description="Score call before the serve: serving team, receiving team, server number.",
+        description=(
+            "Score call before the serve: serving team, receiving team, server number. "
+            "Gold labels only (ADR 0019)."
+        ),
     ),
 ]
 

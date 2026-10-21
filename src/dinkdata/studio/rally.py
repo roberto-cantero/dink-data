@@ -1,16 +1,18 @@
 """Rally mode: the page's marks, checked against the rules and turned into `rallies.json`.
 
 The page only records key presses as marks. This module groups the rallies into games,
-replays each game's score with `dinkdata.score.replay`, says which rallies break the rules,
+replays each game's score with `dinkdata.serves.replay`, says which rallies break the rules,
 and builds a `RallyLabels` file that the contract validates (DESIGN 6.13 and 9).
+
+The labeller marks every rally's winner. Players often break the serving rules, so the replay
+only checks a winner against the next serve and never chooses it (ADR 0019).
 """
 
 from pydantic import BaseModel, Field
 
 from dinkdata.contracts.common import PlayerId, Seconds, Side, StrictModel, Team
-from dinkdata.contracts.games import RuleDeviationType, Target
-from dinkdata.contracts.rallies import RallyLabels
-from dinkdata.score.replay import ReplayedGame, ReplayedRally, ServeMark, replay_game
+from dinkdata.contracts.rallies import RallyLabels, RuleDeviationType, Target
+from dinkdata.serves.replay import ReplayedGame, ReplayedRally, ServeMark, replay_game
 
 
 class RallyMark(StrictModel):
@@ -21,7 +23,7 @@ class RallyMark(StrictModel):
     server: PlayerId | None = None
     side: Side | None = None
     replay: bool = False
-    winner: Team | None = Field(default=None, description="Set only when the labeller chose.")
+    winner: Team | None = Field(default=None, description="The team the labeller marked.")
     deviations: list[RuleDeviationType] = Field(default_factory=list)
 
 
@@ -102,6 +104,10 @@ def review(marks: Marks) -> Review:
                 view.todo.append("Press E when the ball is dead.")
             elif mark.end_t <= mark.t:
                 view.todo.append("The rally ends before its serve. Press E again.")
+            # The recording can cut off a game's last rally before anyone wins it.
+            cut_off = k == len(members) and not game.finished
+            if not mark.replay and mark.winner is None and not cut_off:
+                view.todo.append("Press A or B for the team that won, or P for a replay.")
         for i, rally in zip(complete, replayed.rallies, strict=True):
             _fill(views[i], marks.rallies[i], rally)
         todo = []
@@ -152,7 +158,6 @@ def to_labels(marks: Marks, video_id: str, labeller: str) -> RallyLabels:
                     "end_t": mark.end_t,
                     "serve": {
                         "server": mark.server,
-                        "server_number": rally.server_number,
                         "side": mark.side,
                         # The labeller doesn't mark receivers.
                         "receiver": None,
@@ -178,7 +183,7 @@ def to_labels(marks: Marks, video_id: str, labeller: str) -> RallyLabels:
         )
     return RallyLabels.model_validate(
         {
-            "schema": "dinkdata.rallies/v1",
+            "schema": "dinkdata.rallies/v2",
             "video_id": video_id,
             "labeller": labeller,
             "games": games,
@@ -187,10 +192,7 @@ def to_labels(marks: Marks, video_id: str, labeller: str) -> RallyLabels:
 
 
 def from_labels(labels: RallyLabels) -> Marks:
-    """Marks for a saved file, so a labeller can carry on where they stopped.
-
-    A winner becomes the labeller's choice only where the serves alone would say otherwise.
-    """
+    """Marks for a saved file, so a labeller can carry on where they stopped."""
     marks = Marks()
     for game in labels.games:
         marks.games.append(
@@ -208,18 +210,11 @@ def from_labels(labels: RallyLabels) -> Marks:
                 server=r.serve.server,
                 side=r.serve.side,
                 replay=r.replay,
+                winner=r.winner_team,
                 deviations=[d.type for d in r.rule_deviations],
             )
             for r in game.rallies
         ]
-        serves = [
-            ServeMark(t=m.t, server=r.serve.server, side=r.serve.side, replay=m.replay)
-            for m, r in zip(rallies, game.rallies, strict=True)
-        ]
-        replayed = replay_game(serves, finished=game.finished, target=game.target)
-        for mark, saved, auto in zip(rallies, game.rallies, replayed.rallies, strict=True):
-            if saved.winner_team != auto.winner_team:
-                mark.winner = saved.winner_team
         marks.rallies.extend(rallies)
     return marks
 

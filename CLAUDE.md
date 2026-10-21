@@ -7,7 +7,7 @@
 
 DinkData turns a PickleCam recording of a doubles pickleball game into per-player stats and
 highlight reels. The pipeline finds the court, ball and players, builds a game log of rallies,
-hits, bounces and the score, and pure functions turn the game log into stats and reels.
+hits, bounces and rally winners, and pure functions turn the game log into stats and reels.
 
 DinkData is a standalone app first. The goal of M0 to M3 is a prototype whose stats and reels
 are accurate and reliable enough to show PickleCam's CEO, built on about 150 games downloaded
@@ -35,6 +35,7 @@ Rows marked _planned_ don't exist yet. If you couldn't run something, say so.
 | CLI | `uv run dink --help` |
 | Regenerate `contracts/*.schema.json` after changing a contract model | `uv run dink contracts export` |
 | Opaque id for a hand-downloaded game | `uv run --env-file .env dink id video` |
+| Upgrade saved v1 rally labels to v2 | `uv run dink contracts upgrade-rallies` |
 | Label rallies in the browser (video in `data/videos/<video_id>.mp4`) | `uv run dink studio --rallies <video_id> --labeller <handle>` |
 | Rebuild the design PDF after editing `docs/DESIGN.md` | `make design-pdf` |
 | Run the pipeline on a recording | _planned_ `uv run dink run <video_id>` |
@@ -52,7 +53,7 @@ Robby is `@roberto-cantero` (`owner:Robby`). Marti is `@probablynotmarti` (`owne
 | `src/dinkdata/events/` | event spotter, rally grammar | Robby |
 | `src/dinkdata/stats/`, `report/` | stats and the report | Robby |
 | `src/dinkdata/players/` | detection, tracking, ids, serve states, game mode, rallies | Marti |
-| `src/dinkdata/score/` | score decoder | Marti |
+| `src/dinkdata/serves/` | serve sequence, rally winners, internal score replay | Marti |
 | `src/dinkdata/highlights/` | reel selection and rendering | Marti |
 | `src/dinkdata/contracts/`, `eval/`, `studio/` | file formats, evaluation, labelling tool | both |
 | `tests/` | mirrors `src/dinkdata/`, synthetic fixtures only | both |
@@ -66,6 +67,9 @@ Ask before changing the other owner's area.
 - **Court.** Positions are in feet (`docs/COURT.md`). The court mapping is only valid for
   points on the floor, such as feet and bounces, never a ball in the air. No hardcoded pixel
   thresholds.
+- **Score.** Never show players the score or a number derived from it (final score, games
+  won, points scored, rallies won, rule deviations). Players often mis-score, so nothing may
+  depend on the score being right (ADR 0019). An internal score is weak evidence at most.
 - **Contracts.** File formats are pydantic models in `src/dinkdata/contracts/`, with generated
   JSON Schemas in `contracts/`. Validate files at run time. Every detection has `conf`.
   Changing a contract needs a version bump and both owners' approval.

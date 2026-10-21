@@ -4,7 +4,7 @@ The product requirements, technical design and system design for DinkData. This 
 
 | | |
 |---|---|
-| Version | 1.10 |
+| Version | 1.11 |
 | Date | 21 October 2026 |
 | Owners | Robby (`@roberto-cantero`) and Marti (`@probablynotmarti`) |
 | Prepared with | Claude Code, after a review session with Robby and review comments from Marti |
@@ -55,27 +55,28 @@ approves the prototype, built around whatever PickleCam already runs (ADR 0018).
 
 The v1 has two priorities, and each owner leads one.
 
-- **Stats, led by Robby.** Game score and rallies won, serve in % and depth, return in % and
-  depth, net and out errors per player, and winners per player. A landing map of serves,
-  returns and out-errors comes almost free.
+- **Stats, led by Robby.** Serve in % and depth, return in % and depth, net and out errors
+  per player, and winners per player. A landing map of serves, returns and out-errors comes
+  almost free. DinkData doesn't report the score (ADR 0019).
 - **Highlights, led by Marti.** A short video for each player, stitched automatically from
   their best rallies in the game.
 
 The pipeline has three layers. Perception finds the court, the ball and the four players in
 every frame. Structure turns those detections into a game log of rallies, hits, bounces, who
-hit each ball and the score. Outputs read the game log and produce stats, a report and the
+hit each ball and who won each rally. Outputs read the game log and produce stats, a report and the
 highlight reels.
 
 Five ideas carry the design.
 
-1. **The rules of pickleball are the strongest model.** Two decoders pick the most likely
-   sequence that obeys the rules, one for the events inside a rally and one for the score
-   across a game. They correct many missed and extra detections without training labels.
-2. **The serves reveal the score.** At each serve the cameras show which team serves, which
-   partner serves and from which side. Comparing one serve with the next tells us who won the
-   rally in between. The score therefore comes from player positions and identities, before
-   ball tracking works. Telling the two partners apart is the key requirement and the riskiest
-   assumption, so M0 measures it first.
+1. **The rules of pickleball are the strongest model.** A rally grammar decoder picks the most
+   likely sequence of events inside a rally that obeys the rules. It corrects many missed and
+   extra detections without training labels.
+2. **Nothing depends on the players keeping score.** Many PickleCam players are beginners or
+   play for fun, and they lose track of side-out scoring. Players know their own score and
+   would spot any score that differs from theirs, so DinkData never reports it (ADR 0019).
+   Comparing one serve with the next still hints at who won the rally in between, but only as
+   weak evidence next to the ball. Telling the two partners apart matters for every per-player
+   serve stat, so M0 measures it first.
 3. **The cameras are fixed, so each one is calibrated once.** The calibration fits a real
    lens model, including wide-angle distortion, from court points, lines and the net. Each
    video also gets background images of the empty court, which gave ball trackers their
@@ -86,8 +87,8 @@ Five ideas carry the design.
 5. **Measure everything.** One command scores every stage against a hand-labelled answer key
    called the gold set. Every pull request shows its numbers, so AI agents can build safely.
 
-The accuracy targets are an exact final score in at least 90% of games, and each player's
-count for each stat off by at most one in at least 90% of player-games. We measure accuracy
+The accuracy target is each player's count for each stat off by at most one in at least 90%
+of player-games. We measure accuracy
 over the stats we ship and always report coverage, the share of stats shipped. A stat with
 low confidence is left out, not shown wrong. During the beta, a person reviews every game.
 
@@ -102,13 +103,13 @@ videos (section 11).
 | Setup, done by this session | Docs, an empty package layout, CI and GitHub issues ready for other sessions |
 | M0 Foundations | Data contracts, 150 hand-downloaded games in storage, stats tested on hand-written logs, a highlight renderer working from a hand-written rally list, partner identity measured, and labelling under way |
 | M1 Ground truth | Calibrated cameras, the labelling tool, the gold set, the eval command, and a first end-to-end version producing a report and a reel |
-| M2 Score and first reels | The score meets its target, rally-based reels per player, ball tracker v1 |
+| M2 Serve states and first reels | Serve states and rally winners meet their targets, rally-based reels per player, ball tracker v1 |
 | M3 Ball stats and full reels | Stats 2 to 5, the landing map and per-player reels built from winners and aces |
 | M4 Integration and beta, after PickleCam approves the prototype | Automatic intake through PickleCam's endpoint, batch processing, reels played over PickleCam's video, automatic calibration, delivery to beta players with human review, and a measured production cost per video |
 
 M0 to M3 build the prototype. M3 ends with every v1 stat and reel meeting its gate on
 held-out facilities, and that is the version we show PickleCam's CEO. After M2 we decide
-whether an internal preview of the score and first reels is worth showing early.
+whether an internal preview of the first reels is worth showing early.
 
 ## 2. Findings
 
@@ -195,17 +196,20 @@ integration come later.
 The input is one PickleCam recording, identified by an opaque `video_id`, with its camera id.
 For each game in the recording, DinkData writes these files.
 
-- `events.json`, the game log.
-- `stats.json`, every stat for every player, with a confidence and a shipped flag.
-- `report.html`, a one-page report with the final score, a card per player with a photo and
-  their numbers, and the landing map.
+- `events.json`, the game log. It stays internal, because its rally winners and servers
+  would let anyone rebuild the score.
+- `stats.json`, every stat for every player, with a confidence and a shipped flag. It stays
+  internal too, and the report shows its shipped stats.
+- `report.html`, a one-page report headed by the game number, date and length, with a card
+  per player with a photo and their numbers, and the landing map. It shows no score.
 - `highlights.json`, a reel for each player as a list of clips, and one reel MP4 per player
   rendered from it. In M4 a web player can play the clips from PickleCam's video instead, and
   MP4s are rendered only on request (ADR 0012).
 
 Every player gets the whole-game report and every reel, and finds themselves by photo. The v1
-covers doubles with side-out scoring. Games go to 11 by default, and games to 15 or 21 must
-work.
+covers doubles under any scoring system, because no stat depends on the score. Rally-level
+gold labels cover side-out games only for now. If rally-scoring games turn up in the
+prototype's games, the labeller gains a scoring format.
 
 ### 3.2 Stats (Robby)
 
@@ -214,7 +218,6 @@ Every stat is a pure function of `events.json`, with unit tests built from hand-
 
 | Stat | Definition |
 |---|---|
-| Final score and games won | The score as played. Only the serving team scores. The call is serving score, receiving score, server number, as in `4-3-2`, and a game starts at `0-0-2` |
 | Serve in % | Serves whose first bounce lands in the diagonal service court, divided by serves. A serve touching the kitchen line is a fault. Close calls go to review |
 | Serve depth | Feet from the serve's first bounce to the receiver's baseline. Deep is 5 ft or less, medium 5 to 10 ft, short over 10 ft, to be confirmed on real data |
 | Return in % | Returns whose first bounce lands in the serving team's half, divided by returns |
@@ -223,7 +226,9 @@ Every stat is a pure function of `events.json`, with unit tests built from hand-
 | Winners | The last shot of a rally the player's team won, which no opponent touched |
 | Landing map | A top-down court showing the player's serve and return bounces and the bounce spots of their out-errors |
 
-Rallies won, points scored and serve faults come free from the same events. Later stats, in
+Serve faults come free from the same events. DinkData shows no number that players could
+check against the score they remember: no final score, games won, points scored or rallies
+won (ADR 0019). Later stats, in
 order unless the beta says otherwise, are dink success rate (a dink that lands in the
 opponents' kitchen and isn't an error), an all-shots heat map, unforced errors and forehand
 versus backhand. The owners approve any other stat first.
@@ -240,16 +245,16 @@ DinkData scores every rally for each player and keeps the best ones. The v1 rule
 | Moment | Score | Available from |
 |---|---|---|
 | A long rally the player took part in, by shot count or duration | Higher for longer rallies | M2, from rally start and end |
-| A point the player's team won on that player's serve | Medium | M2, from the score decoder |
-| Game point and the final rally of the game | Bonus | M2 |
+| A rally the player's team won on that player's serve | Medium | M2, from the rally winner |
+| The final rally of the game | Bonus | M2 |
 | A winner hit by the player | High | M3, from hitter attribution |
 | An ace: the player's serve that the receiver didn't return | High | M3 |
 | A long dink exchange | Medium | Later, once dinks exist |
 
 A reel holds the top-scoring clips in time order, about 5 to 8 clips and 30 to 90 seconds in
 total. Each clip starts about 1 second before the serve and ends about 1.5 seconds after the
-rally ends. The reel opens with a title card showing the player's photo crop and the final
-score. A small marker under the player's feet, taken from tracking, shows who the reel is
+rally ends. The reel opens with a title card showing the player's photo crop, the game number
+and the date, and no score. A small marker under the player's feet, taken from tracking, shows who the reel is
 about. In the prototype the renderer cuts and joins the clips with FFmpeg into an MP4 for
 every player. In M4 a web player plays the clips straight from PickleCam's video and draws the
 marker from the tracking data, and the renderer runs only when a player taps download or
@@ -264,7 +269,7 @@ checks clip boundaries against the rally gold labels, as section 10 describes.
 
 | Requirement | Target | Measured on |
 |---|---|---|
-| Score | Exact final score in at least 90% of games | Rally-level gold test set, about 30 games plus the 8 full-event test games |
+| Rally winners | The winning team matches gold on at least 95% of rallies, provisionally | Rally-level gold test set, about 30 games plus the 8 full-event test games |
 | Per-player counts | For each stat, off by at most 1 in at least 90% of the player-games where it's shipped, and better than a trivial baseline | Full-event gold test set, 32 player-games |
 | Depth | The bucket matches gold for at least 90% of visible serves and returns, provisionally | Full-event gold |
 | Hits and bounces | F1 no more than 0.03 below human agreement, provisionally | Full-event gold |
@@ -291,8 +296,8 @@ the corrections become training data.
 
 ### 3.5 Out of scope, and constraints
 
-The v1 has no PickleCam integration, email sending, accounts or web app. It has no singles,
-rally scoring, ball speed, spin, forced versus unforced errors, forehand versus backhand or
+The v1 has no PickleCam integration, email sending, accounts or web app. It has no score, no singles,
+ball speed, spin, forced versus unforced errors, forehand versus backhand or
 dink stats. It doesn't use audio, and it flags close line calls but never rules on them.
 
 | Constraint | Consequence |
@@ -367,7 +372,7 @@ dink stats. It doesn't use audio, and it flags close line calls but never rules 
 | Precision, recall, F1 | Of what we found, the share that was right. Of what was there, the share we found. F1 combines both |
 | Tolerance | How close in time a detection must be to count, such as 2 frames |
 | Event spotting | Finding the exact frame of a hit or bounce |
-| HMM, Viterbi | A model of hidden states, such as the true score, seen through noisy evidence, and the algorithm that finds the most likely sequence of states |
+| HMM, Viterbi | A model of hidden states, such as which candidates are real events, seen through noisy evidence, and the algorithm that finds the most likely sequence of states |
 | Encoder-decoder, U-Net | A network that shrinks an image to understand it, then grows it back to locate things |
 | Loss, weighted cross-entropy | The number training reduces, and a version that weights rare things like the ball more |
 | Augmentation | Extra training examples made by changing brightness, adding blur or flipping images |
@@ -381,9 +386,9 @@ dink stats. It doesn't use audio, and it flags close line calls but never rules 
 | Term | Meaning |
 |---|---|
 | Rally, side-out | Play from the serve until the ball is dead, and the moment the serving team loses the serve |
-| Side-out scoring | Only the serving team scores. Each team gets two servers per turn, except the first turn of a game, which starts at `0-0-2`. Games go to 11, win by 2 |
-| Rally scoring | Either team can score on any rally. Not in v1 |
-| Starting positions | A team's players stand on their starting sides whenever that team's score is even, and switch only after winning a point on their own serve. Each service turn starts from the right |
+| Side-out scoring | Only the serving team scores. Each team gets two servers per turn, except the first turn of a game, which starts at `0-0-2`. Games go to 11, win by 2. Players often get it wrong, so DinkData doesn't report the score |
+| Rally scoring | Either team can score on any rally. Supported, because no stat reads the score |
+| Starting positions | A team's players stand on their starting sides whenever that team's score is even, and switch only after winning a point on their own serve. Each service turn starts from the right. DinkData uses this only as an internal tiebreak |
 | Two-bounce rule | The serve and the return must bounce before being hit. Volleys are allowed after that |
 | Kitchen, service court | The 7-ft no-volley zone by the net, and the diagonal box a serve must land in |
 | Fault | A rule break that ends the rally, such as a serve out, a volleyed return, a kitchen volley, the ball hitting a player or a foot fault |
@@ -418,15 +423,15 @@ therefore be built and tested alone, using the saved outputs of earlier stages.
 | 6 | Serve states, game mode, rallies | The `serve` block and boundaries of each rally, play and warm-up segments | Marti |
 | 7 | Event spotter | Candidate hits, bounces and net events with probabilities | Robby |
 | 8 | Rally grammar decoder | Clean rallies with events and end reasons | Robby |
-| 9 | Score decoder | Games, scores, servers, winners, rule deviations | Marti |
+| 9 | Serve sequence | Games and each rally's winner. Any score stays in memory | Marti |
 | 10 | Stats | `stats.json` | Robby |
 | 11 | Report | `report.html` | Robby |
 | 12 | Highlights | `highlights.json` with a clip list per player, and a reel MP4 per player | Marti |
 | | Studio and eval | Labels, calibrations, patches, metrics | Both |
 
 This split gives each owner the stages behind their priority. Robby owns the ball and events
-path that the stats need. Marti owns players, rallies and the score, which the highlights need
-first. It replaces the earlier split, in which Marti owned stats.
+path that the stats need. Marti owns players, rallies and the serve sequence, which the
+highlights need first. It replaces the earlier split, in which Marti owned stats.
 
 ![Infrastructure](diagrams/infrastructure.svg)
 
@@ -568,17 +573,19 @@ event spotter also uses wrist keypoints and heat map peaks.
    Team A is p1 and p2, and team B is p3 and p4. Appearance carries ids across games and end
    switches. Keeping partners apart matters most, so each serve checks the server against both
    stored profiles.
-6. **Partner identity is the riskiest assumption in the plan.** The M2 score depends on telling
-   p1 from p2 at every serve. Partners often dress alike, the far team is small on low
+6. **Partner identity is the riskiest assumption in the plan.** Per-player serve stats and the
+   next-serve winner hint depend on telling p1 from p2 at every serve. Partners often dress alike, the far team is small on low
    down-the-line cameras (64% of videos), and the near team is seen from behind. The player
    spike in M0 therefore measures partner-identity accuracy at the serve, separately for the
    near and far team, on serves the owners label by hand. The eval command keeps reporting it.
    M2's design is locked only after the spike shows the accuracy we can reach. If the far
-   team falls short, the score decoder leans on the parity hint and, from M3, the ball-based
-   winner, and the score may ship only for some camera setups.
+   team falls short, per-player serve stats ship only for the camera setups that pass, and
+   rally winners lean on the ball from M3.
 7. At each serve formation the serve state records which team serves, which player, from
-   which side and who receives. It also records whether each team stands on its starting
-   sides. That gives a hint about score parity, which stacking makes unreliable.
+   which side and who receives. Internally it also notes whether each team stands on its
+   starting sides, which hints at score parity. Players who lose track of the score and teams
+   that stack both make that hint wrong, so it only breaks a tie when the appearance check
+   can't tell partners apart, and it never goes into a file.
 8. Rules based on serve formations and their rhythm label segments as `game`, `warmup`,
    `drill` or `idle`.
 9. A rally starts at a detected serve and ends when the ball is dead: the ball leaves play,
@@ -586,7 +593,7 @@ event spotter also uses wrist keypoints and heat map peaks.
    serve.
 
 The main risks are occlusion near the net, spectators near the court, end switches and
-partners swapping ids. The appearance check and the score decoder's parity check catch swaps.
+partners swapping ids. The appearance check catches swaps, with the parity hint as a tiebreak.
 
 ### 6.7 Event spotter (`dinkdata.events`, Robby)
 
@@ -621,65 +628,62 @@ low-confidence hit. Some legal but unusual sequences are allowed with a penalty,
 never forces nonsense. These are the ball hitting a player, volleyed serves or returns,
 kitchen volleys, replays, players stopping on a wrong call and net-cord serves.
 
-The output is a clean event list, the end reason and the winner implied by the ball. If the
-score decoder's serve-based winner disagrees, the serve-based winner stands and the rally is
-flagged. Out calls follow what the players did.
+The output is a clean event list, the end reason and the winner implied by the ball. When the
+ball-based winner's confidence passes its threshold, it decides the rally. Otherwise the
+next-serve hint decides. A disagreement lowers the rally's `conf`, so a stat can leave the
+rally out instead of guessing. Out calls follow what the players did.
 
-### 6.9 Score decoder (`dinkdata.score`, Marti)
+### 6.9 Serve sequence (`dinkdata.serves`, Marti)
 
-Each rally outcome leads to a different next serve.
+The serve sequence turns serve states into each rally's winner and the game boundaries.
+DinkData never reports the score (ADR 0019), and no stage depends on it, because PickleCam
+players often lose track of side-out scoring.
 
-| Previous rally | Next serve |
+1. **The next-serve hint.** Each serve is compared with the next one only. If the other team
+   serves next, the serving team lost. If the same player serves again from the other side,
+   the serving team won. If the partner serves, the rules say the team lost with server 1,
+   but a team that won and forgot to swap looks the same. So the serves can't tell, the ball
+   decides from M3, and until then the rally gets a low confidence. A scoring mistake by the players
+   changes at most one rally and doesn't carry through the game.
+2. **The internal side-out replay.** The rules of side-out scoring, run over the whole game,
+   add weak evidence where the next-serve hint can't tell. The replay lives in memory only.
+   It allows rule breaks with a small penalty, drops out when the serves don't fit the rules,
+   and writes nothing to `events.json`. Its rules are below.
+
+| Previous rally | Next serve under the rules |
 |---|---|
 | Serving team won | The same server serves from the other side, because the partners swapped |
 | Serving team lost with server 1 | The partner serves as server 2, from where they stand |
 | Serving team lost with server 2, or the first server at `0-0-2` | Side-out. The other team serves from the right |
 | Replay | Same server, same side, same score |
 
-In the first two cases the next serve comes from the other side. Only the identity of the
-server tells them apart, which is why identities matter.
-
-The decoder is an HMM. Its hidden state holds both scores, the serving team, the server
-number, which partner is server 1 and where each player stands. Its transitions are the rules
-above, plus replays, end switches in the middle of a game (often at 6, or at 8 or 11 in longer
-games) and the rule breaks described in 6.10. Its observations are the server's and receiver's
-identity and side at each serve, with the parity hint and the ball-based winner as weak extra
-evidence. Viterbi runs over the whole game, so one misread serve rarely derails it.
-
-A game ends when a team reaches the target with a 2-point lead. The target is 11 unless the
-evidence fits 15 or 21 better. A game can only end on a point won by the serving team, so
-the last rally's winner is known too. A reset to `0-0-2` starts a new game. A game cut off at
-45 minutes gets `finished: false`. If fewer than four players are on court, or the serve
-pattern doesn't fit side-out scoring, the recording is singles or rally scoring and the score
-doesn't ship.
+3. **Games.** A game boundary comes from a break in play: the players stop, walk, swap ends or
+   reset their formation for a first serve from the right. The replay's guess at a game end
+   is only a hint. A game has an id, a start, an end and its rallies, and no target, winner or
+   final score.
+4. If fewer than four players are on court, the recording is singles, which v1 doesn't
+   support. Any scoring system works, because no stat reads the score. Gold labels are
+   side-out only for now, so eval can't yet measure rally-scoring games.
 
 ### 6.10 When players break the rules
 
 Recreational players make mistakes. They forget who served last, the wrong partner serves, a
 team serves again after it should have lost the serve, a player serves from the wrong side, or
-they lose track of the score and end the game at the wrong number. DinkData treats this as
-normal, and handles it in four ways.
+they lose track of the score and end the game at the wrong number. Most PickleCam games have
+a few of these. DinkData treats this as normal, in three ways.
 
-1. **Report what was played.** The score decoder models what happened on court. A serve
-   seen by the cameras is strong evidence, so the decoder doesn't force the sequence to fit
-   the rules. It allows rule breaks with a small penalty. One rule break then explains a
-   strange sequence better than several detection errors would.
-2. **Count points from rally outcomes.** A team scores when it wins a rally on its own serve,
-   whoever served and from wherever. If the wrong partner served and won, the point still
-   counts. When a rule break makes a rally's outcome ambiguous from the serves alone, the
-   ball-based winner decides, once it exists in M3. Until then the rally gets a low confidence.
-3. **Record and show each deviation.** Each rule break becomes a `rule_deviation` entry on its
-   rally, with a type (`wrong_server`, `missed_side_out`, `early_side_out`, `wrong_side`,
-   `extra_serve`, `game_end_mismatch`) and a confidence. The report states it plainly, for example "Team B
-   served twice at 6-4-1. The score shown counts each rally as it was played."
-4. **Follow the players at the end of a game.** We don't hear score calls, so a game ends
-   when the players stop and reset. If our count says 10-8 when they stopped, the report shows
-   10-8 and flags the mismatch for review. Either they miscounted or we did.
-
-The score target applies to games without deviations and to games with them, reported
-separately so we can see whether rule breaks hurt accuracy. Gold labels record what was
-played, including each deviation. The rally-level gold set will show how common these
-mistakes are.
+1. **No output depends on the score.** The players know their own score, so a score that
+   differs from theirs would look wrong at once, even when our count matches what was played.
+   No report, stat or reel shows the score, games won, points scored, rallies won or rule
+   deviations.
+2. **Rally winners come from local evidence.** The next-serve hint looks only at the next
+   serve, and the ball decides when it is confident, so one mistake by the players changes at
+   most one rally.
+3. **Gold labels record what was played.** The rally labeller replays the score and flags
+   rallies where the serves break the rules, and the labeller marks each rule deviation in
+   `rallies.json`. The labeller marks every rally's winner by hand, so the replay checks the
+   winner instead of choosing it. The rally-level gold set therefore shows how often players
+   get the score wrong, and that number never reaches a player.
 
 ### 6.11 Stats and report (`dinkdata.stats`, `dinkdata.report`, Robby)
 
@@ -687,15 +691,13 @@ Each stat is a pure function that returns a value, numerator, denominator, confi
 flag and reason. Unit tests cover every rule. A serve on the kitchen line is a fault, a winner
 requires that no opponent touched the ball, and a serve into an area the camera can't see is
 left out. The report is one static HTML file built from a Jinja2 template, laid out for
-phones, with an inline SVG landing map and any rule deviations.
+phones, with an inline SVG landing map. It shows no score and no rule deviations.
 
 ```json
 {"video_id": "v_9c1e…", "game_id": "g1",
  "players": {"p1": {
    "serve_in_pct": {"value": 0.875, "num": 7, "den": 8, "conf": 0.93, "shipped": true},
-   "winners": {"value": 1, "conf": 0.64, "shipped": false, "reason": "low_attribution_conf"}}},
- "teams": {"A": {"rallies_won": 15, "points_scored": 11}, "B": {"rallies_won": 10, "points_scored": 7}},
- "final_score": {"A": 11, "B": 7}}
+   "winners": {"value": 1, "conf": 0.64, "shipped": false, "reason": "low_attribution_conf"}}}}
 ```
 
 ### 6.12 Highlights (`dinkdata.highlights`, Marti)
@@ -712,7 +714,7 @@ phones, with an inline SVG landing map and any rule deviations.
    NVENC, and keeps it for 30 days (ADR 0012).
 
 In M0 the player and renderer work from a hand-written list of rallies, so they need no models. In M2 it
-uses detected rallies and the score. In M3 it adds winners and aces.
+uses detected rallies and their winners. In M3 it adds winners and aces.
 
 ### 6.13 Studio (`dinkdata.studio`, both)
 
@@ -765,22 +767,21 @@ personal data.
 | `events.json` | The game log, shown below |
 | `stats.json` | For each game, subject (player or team) and stat: value, num, den, conf, shipped and reason. Depth stats hold bucket counts and the landing map holds court points |
 | `highlights.json` | One reel per game per player: the clips with rally, start, end, reasons and score, and the MP4 once rendered |
-| `rallies.json` | Rally-level gold labels: games, and for each rally the server, side, receiver, winner, score as played and any rule deviation. Times are `t` only, because the browser labeller can't know frames |
+| `rallies.json` | Rally-level gold labels: games, and for each rally the server, side, receiver, winner, score as played and any rule deviation. Only gold keeps the score, to measure how often players get it wrong. Times are `t` only, because the browser labeller can't know frames |
 | `ball_labels.parquet` | Ball clicks: `frame`, `t`, `x`, `y`, `visible`, `clicked`, `split` |
 | `patch.json` | Corrections to one pipeline run, with its `run_id`. Add, change and delete operations on games, rallies and events by id, with author handle, time and the old values. The patched `events.json` is saved next to it |
 
 ```json
-{"schema": "dinkdata.events/v1",
+{"schema": "dinkdata.events/v2",
  "video": {"id": "v_9c1e…", "fps_nominal": 30, "frames": "videos/v_9c1e….frames.parquet", "dropped_frames": 14},
  "camera": {"id": "c_41ab…", "version": 2},
  "players": [{"id": "p1", "team": "A", "label": "Player 1", "crop": "crops/p1.jpg"}],
  "segments": [{"type": "warmup", "start_frame": 0, "end_frame": 5400, "start_t": 0.0, "end_t": 180.43, "conf": 0.9}],
- "games": [{"id": "g1", "format": "sideout", "target": 11, "finished": true,
-   "winner_team": "A", "final_score": {"A": 11, "B": 7},
+ "games": [{"id": "g1", "start_frame": 5520, "end_frame": 27360, "start_t": 184.47, "end_t": 912.30,
    "rallies": [{"id": "g1_r1", "start_frame": 5520, "end_frame": 5910, "start_t": 184.47, "end_t": 197.47,
-     "serve": {"server": "p1", "server_number": 2, "side": "right", "receiver": "p3", "conf": 0.96},
-     "score_before": "0-0-2", "winner_team": "A", "winner_source": "serve_state", "replay": false,
-     "end_reason": null, "rule_deviations": [], "reviewed": false, "conf": 0.94,
+     "serve": {"server": "p1", "side": "right", "receiver": "p3", "conf": 0.96},
+     "winner_team": "A", "winner_source": "next_serve", "replay": false,
+     "end_reason": null, "reviewed": false, "conf": 0.94,
      "events": [
        {"id": "e1", "type": "hit", "frame": 5531, "t": 184.83, "player": "p1", "shot_index": 1, "volley": false, "conf": 0.97},
        {"id": "e2", "type": "bounce", "frame": 5562, "t": 185.87, "image_xy": [880.5, 412.0],
@@ -793,7 +794,7 @@ personal data.
 The example shows four things. The return's bounce, e4, lands below the frame, so its
 position and `in` are `null`. The ball doesn't show how the rally ended, so `end_reason` is
 `null`. The next serve, p1 again from the left, shows that team A won, so `winner_source` is
-`serve_state`. And `t` differs from `frame / 30` because 14 frames were dropped earlier.
+`next_serve`. And `t` differs from `frame / 30` because 14 frames were dropped earlier.
 
 The end reasons are these.
 - `net`: the shot didn't cross the net.
@@ -880,7 +881,7 @@ side. Frame rate, resolution and size come from the file at fetch time.
 | Label set | Purpose | Size |
 |---|---|---|
 | Gold, full events | The answer key for events and per-player stats. Never trains | 12 games, 4 dev and 8 test from held-out facilities covering all setups, split 6 each between the owners. They also give rally-level labels |
-| Gold, rally level | The answer key for the score, game boundaries, rule deviations and highlight clip edges | About 50 more games, 20 dev and 30 test, about 10 minutes each |
+| Gold, rally level | The answer key for rally winners, serve states, game boundaries and highlight clip edges. It also records the score as played and rule deviations, to measure how often players get the score wrong | About 50 more games, 20 dev and 30 test, about 10 minutes each |
 | Ball clicks | Training and measuring the ball tracker | About 4,000 training frames and 1,000 test frames, in 2-second clips |
 | Foot clicks | Measuring foot position error | About 200 serve frames from test games |
 | Silver | Training the event spotter | About 10 corrected training games in M3, then beta corrections |
@@ -928,7 +929,7 @@ synthetic version runs in CI.
 | Hits, bounces, net | Precision, recall and F1 within 2 frames, about 67 ms |
 | Attribution | Hitter accuracy among matched hits |
 | Bounces | Position error in feet, in/out accuracy and close-call rate |
-| Score | Exact final scores per game, per-rally score accuracy, rule deviations found, all reported separately for games with and without deviations |
+| Rally winners | The share of rallies whose winning team matches gold, reported separately for rallies the serves settle (the other team or the same server serves next) and rallies they can't (the partner serves next), and for games with and without rule deviations in the gold labels |
 | Stats | The share of player-games off by at most 1 for each stat, the mean error, and the same numbers for the median-count baseline |
 | Highlights | The share of clips containing the whole rally, and the share with the marker on the right player |
 | GPU time | GPU-seconds per video for each stage, as information. The cost-per-video target waits for M4 |
@@ -937,7 +938,8 @@ synthetic version runs in CI.
 | Gate | Requirement | Milestone |
 |---|---|---|
 | Partner identity | Accuracy at the serve measured for near and far teams, and a target agreed before M2 starts | M0 spike |
-| Score ships | Exact in at least 90% of test games | M2 |
+| Serve states | Server identity at or above the target set after the M0 spike, for near and far teams | M2 |
+| Rally winners | The winning team matches gold on at least 95% of test rallies, provisionally. The share is also reported for rallies the serves can't settle | M2 |
 | Rally reels ship | At least 95% of clips contain the whole rally | M2 |
 | Ball v1 | Recall and precision of at least 90% at 10 px on test clicks | M2 to M3 |
 | Ball stats ship | Each stat off by at most 1 in at least 90% of test player-games, better than the median-count baseline, and at or above the coverage floor for each setup | M3 |
@@ -1089,7 +1091,7 @@ dedicated GPU servers.
 ### 12.1 Layout and tooling
 
 ```
-src/dinkdata/  contracts data video court ball players events score stats report highlights eval studio, cli.py
+src/dinkdata/  contracts data video court ball players events serves stats report highlights eval studio, cli.py
 studio-ui/     contracts/ (generated)    tests/ (synthetic fixtures)
 docs/          DESIGN.md and its PDF, STATS COURT DATA LABELLING EVAL OPERATIONS KNOWN-ISSUES, adr/, agents/, diagrams/
 GLOSSARY.md  CLAUDE.md  README.md  LICENSE (AGPL-3.0)  pyproject.toml  uv.lock  Makefile  .github/
@@ -1101,7 +1103,7 @@ it. Topic docs hold the detail. `STATS.md` is the authority for stat code. `GLOS
 `DESIGN.md`, it updates both.
 
 CODEOWNERS follows the split in section 5. Robby owns `data`, `video`, `court`, `ball`,
-`events`, `stats` and `report`. Marti owns `players`, `score` and `highlights`. Both own
+`events`, `stats` and `report`. Marti owns `players`, `serves` and `highlights`. Both own
 `contracts`, `eval`, `studio`, `docs`, `.github` and `CLAUDE.md`.
 
 The core dependencies are numpy, pydantic, pyarrow, polars, typer, httpx and boto3, enough for
@@ -1184,12 +1186,12 @@ Work that only serves integration or production cost waits for M4.
 | Setup | Section 14.2 | The docs and package layout are merged and the issues are ready |
 | M0 Foundations | Contracts v1, the endpoint spec sent, 150 hand-picked and hand-downloaded games prepared with `dink ingest` and stored in R2, cloud accounts with guardrails, stats v1 on hand-written logs and CVAT ball clicks with a converter (Robby). The Docker image, the highlight renderer on a hand-written rally list, the minimal rally labeller and the player spike with partner-identity accuracy (Marti). Rally-level labelling starts | Contract tests pass, 150 games with timestamps are in R2, stats tests cover every v1 rule, a reel renders from a hand-written list, and partner-identity accuracy is measured for near and far teams |
 | M1 Ground truth | The calibration tool and calibrations, the camera-moved check, the studio with its events mode, the rest of the rally-level gold set and the first full-event games, the eval command with baselines and coverage per setup, and a first end-to-end version that produces a report and a reel | `dink run` produces a report and reels, `dink eval` prints every metric, and agreement is measured |
-| M2 Score and first reels | Serve states, game mode, rallies, the score decoder with rule deviations and rally-based reels, designed around the measured partner-identity accuracy (Marti). Ball tracker v1 (Robby) | The score and rally-reel gates pass, and the ball reaches 90% at 10 px |
+| M2 Serve states and first reels | Serve states, game mode, rallies, the serve sequence with rally winners and game boundaries, and rally-based reels, designed around the measured partner-identity accuracy (Marti). Ball tracker v1 (Robby) | The serve-state, rally-winner and rally-reel gates pass, and the ball reaches 90% at 10 px |
 | M3 Ball stats and full reels | Silver labels, the spotter, the rally grammar and attribution, bounces and in/out, stats 2 to 5 and the landing map (Robby). Reels with winners and aces (Marti) | The stats and events gates pass, with coverage reported |
 | M4 Integration and beta, after PickleCam approves the prototype | Automatic intake (endpoint, `dink catalog sync`, `dink sample`, `dink fetch` and the daily workflow), `dink run` on loose files with automatic camera matching, reels played over PickleCam's video, the play-segment and rally-only speed-ups, the batch runner, review mode, automatic calibration, thresholds, delivery to beta players, retraining, the optimized Linux Docker image, and the provider benchmark on 100 games | A week of reviewed games with fewer than 1 stat in 10 changed, and cost under $0.01 a video |
 
 Later work includes dink success rate, an all-shots heat map, unforced errors, forehand versus
-backhand, singles and rally scoring, the WASB comparison, self-training, production in the
+backhand, singles, the WASB comparison, self-training, production in the
 cloud, a web app and the PickleCam integration.
 
 ### 14.2 The setup phase, done by this session after approval
@@ -1263,8 +1265,8 @@ The M2 to M4 issues are written when those milestones start.
 |---|---|
 | Labelling takes longer than planned, which is likely | Labelling starts in M0 without waiting for the studio: a minimal rally labeller, CVAT for ball clicks and the calibration click tool. 4 full games first, model suggestions, and gold sets that grow over time |
 | The far ball is too small on low cameras | The crop, larger inputs, more labels from low cameras, and leaving stats out with coverage reported |
-| Partners can't be told apart, or swap ids, and the score breaks | Measure partner identity in the M0 spike for near and far teams before designing M2. Appearance check at each serve, the decoder's parity check, and shipping the score only for setups that pass |
-| Players break the serving rules | Rule-break transitions in the decoder, deviations shown in the report and accuracy reported separately, as section 6.10 describes |
+| Partners can't be told apart, or swap ids, and per-player serve stats break | Measure partner identity in the M0 spike for near and far teams before designing M2. Appearance check at each serve, the parity hint only as a tiebreak, and shipping per-player serve stats only for setups that pass |
+| Players break the serving rules, a few times in most games | No output shows the score, rally winners come from local evidence, and rally-winner accuracy is reported separately for games with deviations, as section 6.10 describes |
 | Stacking and other unusual positions | Weak evidence, not rules, measured on the rally-level gold set |
 | The endpoint arrives late | It isn't needed until after the prototype. We download games by hand |
 | Many camera models | Group by facility, share lens parameters, automatic calibration in M4 |
@@ -1320,11 +1322,11 @@ review.
 | 2 | Two v1 priorities: stats (Robby) and per-player highlight reels (Marti) | The owners' notes |
 | 3 | Ownership follows the priorities (section 5) | Each owner controls the stages behind their priority |
 | 4 | Every player gets the whole-game report and every reel, and finds themselves by photo | The simplest identity solution |
-| 5 | Doubles with side-out scoring, games to 11 by default and longer games supported | Most games. Singles and rally scoring later |
+| 5 | Doubles with side-out scoring, games to 11 by default and longer games supported. Superseded by 40 | Most games. Singles and rally scoring later |
 | 6 | Five v1 stats and the landing map. Dinks, unforced errors and forehand versus backhand later | Most wanted and cheapest to build |
-| 7 | Targets on the score, per-stat counts, events from human agreement, and coverage | A ±5-point target per player couldn't be measured |
-| 8 | Two gold sets, 12 full games and about 50 rally-level games | Enough games to measure the score |
-| 9 | Report the score as played, and flag the players' rule breaks | Recreational players make serving mistakes |
+| 7 | Targets on per-stat counts, events from human agreement, and coverage | A ±5-point target per player couldn't be measured |
+| 8 | Two gold sets, 12 full games and about 50 rally-level games | Enough games to measure rally winners, serve states and clip edges |
+| 9 | Report the score as played, and flag the players' rule breaks. Superseded by 40 | Recreational players make serving mistakes |
 | 10 | Human review of every beta game | Trust while the models improve |
 | 11 | Minimal spending, no contractors, we label ourselves | Budget |
 | 12 | Cloud GPUs from the start in one Docker image, the cheapest GPU that gives the same result, a $50 monthly development budget, and production chosen by measured cost in M4 | One environment, cloud skills learned early, no switch before launch |
@@ -1355,7 +1357,8 @@ review.
 | 37 | R2 stays as the development store, and `dink run` reads models from a local folder | Labels and games need one shared, backed-up place. ADR 0006 |
 | 38 | A training run that measurably improves accuracy can exceed the $50 monthly budget if both owners agree first | Accuracy wins over saving money |
 | 39 | M0 uses RunPod only, with prepaid credit as the cap and a 4-hour timer on every pod. Modal waits for batch eval and Vast.ai for the M4 benchmark | One account until a ticket needs more. RunPod can't stop idle pods |
-| 40 | The rally labeller's reference crops are uploaded with the labels to the private `labels/` folder in R2 and its backup | Labellers need them to tell partners apart, and the bucket already holds the full videos |
+| 40 | No output shows the score or any number derived from it. The pipeline may track the score in memory as weak evidence, gold labels keep it, and v1 covers doubles under any scoring system | PickleCam's CEO, 21 October 2026: players often mis-score, and a score that differs from theirs looks wrong. ADR 0019 |
+| 41 | The rally labeller's reference crops are uploaded with the labels to the private `labels/` folder in R2 and its backup | Labellers need them to tell partners apart, and the bucket already holds the full videos |
 
 ## Appendix B: Questions for the PickleCam backend developer
 

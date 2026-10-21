@@ -1,5 +1,5 @@
 {
-  "schema": "dinkdata.events/v1",
+  "schema": "dinkdata.events/v2",
   "video": {
     "id": "v_5eed00000000e001",
     "fps_nominal": 30,
@@ -20,11 +20,10 @@
   "games": [
     {
       "id": "g1",
-      "format": "sideout",
-      "target": 11,
-      "finished": false,
-      "winner_team": null,
-      "final_score": { "A": 1, "B": 0 },
+      "start_frame": 5401,
+      "end_frame": 6700,
+      "start_t": 180.47,
+      "end_t": 223.8,
       "rallies": [
         {
           "id": "g1_r1",
@@ -32,13 +31,11 @@
           "end_frame": 5910,
           "start_t": 184.47,
           "end_t": 197.47,
-          "serve": { "server": "p1", "server_number": 2, "side": "right", "receiver": "p3", "conf": 0.96 },
-          "score_before": "0-0-2",
+          "serve": { "server": "p1", "side": "right", "receiver": "p3", "conf": 0.96 },
           "winner_team": "A",
-          "winner_source": "serve_state",
+          "winner_source": "next_serve",
           "replay": false,
           "end_reason": null,
-          "rule_deviations": [],
           "reviewed": false,
           "conf": 0.94,
           "events": [
@@ -54,13 +51,11 @@
           "end_frame": 6560,
           "start_t": 210.47,
           "end_t": 219.13,
-          "serve": { "server": "p1", "server_number": 2, "side": "left", "receiver": "p4", "conf": 0.88 },
-          "score_before": "1-0-2",
+          "serve": { "server": "p1", "side": "left", "receiver": "p4", "conf": 0.88 },
           "winner_team": "B",
           "winner_source": "ball",
           "replay": false,
           "end_reason": "net",
-          "rule_deviations": [],
           "reviewed": true,
           "conf": 0.81,
           "events": [

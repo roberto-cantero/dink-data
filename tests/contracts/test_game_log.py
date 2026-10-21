@@ -45,7 +45,10 @@ def test_bounce_in_keeps_its_json_name():
             lambda d: event(d, 1, 1).update(frame=5500), "inside", id="event frame outside"
         ),
         pytest.param(lambda d: event(d, 2, 1).update(id="e1"), "unique", id="duplicate event id"),
-        pytest.param(lambda d: rally(d, 2).update(score_before="0-0-2"), "score", id="bad score"),
+        pytest.param(
+            lambda d: d["games"][0].update(end_frame=6000), "inside", id="rally after game end"
+        ),
+        pytest.param(lambda d: d["games"][0].update(end_t=200.0), "inside", id="game ends early"),
         pytest.param(
             lambda d: rally(d, 2).update(winner_team=None), "winner_source", id="source, no winner"
         ),
@@ -79,7 +82,14 @@ def test_rules_across_the_log(change, message):
         pytest.param(lambda d: event(d, 1, 2).update(court_xy=[1, 2, 3]), id="3d bounce"),
         pytest.param(lambda d: event(d, 1, 2).update(conf=-0.1), id="negative conf"),
         pytest.param(lambda d: d["segments"][0].update(type="lunch"), id="unknown segment type"),
-        pytest.param(lambda d: d["games"][0].update(format="rally"), id="rally scoring"),
+        # No score field reaches the game log (ADR 0019).
+        pytest.param(lambda d: rally(d, 1).update(score_before="0-0-2"), id="score call"),
+        pytest.param(lambda d: rally(d, 1).update(rule_deviations=[]), id="rule deviations"),
+        pytest.param(lambda d: rally(d, 1)["serve"].update(server_number=2), id="server number"),
+        pytest.param(lambda d: d["games"][0].update(final_score={"A": 1, "B": 0}), id="final"),
+        pytest.param(lambda d: d["games"][0].update(winner_team="A"), id="game winner"),
+        pytest.param(lambda d: d["games"][0].update(format="sideout"), id="scoring format"),
+        pytest.param(lambda d: rally(d, 1).update(winner_source="serve_state"), id="old source"),
     ],
 )
 def test_schema_rejects(change):
@@ -95,5 +105,4 @@ def test_unknowns_are_allowed():
     rally(log, 1)["serve"]["receiver"] = None
     event(log, 1, 1)["player"] = None
     log["players"][0]["crop"] = None
-    # With r1's winner unknown, r2's call of 1-0-2 still fits a point for team A.
     EventLog.model_validate(log)

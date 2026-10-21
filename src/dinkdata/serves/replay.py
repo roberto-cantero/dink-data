@@ -1,9 +1,12 @@
 """Score replay: the side-out rules run over serves that a person marked. Owner: Marti.
 
-The rally labeller marks each serve's time, server and side. This module replays one game's
-score from those marks (DESIGN 6.9). It fills in each rally's winner from the serve that
-follows it, and it suggests a rule deviation wherever the serves break the rules (DESIGN 6.10).
-Points follow the rallies as played: a team scores when it wins a rally it served (ADR 0014).
+The rally labeller marks each serve's time, server, side and winner. This module replays one
+game's score from those marks (DESIGN 6.9), checks each winner against the serve that follows
+it, and suggests a rule deviation wherever the serves break the rules (DESIGN 6.10). Points
+follow the rallies as played: a team scores when it wins a rally it served.
+
+The score is internal. It goes into gold labels only, where it measures how often players get
+it wrong, and never into an output (ADR 0019).
 
 The rules, after a rally served by player s from side x with server number n:
 
@@ -14,16 +17,19 @@ The rules, after a rally served by player s from side x with server number n:
 | Lost with server 2, or at `0-0-2` | Side-out: the other team's right-side player, from the right |
 | Replay | s again, from x, at the same score |
 
-For each rally the replay tries every outcome the labeller left open and keeps the one whose
-next serve breaks the fewest rules. When two outcomes tie, it leaves the winner to the
-labeller and lists what each choice would mean. Team positions are learnt from the serves:
-a team's first serve shows who stands on its right.
+Players often break these rules, so a winner the serves suggest is weak evidence. The
+labeller marks every winner, so the replay checks each one against the next serve. Where a
+winner is left open, as on a cut-off game's last rally or in a test, the replay tries every
+outcome and keeps the one whose next serve breaks the fewest rules. When two outcomes tie,
+it leaves the winner to the labeller and lists what each choice would mean. Team positions
+are learnt from the serves: a team's first serve shows who stands on its right.
 
 A serve by the wrong team is `missed_side_out` when the serving team kept a serve it should
 have lost, and `early_side_out` when it gave up its second serve. A team that hands over the
 serve after winning a point fits no deviation type, so that rally is marked unexplained.
 
-The score decoder (M2) reuses these rules, and eval uses them to check gold files.
+The serve sequence (M2) may reuse these rules as weak evidence for rally winners, and eval
+uses them to check gold files.
 """
 
 from collections.abc import Sequence
@@ -31,7 +37,7 @@ from dataclasses import dataclass, field, replace
 from typing import Literal
 
 from dinkdata.contracts.common import PlayerId, Side, Team, team_of
-from dinkdata.contracts.games import RuleDeviationType, Target
+from dinkdata.contracts.rallies import RuleDeviationType, Target
 
 Outcome = Literal["won", "lost", "replay"]
 WinnerSource = Literal["labeller", "next_serve", "game_end"]
@@ -57,7 +63,7 @@ class ServeMark:
     side: Side
     replay: bool = False
     winner: Team | None = None
-    """The labeller's winner. None lets the next serve decide."""
+    """The labeller's winner. None, only on a cut-off rally, lets the next serve decide."""
 
     def __post_init__(self) -> None:
         if self.replay and self.winner is not None:

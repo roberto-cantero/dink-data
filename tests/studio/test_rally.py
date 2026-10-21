@@ -91,9 +91,39 @@ def test_saving_incomplete_marks_lists_every_problem():
     assert len(raised.value.problems) == 3
 
 
+def test_every_rally_needs_the_labellers_winner():
+    marks = one_game(rally(10, "p1", "right"), rally(20, "p1", "left"), finished=True)
+    assert "Press A or B" in review(marks).rallies[0].todo[-1]
+    marks.rallies[0].winner = "A"
+    assert not review(marks).rallies[0].todo
+    marks.rallies[1].replay = True
+    assert not review(marks).rallies[1].todo
+
+
+def test_a_cut_off_game_may_end_on_a_rally_without_a_winner():
+    marks = one_game(rally(10, "p1", "right", winner="A"), rally(20, "p1", "left"))
+    assert not review(marks).rallies[1].todo
+
+
+def test_the_replay_checks_a_winner_instead_of_choosing_it():
+    # In rally 2, p3 serves for B as server 1, and B wins. The players forget the point: p3
+    # and p4 don't swap, and p4 serves rally 3 from the left. Left to the serves, the replay
+    # would call rally 2 a loss with server 1 and quietly give it to A.
+    marks = one_game(
+        rally(10, "p1", "right", winner="B"), rally(20, "p3", "right"), rally(30, "p4", "left")
+    )
+    assert review(marks).rallies[1].winner_team == "A"
+    marks.rallies[1].winner = "B"
+    result = review(marks)
+    assert result.rallies[1].winner_team == "B"
+    # The deviation belongs to the serve that broke the rule.
+    assert result.rallies[2].red
+    assert "wrong_server" in result.rallies[2].missing
+
+
 def test_the_contract_still_has_the_last_word():
     # A finished game that stops at 1-0 needs game_end_mismatch, which the contract checks.
-    marks = one_game(rally(10, "p1", "right"), finished=True)
+    marks = one_game(rally(10, "p1", "right", winner="A"), finished=True)
     with pytest.raises(ValidationError, match="game_end_mismatch"):
         to_labels(marks, VIDEO_ID, "marti")
     marks.rallies[0].deviations.append("game_end_mismatch")
@@ -109,6 +139,8 @@ def test_the_example_file_survives_loading_and_saving():
             r["serve"]["receiver"] = None
     saved = RallyLabels.model_validate(data)
     marks = from_labels(saved)
-    # Only the one winner the serves can't show is the labeller's own choice.
-    assert [r.winner for r in marks.rallies if r.winner] == ["B"]
+    # Every winner is the labeller's own, so loading keeps them all. Only g2's last rally,
+    # which the recording cut off, has none.
+    assert [r.winner is None and not r.replay for r in marks.rallies].count(True) == 1
+    assert marks.rallies[-1].winner is None
     assert to_labels(marks, saved.video_id, saved.labeller) == saved
