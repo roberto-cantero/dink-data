@@ -4,7 +4,7 @@ The product requirements, technical design and system design for DinkData. This 
 
 | | |
 |---|---|
-| Version | 1.10 |
+| Version | 1.11 |
 | Date | 21 October 2026 |
 | Owners | Robby (`@roberto-cantero`) and Marti (`@probablynotmarti`) |
 | Prepared with | Claude Code, after a review session with Robby and review comments from Marti |
@@ -868,7 +868,10 @@ side. Frame rate, resolution and size come from the file at fetch time.
 1. No emails, facility names, session ids or Bunny ids go into the repo, issues, PRs, logs or labels.
 2. No footage or frames go into the repo. Test fixtures are synthetic.
 3. Fetch drops the audio track, so we store no audio.
-4. Player photos and reels stay in `runs/` and go only to the players in that game.
+4. Player photos and reels stay in `runs/` and go only to the players in that game. The rally
+   labeller's reference crops, one photo per player per game, are the one exception. They stay
+   next to their labels in the private `labels/` folder in R2 and its backup, and never go into
+   the repo.
 5. DinkData stores no contact details. How beta players receive reports and reels is an open question.
 6. Agents work only from issues the two owners wrote.
 7. Robby confirmed for PickleCam on 17 October 2026 that all games may be used for this project.
@@ -1355,6 +1358,7 @@ review.
 | 38 | A training run that measurably improves accuracy can exceed the $50 monthly budget if both owners agree first | Accuracy wins over saving money |
 | 39 | M0 uses RunPod only, with prepaid credit as the cap and a 4-hour timer on every pod. Modal waits for batch eval and Vast.ai for the M4 benchmark | One account until a ticket needs more. RunPod can't stop idle pods |
 | 40 | No output shows the score or any number derived from it. The pipeline may track the score in memory as weak evidence, gold labels keep it, and v1 covers doubles under any scoring system | PickleCam's CEO, 21 October 2026: players often mis-score, and a score that differs from theirs looks wrong. ADR 0019 |
+| 41 | The rally labeller's reference crops are uploaded with the labels to the private `labels/` folder in R2 and its backup | Labellers need them to tell partners apart, and the bucket already holds the full videos |
 
 ## Appendix B: Questions for the PickleCam backend developer
 

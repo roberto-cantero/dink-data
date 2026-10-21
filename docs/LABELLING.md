@@ -38,8 +38,8 @@ uv run dink studio --rallies <video_id> --labeller <your handle>
 
 1. Press G where the first game starts.
 2. Press C and click p1, p2, p3 and p4 once each. The page keeps a crop of each player beside
-   the timeline, so you can tell partners apart later. Crops stay in your local `labels/`
-   folder, never in the repo.
+   the timeline, so you can tell partners apart later. Crops are saved next to your
+   labels and uploaded with them to R2, never to the repo.
 3. Play the game. At each serve press S, the server (1 to 4) and the side they stand on
    (L or R).
 4. When the ball is dead, press E, then A or B for the team that won the rally, or P for a
