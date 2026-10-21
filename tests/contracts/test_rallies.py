@@ -7,7 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from dinkdata.contracts.common import dump, load
-from dinkdata.contracts.rallies import RallyLabels, RuleDeviation, RuleDeviationType
+from dinkdata.contracts.rallies import RallyLabels, RuleDeviation, RuleDeviationType, upgrade_v1
 from tests.contracts.examples import example
 
 
@@ -149,3 +149,22 @@ def test_schema_rejects(change):
     change(labels)
     with pytest.raises(ValidationError):
         RallyLabels.model_validate(labels)
+
+
+def v1_example() -> dict:
+    """The example as the v1 labeller saved it: the old schema and a server number per serve."""
+    data = example("rallies")
+    data["schema"] = "dinkdata.rallies/v1"
+    for game in data["games"]:
+        for r in game["rallies"]:
+            r["serve"]["server_number"] = int(r["score_before"][-1])
+    return data
+
+
+def test_a_v1_file_upgrades_to_v2():
+    assert upgrade_v1(v1_example()) == RallyLabels.model_validate(example("rallies"))
+
+
+def test_only_v1_files_upgrade():
+    with pytest.raises(ValueError, match="not a rallies v1 file"):
+        upgrade_v1(example("rallies"))

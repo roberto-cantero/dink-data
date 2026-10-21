@@ -74,6 +74,30 @@ class IdKind(StrEnum):
     facility = "facility"
 
 
+@contracts_app.command("upgrade-rallies")
+def contracts_upgrade_rallies(
+    labels: Annotated[Path, typer.Option(help="Local folder for label files.")] = Path("labels"),
+) -> None:
+    """Save each labeller's latest v1 rallies.json as a new v2 version. Nothing is overwritten."""
+    import json
+
+    from dinkdata.contracts.common import to_json
+    from dinkdata.contracts.rallies import upgrade_v1
+    from dinkdata.studio import store
+
+    upgraded = 0
+    for folder in sorted((labels / store.GOLD_RALLIES).glob("*/*")):
+        path = store.latest(folder, ".json")
+        if path is None or json.loads(path.read_text()).get("schema") != "dinkdata.rallies/v1":
+            continue
+        new = store.write_new_version(
+            folder, to_json(upgrade_v1(json.loads(path.read_text()))).encode(), ".json"
+        )
+        typer.echo(f"Upgraded {path} to {new.name}. Re-check its winners in the labeller.")
+        upgraded += 1
+    typer.echo(f"Upgraded {upgraded} file(s).")
+
+
 @app.command(name="id")
 def make_id(kind: IdKind) -> None:
     """Print the opaque id for a PickleCam id. Run with `uv run --env-file .env dink id video`.

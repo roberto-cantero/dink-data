@@ -7,10 +7,12 @@ the nearest frame in the video's frames.parquet.
 Labels record what was played, including the score as played and each rule deviation. Only
 gold keeps the score: it measures how often players get it wrong, and no output carries it
 (ADR 0019). The labeller marks every rally's winner, so the score follows the winners and
-never decides them.
+never decides them. Gold covers side-out games only for now: a game starts at `0-0-2` and
+ends at its target.
 """
 
-from typing import Literal
+import copy
+from typing import Any, Literal
 
 from pydantic import Field, model_validator
 
@@ -185,3 +187,19 @@ def _recount(rallies: list[LabelRally]) -> set[tuple[int, int]]:
         else:
             possible = {called, won}
     return possible
+
+
+def upgrade_v1(data: dict[str, Any]) -> RallyLabels:
+    """A `dinkdata.rallies/v1` file as v2: the schema string changes and `serve.server_number`
+    goes, because the score call's last digit already holds it. Raises ValueError otherwise.
+
+    v1 winners were often filled in from the next serve, so a person re-checks them after.
+    """
+    if data.get("schema") != "dinkdata.rallies/v1":
+        raise ValueError(f"not a rallies v1 file: schema is {data.get('schema')!r}")
+    upgraded = copy.deepcopy(data)
+    upgraded["schema"] = "dinkdata.rallies/v2"
+    for game in upgraded.get("games", []):
+        for rally in game.get("rallies", []):
+            rally.get("serve", {}).pop("server_number", None)
+    return RallyLabels.model_validate(upgraded)

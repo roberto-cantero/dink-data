@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from typer.testing import CliRunner
 
@@ -56,3 +58,18 @@ def test_studio_finds_the_video_by_id(tmp_path):
     )
     assert result.exit_code == 1
     assert "v_5eed00000000a001.mp4" in result.output
+
+
+def test_upgrade_rallies_saves_a_new_version_and_keeps_the_old(tmp_path):
+    from tests.contracts.test_rallies import v1_example
+
+    folder = tmp_path / "gold-rallies" / "v_5eed00000000a001" / "marti"
+    folder.mkdir(parents=True)
+    old = json.dumps(v1_example())
+    (folder / "v1.json").write_text(old)
+    result = runner.invoke(app, ["contracts", "upgrade-rallies", "--labels", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    assert (folder / "v1.json").read_text() == old
+    assert json.loads((folder / "v2.json").read_text())["schema"] == "dinkdata.rallies/v2"
+    again = runner.invoke(app, ["contracts", "upgrade-rallies", "--labels", str(tmp_path)])
+    assert "Upgraded 0 file(s)." in again.output

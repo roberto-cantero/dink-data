@@ -207,7 +207,9 @@ For each game in the recording, DinkData writes these files.
   MP4s are rendered only on request (ADR 0012).
 
 Every player gets the whole-game report and every reel, and finds themselves by photo. The v1
-covers doubles under any scoring system, because no stat depends on the score.
+covers doubles under any scoring system, because no stat depends on the score. Rally-level
+gold labels cover side-out games only for now. If rally-scoring games turn up in the
+prototype's games, the labeller gains a scoring format.
 
 ### 3.2 Stats (Robby)
 
@@ -660,7 +662,8 @@ players often lose track of side-out scoring.
    is only a hint. A game has an id, a start, an end and its rallies, and no target, winner or
    final score.
 4. If fewer than four players are on court, the recording is singles, which v1 doesn't
-   support. Any scoring system works, because no stat reads the score.
+   support. Any scoring system works, because no stat reads the score. Gold labels are
+   side-out only for now, so eval can't yet measure rally-scoring games.
 
 ### 6.10 When players break the rules
 
@@ -923,7 +926,7 @@ synthetic version runs in CI.
 | Hits, bounces, net | Precision, recall and F1 within 2 frames, about 67 ms |
 | Attribution | Hitter accuracy among matched hits |
 | Bounces | Position error in feet, in/out accuracy and close-call rate |
-| Rally winners | The share of rallies whose winning team matches gold, reported separately for games with and without rule deviations in the gold labels |
+| Rally winners | The share of rallies whose winning team matches gold, reported separately for rallies the serves settle (the other team or the same server serves next) and rallies they can't (the partner serves next), and for games with and without rule deviations in the gold labels |
 | Stats | The share of player-games off by at most 1 for each stat, the mean error, and the same numbers for the median-count baseline |
 | Highlights | The share of clips containing the whole rally, and the share with the marker on the right player |
 | GPU time | GPU-seconds per video for each stage, as information. The cost-per-video target waits for M4 |
@@ -933,7 +936,7 @@ synthetic version runs in CI.
 |---|---|---|
 | Partner identity | Accuracy at the serve measured for near and far teams, and a target agreed before M2 starts | M0 spike |
 | Serve states | Server identity at or above the target set after the M0 spike, for near and far teams | M2 |
-| Rally winners | The winning team matches gold on at least 95% of test rallies, provisionally | M2 |
+| Rally winners | The winning team matches gold on at least 95% of test rallies, provisionally. The share is also reported for rallies the serves can't settle | M2 |
 | Rally reels ship | At least 95% of clips contain the whole rally | M2 |
 | Ball v1 | Recall and precision of at least 90% at 10 px on test clicks | M2 to M3 |
 | Ball stats ship | Each stat off by at most 1 in at least 90% of test player-games, better than the median-count baseline, and at or above the coverage floor for each setup | M3 |

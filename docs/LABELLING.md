@@ -55,7 +55,10 @@ uv run dink studio --rallies <video_id> --labeller <your handle>
 The page shows the score as played so you can spot rule breaks. The score and deviations stay
 in the gold labels, where they measure how often players get the score wrong, and never reach
 a player (ADR 0019). The page stores times in seconds, not frames (ADR 0015). Files saved before 21 October 2026
-use `dinkdata.rallies/v1` and no longer load. Tell both owners if you have one. Python owns every rule: the score
+use `dinkdata.rallies/v1` and no longer load. Run `uv run dink contracts upgrade-rallies` to
+save each one as a new v2 version, then re-check every winner, because v1 filled many in from
+the next serve. Label only side-out games for now. The labeller can't record a rally-scoring
+game yet, so skip one and tell both owners. Python owns every rule: the score
 replay is `dinkdata.serves.replay`, and the checks and the file are `dinkdata.studio.rally`.
 
 ## Ball clicks in CVAT
