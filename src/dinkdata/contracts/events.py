@@ -1,7 +1,9 @@
 """Hits, bounces and net events inside a rally. Owner: Robby (docs/DESIGN.md 6.7, 6.8).
 
-Provisional: copied from the DESIGN section 7 example so the game log validates end to end.
-Robby owns these shapes and may change them in his part of Contracts v1 (#33).
+The rally grammar writes these from candidates.parquet. A bounce's court position is valid
+because the ball is on the floor. Nothing here maps a ball in the air to the court
+(docs/COURT.md). `WinnerSource` says how the rally's winner was decided: from the next serve,
+from the ball, or from a person's label.
 """
 
 from typing import Annotated, Literal

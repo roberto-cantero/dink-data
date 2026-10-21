@@ -1,0 +1,19 @@
+{
+  "schema": "dinkdata.camera/v1",
+  "camera_id": "c_5eed00000000c001",
+  "version": 2,
+  "model": null,
+  "setup": "dtl_low",
+  "image_size": {"width": 1920, "height": 1080},
+  "intrinsics": {"fx": 1150.0, "fy": 1150.0, "cx": 960.0, "cy": 540.0},
+  "distortion": {"k1": -0.28, "k2": 0.07},
+  "rotation": [1.91, 0.0, 0.0],
+  "translation": [-10.0, -3.5, 52.0],
+  "reprojection_error_px": 2.4,
+  "visible_region": [[0.0, 0.0], [20.0, 0.0], [20.0, 41.5], [0.0, 41.5]],
+  "overlay_masks": [
+    [[1700.0, 20.0], [1900.0, 20.0], [1900.0, 90.0], [1700.0, 90.0]],
+    [[20.0, 990.0], [220.0, 990.0], [220.0, 1060.0], [20.0, 1060.0]]
+  ],
+  "source": "clicks"
+}

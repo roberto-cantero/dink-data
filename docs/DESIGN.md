@@ -756,18 +756,18 @@ personal data.
 
 | File | Contents |
 |---|---|
-| `catalog.parquet` | `video_id`, `facility_id`, `camera_id`, `uploaded_at`, `duration_s`, `fps_nominal`, size, `setup`, `split`, `fetched` |
-| `{video_id}.frames.parquet` | `frame`, `t`, `dropped_before`, `duplicate` |
-| `camera.json` | Camera id and model, image size, intrinsics, distortion, rotation, translation, reprojection error, visible region, overlay masks, source, version |
+| `catalog.parquet` | `video_id`, `facility_id`, `camera_id`, `uploaded_at`, `duration_s`, `fps_nominal`, `size_bytes`, `setup`, `split`, `fetched`, `notes`. `uploaded_at` can be null for a hand download and `setup` stays null until calibration. Every game of a facility has the same split |
+| `{video_id}.frames.parquet` | `frame`, `t`, `dropped_before`, `duplicate`. One row per decoded frame, and the first frame's `t` is 0 |
+| `camera.json` | Camera id and model, setup, image size, intrinsics, distortion (k1, k2), rotation, translation, reprojection error, visible region in court feet, overlay masks in pixels, source, version |
 | `ball.parquet` | `frame`, `t`, `x`, `y`, `visible`, `conf`, `interpolated`, the top 3 `peaks` |
 | `players.parquet` | One row per frame per track: `frame`, `t`, `player_id`, `track_id`, `team`, `box`, 17 `keypoints`, `foot_court`, `estimated_foot`, `conf`, `foot_conf`. Tracks that aren't players have a null `player_id` |
-| `candidates.parquet` | For each candidate, `frame`, `t`, event probabilities and hitter probabilities |
+| `candidates.parquet` | For each candidate, `frame`, `t`, `conf`, the hit, bounce and net probabilities, and the hitter probabilities for p1 to p4 |
 | `events.json` | The game log, shown below |
-| `stats.json` | For each player and stat, value, num, den, conf, shipped and reason |
+| `stats.json` | For each game, subject (player or team) and stat: value, num, den, conf, shipped and reason. Depth stats hold bucket counts and the landing map holds court points |
 | `highlights.json` | One reel per game per player: the clips with rally, start, end, reasons and score, and the MP4 once rendered |
 | `rallies.json` | Rally-level gold labels: games, and for each rally the server, side, receiver, winner, score as played and any rule deviation. Times are `t` only, because the browser labeller can't know frames |
 | `ball_labels.parquet` | Ball clicks: `frame`, `t`, `x`, `y`, `visible`, `clicked`, `split` |
-| `patch.json` | Corrections to one pipeline run, with its `run_id`. Add, change and delete operations by id, with author and time. The patched `events.json` is saved next to it |
+| `patch.json` | Corrections to one pipeline run, with its `run_id`. Add, change and delete operations on games, rallies and events by id, with author handle, time and the old values. The patched `events.json` is saved next to it |
 
 ```json
 {"schema": "dinkdata.events/v1",

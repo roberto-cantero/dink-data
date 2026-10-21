@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/roberto-cantero/dink-data/contracts/stats.schema.json",
+  "title": "DinkData per-player stats (stats.json)",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$defs": {
+    "Depth": {
+      "additionalProperties": false,
+      "description": "Bounces by depth bucket (docs/STATS.md): deep is 5 ft or less from the baseline.",
+      "properties": {
+        "deep": {
+          "minimum": 0,
+          "title": "Deep",
+          "type": "integer"
+        },
+        "medium": {
+          "minimum": 0,
+          "title": "Medium",
+          "type": "integer"
+        },
+        "short": {
+          "minimum": 0,
+          "title": "Short",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "deep",
+        "medium",
+        "short"
+      ],
+      "title": "Depth",
+      "type": "object"
+    },
+    "LandingMap": {
+      "additionalProperties": false,
+      "description": "Court positions in feet of the player's bounces (docs/COURT.md).",
+      "properties": {
+        "serve": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "Serve",
+          "type": "array"
+        },
+        "return": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "Return",
+          "type": "array"
+        },
+        "out_error": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "Out Error",
+          "type": "array"
+        }
+      },
+      "required": [
+        "serve",
+        "return",
+        "out_error"
+      ],
+      "title": "LandingMap",
+      "type": "object"
+    },
+    "Stat": {
+      "additionalProperties": false,
+      "properties": {
+        "game": {
+          "anyOf": [
+            {
+              "description": "g1, g2, ... in time order.",
+              "pattern": "^g[1-9][0-9]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null for games_won, which covers the recording.",
+          "title": "Game"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "enum": [
+                "p1",
+                "p2",
+                "p3",
+                "p4"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "A",
+                "B"
+              ],
+              "type": "string"
+            }
+          ],
+          "title": "Subject"
+        },
+        "stat": {
+          "enum": [
+            "final_score",
+            "games_won",
+            "rallies_won",
+            "points_scored",
+            "serve_in_pct",
+            "serve_depth",
+            "return_in_pct",
+            "return_depth",
+            "net_errors",
+            "out_errors",
+            "serve_faults",
+            "winners",
+            "landing_map"
+          ],
+          "title": "Stat",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/Depth"
+            },
+            {
+              "$ref": "#/$defs/LandingMap"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null only when not shipped.",
+          "title": "Value"
+        },
+        "num": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Numerator, for percentages only.",
+          "title": "Num"
+        },
+        "den": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Denominator, for percentages only.",
+          "title": "Den"
+        },
+        "conf": {
+          "description": "Confidence, 0 to 1. Gold labels use 1.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Conf",
+          "type": "number"
+        },
+        "shipped": {
+          "title": "Shipped",
+          "type": "boolean"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "description": "Such as no_serves.",
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Why it didn't ship. null when shipped.",
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "game",
+        "subject",
+        "stat",
+        "value",
+        "num",
+        "den",
+        "conf",
+        "shipped",
+        "reason"
+      ],
+      "title": "Stat",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The stats of one recording from one pipeline run.",
+  "properties": {
+    "schema": {
+      "const": "dinkdata.stats/v1",
+      "title": "Schema",
+      "type": "string"
+    },
+    "video_id": {
+      "description": "Opaque video id (dinkdata.contracts.ids).",
+      "pattern": "^v_[0-9a-f]{16}$",
+      "title": "Video Id",
+      "type": "string"
+    },
+    "run_id": {
+      "description": "A pipeline run, as in runs/.",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "stats": {
+      "items": {
+        "$ref": "#/$defs/Stat"
+      },
+      "title": "Stats",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "video_id",
+    "run_id",
+    "stats"
+  ],
+  "type": "object"
+}

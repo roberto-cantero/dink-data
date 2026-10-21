@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/roberto-cantero/dink-data/contracts/frames.schema.json",
+  "title": "DinkData frame timestamps (frames.parquet rows)",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$defs": {
+    "FrameRow": {
+      "additionalProperties": false,
+      "description": "One row of frames.parquet.",
+      "properties": {
+        "frame": {
+          "description": "0-based index of a decoded frame.",
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "t": {
+          "description": "Seconds from the first frame's timestamp.",
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        },
+        "dropped_before": {
+          "description": "Frames missing before this one.",
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Dropped Before",
+          "type": "integer"
+        },
+        "duplicate": {
+          "description": "true when the picture repeats the previous frame's.",
+          "title": "Duplicate",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "frame",
+        "t",
+        "dropped_before",
+        "duplicate"
+      ],
+      "title": "FrameRow",
+      "type": "object"
+    }
+  },
+  "items": {
+    "$ref": "#/$defs/FrameRow"
+  },
+  "type": "array"
+}

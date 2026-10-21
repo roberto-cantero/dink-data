@@ -1,0 +1,5 @@
+[
+  {"frame": 5531, "t": 184.83, "x": 640.5, "y": 412.0, "visible": true, "clicked": true, "split": "train"},
+  {"frame": 5532, "t": 184.87, "x": 652.0, "y": 398.5, "visible": true, "clicked": false, "split": "train"},
+  {"frame": 5533, "t": 184.9, "x": null, "y": null, "visible": false, "clicked": true, "split": "train"}
+]

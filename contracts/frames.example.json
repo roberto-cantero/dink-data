@@ -1,0 +1,7 @@
+[
+  {"frame": 0, "t": 0.0, "dropped_before": 0, "duplicate": false},
+  {"frame": 1, "t": 0.033333, "dropped_before": 0, "duplicate": false},
+  {"frame": 2, "t": 0.066667, "dropped_before": 0, "duplicate": false},
+  {"frame": 3, "t": 0.133333, "dropped_before": 1, "duplicate": false},
+  {"frame": 4, "t": 0.166667, "dropped_before": 0, "duplicate": true}
+]
