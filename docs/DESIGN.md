@@ -4,7 +4,7 @@ The product requirements, technical design and system design for DinkData. This 
 
 | | |
 |---|---|
-| Version | 1.7 |
+| Version | 1.8 |
 | Date | 20 October 2026 |
 | Owners | Robby (`@roberto-cantero`) and Marti (`@probablynotmarti`) |
 | Prepared with | Claude Code, after a review session with Robby and review comments from Marti |
@@ -45,6 +45,14 @@ courts at about 140 facilities and record thousands of games a week. For now Din
 on its own: a video goes in, stats and reels come out. Sending them with PickleCam's video
 emails comes later, once the accuracy targets are met.
 
+DinkData is a standalone app first. The first goal is a prototype whose stats and reels are
+accurate and reliable enough for PickleCam to pay for, because players ignore or complain
+about wrong stats. We show it to PickleCam's CEO at the end of M3. The prototype is built on
+about 150 games downloaded by hand from the facility dashboard. `dink run` takes one of them
+and writes the report and each player's reel MP4 to a folder. Integration with PickleCam,
+automatic intake, delivery to players and production cost come in M4, after PickleCam
+approves the prototype, built around whatever PickleCam already runs (ADR 0018).
+
 The v1 has two priorities, and each owner leads one.
 
 - **Stats, led by Robby.** Game score and rallies won, serve in % and depth, return in % and
@@ -83,8 +91,8 @@ count for each stat off by at most one in at least 90% of player-games. We measu
 over the stats we ship and always report coverage, the share of stats shipped. A stat with
 low confidence is left out, not shown wrong. During the beta, a person reviews every game.
 
-PickleCam receives about 4,500 videos a day, so cost per video matters as much as accuracy.
-Built the straightforward way, production would cost about $13,000 a month. The plan targets
+After the prototype, cost per video matters, because PickleCam receives about 4,500 videos a
+day. Built the straightforward way, production would cost about $13,000 a month. The plan targets
 under $0.01 a video, about $900 to $2,000 a month at today's volume, through cheaper GPUs,
 processing only the play segments, a cheaper bandwidth tier, and storing results instead of
 videos (section 11).
@@ -92,11 +100,15 @@ videos (section 11).
 | Milestone | Ends with |
 |---|---|
 | Setup, done by this session | Docs, an empty package layout, CI and GitHub issues ready for other sessions |
-| M0 Foundations | Data contracts, 150 games in storage, stats tested on hand-written logs, a highlight renderer working from a hand-written rally list, partner identity measured, and labelling under way |
+| M0 Foundations | Data contracts, 150 hand-downloaded games in storage, stats tested on hand-written logs, a highlight renderer working from a hand-written rally list, partner identity measured, and labelling under way |
 | M1 Ground truth | Calibrated cameras, the labelling tool, the gold set, the eval command, and a first end-to-end version producing a report and a reel |
 | M2 Score and first reels | The score meets its target, rally-based reels per player, ball tracker v1 |
 | M3 Ball stats and full reels | Stats 2 to 5, the landing map and per-player reels built from winners and aces |
-| M4 Beta | Batch processing, human review, automatic calibration, delivery to beta players, and a measured production cost per video |
+| M4 Integration and beta, after PickleCam approves the prototype | Automatic intake through PickleCam's endpoint, batch processing, reels played over PickleCam's video, automatic calibration, delivery to beta players with human review, and a measured production cost per video |
+
+M0 to M3 build the prototype. M3 ends with every v1 stat and reel meeting its gate on
+held-out facilities, and that is the version we show PickleCam's CEO. After M2 we decide
+whether an internal preview of the score and first reels is worth showing early.
 
 ## 2. Findings
 
@@ -187,8 +199,9 @@ For each game in the recording, DinkData writes these files.
 - `stats.json`, every stat for every player, with a confidence and a shipped flag.
 - `report.html`, a one-page report with the final score, a card per player with a photo and
   their numbers, and the landing map.
-- `highlights.json`, a reel for each player as a list of clips. A web player plays the clips from
-  PickleCam's video, and an MP4 is rendered only when a player asks to download or share it.
+- `highlights.json`, a reel for each player as a list of clips, and one reel MP4 per player
+  rendered from it. In M4 a web player can play the clips from PickleCam's video instead, and
+  MP4s are rendered only on request (ADR 0012).
 
 Every player gets the whole-game report and every reel, and finds themselves by photo. The v1
 covers doubles with side-out scoring. Games go to 11 by default, and games to 15 or 21 must
@@ -218,8 +231,9 @@ versus backhand. The owners approve any other stat first.
 ### 3.3 Highlights (Marti)
 
 A highlight reel is a short MP4 for one player, built from clips of rallies in that game.
-PickleCam already has a highlights feature, since its recordings show a highlight count.
-Appendix B asks how it works. DinkData's reels need no action from the players.
+PickleCam's own highlights are fixed 30-second clips that a command at the court creates, and
+few recordings have one. Nothing picks highlights automatically (`docs/DATA.md`). DinkData's
+reels need no action from the players.
 
 DinkData scores every rally for each player and keeps the best ones. The v1 rules are below.
 
@@ -236,9 +250,10 @@ A reel holds the top-scoring clips in time order, about 5 to 8 clips and 30 to 9
 total. Each clip starts about 1 second before the serve and ends about 1.5 seconds after the
 rally ends. The reel opens with a title card showing the player's photo crop and the final
 score. A small marker under the player's feet, taken from tracking, shows who the reel is
-about. The web player plays the clips straight from PickleCam's video and draws the marker
-from the tracking data, so a reel needs no encoding or storage. When a player taps download or
-share, the renderer cuts and joins the clips with FFmpeg into an MP4. It re-encodes, because
+about. In the prototype the renderer cuts and joins the clips with FFmpeg into an MP4 for
+every player. In M4 a web player plays the clips straight from PickleCam's video and draws the
+marker from the tracking data, and the renderer runs only when a player taps download or
+share. It re-encodes, because
 cuts without re-encoding can only start on keyframes.
 
 A reel is good if every clip contains the whole rally, the player appears in every clip and
@@ -286,7 +301,7 @@ dink stats. It doesn't use audio, and it flags close line calls but never rules 
 | Spend as little as possible, with no contractors | Cheap cloud GPUs with a $50 monthly development budget, free tools, R2 storage at about $1 a month, we label ourselves, and production targets under $0.01 a video |
 | A public repo | AGPL-3.0, and no secrets, footage, facility names, session ids or emails in it |
 | MacBook Airs for development, cloud GPUs for compute | The code runs on macOS and Linux, all GPU work uses one Linux Docker image, and CI tests Ubuntu and macOS |
-| Any Bunny key can delete customer videos | We read videos only through a read-only endpoint that PickleCam builds |
+| Any Bunny key can delete customer videos | We download the prototype's games from the dashboard, and after the prototype read videos only through a read-only endpoint that PickleCam builds |
 
 ## 4. Glossary
 
@@ -406,7 +421,7 @@ therefore be built and tested alone, using the saved outputs of earlier stages.
 | 9 | Score decoder | Games, scores, servers, winners, rule deviations | Marti |
 | 10 | Stats | `stats.json` | Robby |
 | 11 | Report | `report.html` | Robby |
-| 12 | Highlights | `highlights.json` with a clip list per player, and MP4s on request | Marti |
+| 12 | Highlights | `highlights.json` with a clip list per player, and a reel MP4 per player | Marti |
 | | Studio and eval | Labels, calibrations, patches, metrics | Both |
 
 This split gives each owner the stages behind their priority. Robby owns the ball and events
@@ -415,8 +430,10 @@ first. It replaces the earlier split, in which Marti owned stats.
 
 ![Infrastructure](diagrams/infrastructure.svg)
 
-*Figure 2. Videos flow from PickleCam through a read-only endpoint into our R2 bucket. Rented
-cloud GPUs do all the GPU work, in development and production. Section 11 covers the costs.*
+*Figure 2. Videos flow from PickleCam through a read-only endpoint into our R2 bucket. Until
+the prototype is approved, we download them from the dashboard by hand instead (ADR 0018).
+Rented cloud GPUs do all the GPU work, in development and production. Section 11 covers the
+costs.*
 
 The architecture follows these rules.
 - Every file passed between stages has a contract, and a stage that writes an invalid file
@@ -433,26 +450,33 @@ The architecture follows these rules.
 
 ### 6.1 Intake (`dinkdata.data`, Robby)
 
-`dink catalog sync` reads PickleCam's read-only endpoint, specified in section 8.2, and writes
-one row per video. Each row has an opaque `video_id`, which is an HMAC of the session id keyed with a
+For the prototype, intake starts from games downloaded by hand (ADR 0018). The owners pick
+about 150 games from about 40 facilities. They hold out whole facilities for testing, at least
+one per camera setup and more for low down-the-line cameras. They spread the rest across
+cameras, court colours and game lengths, and skip recordings under 5 minutes. The split never
+changes once labels exist. Robby downloads each game's 1080p MP4 from its watch page within 14
+days of upload.
+
+`dink ingest` takes one downloaded MP4. It drops the audio track with `-map 0:v`, saves every
+frame's timestamp with ffprobe, and flags dropped and duplicated frames. It asks for the
+session id, facility and court at a hidden prompt, gives the game its HMAC `video_id` and
+`camera_id` (ADR 0016), adds a catalog row and uploads the results to R2, skipping files
+already there. `dink run <video_id>` finds the game's camera, and so its calibration, in that
+row. Running on a loose MP4 and recognising its camera automatically wait for M4. Bunny's MP4 keeps dropped-frame gaps, and the duplicate check stays in case a
+camera or encoder fills them.
+
+After the prototype, intake runs on its own. `dink catalog sync` reads PickleCam's read-only
+endpoint, specified in section 8.2, and writes one row per video. Each row has an opaque `video_id`, which is an HMAC of the session id keyed with a
 secret in `.env`, plus hashed facility and camera ids, the upload time, length, frame rate,
 size, the camera setup once calibrated, and the split. The map from our ids back to session
 ids lives only in a private `catalog/id_map.parquet` in R2.
 
-`dink sample` picks 150 games from about 40 facilities. It holds out whole facilities for
-testing, at least one per camera setup and more for low down-the-line cameras. It spreads the
-rest across cameras, court colours and game lengths, and skips recordings under 5 minutes.
-The split never changes once labels exist.
+`dink sample` applies the same selection rules to the catalog.
 
-`dink fetch` gets each video's download links and prefers the original upload, then the MP4,
-then the HLS stream, which it remuxes with `ffmpeg -c copy` without quality loss. It drops the
-audio track with `-map 0:v`. It saves every frame's timestamp with ffprobe and flags dropped
-and duplicated frames. It uploads the results to R2 and skips files already there. A scheduled
-GitHub Actions workflow runs fetch daily, so selected games are copied before PickleCam deletes
-them.
-
-Until PickleCam builds the endpoint, we develop against a recorded sample response. If the
-host fills dropped frames with duplicates, the duplicate check finds them.
+`dink fetch` downloads each new game's 1080p MP4. Without one, it takes the original upload,
+and otherwise the HLS stream, which it remuxes with `ffmpeg -c copy` without quality loss (ADR 0017), and passes
+the file to the same steps as `dink ingest`. A scheduled GitHub Actions workflow runs fetch
+daily, so selected games are copied before PickleCam deletes them.
 
 In production, fetch doesn't copy videos into R2. Catalog sync puts each new video on a job
 queue, and a GPU worker reads the video from Bunny, processes it and stores only the results
@@ -489,6 +513,9 @@ at y = 22 and the kitchen lines are at y = 15 and y = 29.*
    A bounce outside it is not visible, rather than out.
 6. `image_to_court` and `court_to_image` convert between pixels and feet, with tests on
    synthetic cameras.
+
+The prototype needs this one-time calibration for each camera before `dink run` works on its
+games, including the held-out facilities' cameras, since calibrating isn't training.
 
 From M1, each video's background is compared with the projected court lines. A mismatch flags
 a camera that moved. A calibration takes about 2 minutes, so our sample of about 100 cameras
@@ -678,10 +705,11 @@ phones, with an inline SVG landing map and any rule deviations.
 2. Clip edges come from rally boundaries with padding. They never cut into the next serve.
 3. It writes `highlights.json` with each clip's start, end, reason and score, so a person can
    check or change the selection in review.
-4. A web player plays each reel from PickleCam's video, with the title card and the player
-   marker drawn on top. This costs no encoding and no storage.
-5. On request, a serverless job renders the MP4: FFmpeg cuts the clips, burns in the marker and
-   title card, and joins them, encoding with NVIDIA's NVENC. The MP4 is kept for 30 days.
+4. The renderer writes a reel MP4 for every player: FFmpeg cuts the clips, burns in the
+   marker and title card, and joins them.
+5. In M4, a web player plays each reel from PickleCam's video with the title card and marker
+   drawn on top, and a serverless job renders the MP4 only on request, encoding with NVIDIA's
+   NVENC, and keeps it for 30 days (ADR 0012).
 
 In M0 the player and renderer work from a hand-written list of rallies, so they need no models. In M2 it
 uses detected rallies and the score. In M3 it adds winners and aces.
@@ -803,9 +831,13 @@ The 150 games take about 60 GB, and everything else a few GB more. R2 charges ab
 per GB-month after 10 GB free, with free downloads, so roughly $1 a month. These prices come
 from comparisons published in mid-2026, so check them at sign-up. Each machine has its own
 R2 key in `.env`, limited to this bucket. The Macs need write access because the studio saves
-labels. Only the fetch machine holds the endpoint token. Claude Code may not read `.env`.
+labels. After the prototype, only the fetch machine holds the endpoint token. Claude Code may
+not read `.env`.
 
-In production R2 holds results, not videos. The JSON outputs and report take about 0.5 MB a
+During M0 to M3, R2 is the shared development store for the games, labels, calibrations and
+models. `dink run` itself never reads R2: it reads models from a local folder, and a separate
+command downloads the latest models from R2 once. After the prototype, R2 holds results, not
+videos. The JSON outputs and report take about 0.5 MB a
 video, per-frame tracks are deleted after 30 days, and reel MP4s rendered on request are deleted
 after 30 days. Full videos stay in R2 only for the gold sets and training data.
 
@@ -815,17 +847,20 @@ still needing a second store for labels and models.
 
 ### 8.2 The read-only endpoint, a spec for the PickleCam backend developer
 
+PickleCam builds this after the prototype (ADR 0018). Until then we download games from the
+dashboard by hand.
+
 Bunny Stream has one key per library, and every key can also delete videos. No Bunny key
-leaves PickleCam. Instead, the backend developer adds two read-only calls protected by a token.
+leaves PickleCam. Instead, the backend developer adds one read-only call protected by a token
+(ADR 0017).
 
 | Call | Returns |
 |---|---|
-| `GET /dinkdata/videos?since=&page=` | A paged list across libraries with `session_id`, `facility_id`, `camera`, `uploaded_at`, `length_s`, `framerate`, `width`, `height`, `size_bytes`, `expires_at`, from Bunny's List Videos call |
-| `GET /dinkdata/videos/{session_id}/links` | Short-lived `original_url`, `mp4_url` and `hls_url`, from Bunny's Get Video play data call |
+| `GET /dinkdata/recordings?since=&page=` | A paged list across facilities with `session_id`, `facility_id`, `camera_id`, `started_at`, `stopped_at`, `uploaded_at`, `expires_at`, `library_id`, `video_id` and `mp4_url`, the download link for the 1080p MP4 |
 
-The calls return no personal data, and they take about 50 to 100 lines of code on PickleCam's
-side. Until they exist we use a recorded response, or download the first games from the
-dashboard by hand.
+The call returns no personal data, and the facility dashboard already loads the same fields.
+PickleCam builds `mp4_url`, so a change to its link format or pull zone needs no change on our
+side. Frame rate, resolution and size come from the file at fetch time.
 
 ### 8.3 Privacy rules
 
@@ -893,7 +928,7 @@ synthetic version runs in CI.
 | Score | Exact final scores per game, per-rally score accuracy, rule deviations found, all reported separately for games with and without deviations |
 | Stats | The share of player-games off by at most 1 for each stat, the mean error, and the same numbers for the median-count baseline |
 | Highlights | The share of clips containing the whole rally, and the share with the marker on the right player |
-| Cost | GPU-seconds per video for each stage, and the estimated cost per video |
+| GPU time | GPU-seconds per video for each stage, as information. The cost-per-video target waits for M4 |
 | Coverage | The share of stats shipped, overall and per camera setup |
 
 | Gate | Requirement | Milestone |
@@ -925,7 +960,7 @@ spare capacity for a long training run, but nothing depends on them.
 | Coding, tests, studio, short clips without a GPU | MacBook Airs |
 | Interactive GPU work and training | RunPod pods with a community RTX 4090, or a Vast.ai RTX 4090 when cheaper. A pod is a remote Linux machine with a GPU, started for a session and then stopped |
 | Batch runs over many games, and eval runs | Modal, using its $30 of free credit each month first, or RunPod serverless. A run spreads the games across many GPUs and then shuts down |
-| Daily fetch of selected videos | A scheduled GitHub Actions workflow, which is free for public repos and needs no GPU |
+| Daily fetch of selected videos, after the prototype | A scheduled GitHub Actions workflow, which is free for public repos and needs no GPU |
 | Production | The cheapest provider that passes the accuracy gates and finishes each day's videos, chosen by the M4 benchmark |
 
 **Spending stays low by choosing the cheapest GPU that gives the same result, and accepting
@@ -941,8 +976,9 @@ must meet the same accuracy as in testing, and a cheaper option that misses a ga
   the balance.
 - Modal has a workspace spending limit, set to the monthly cap.
 - Pods shut down after 30 minutes idle and have a maximum run time.
-- The development budget is $50 a month, with an alert at $30. A month that needs more, such
-  as a long training run in M2, is agreed between the owners first.
+- The development budget is $50 a month, with an alert at $30. A training run that measurably
+  improves accuracy can go over it if both owners agree first. Accuracy wins over saving
+  money, but nothing is spent without a reason.
 - Every eval run records its GPU cost, so the cost of an experiment is visible in the PR.
 
 ### 11.2 Assumptions
@@ -971,8 +1007,8 @@ assumptions, which M2 and M4 replace with measurements.
 | Interactive pods, about 6 hours a week each for two people | About $80 to $160 |
 | Pod disk for code, caches and checkpoints | About $20 to $60 |
 | R2 storage for the 150 sample games, about 75 GB | About $1 a month, rising to about $7 if we keep 500 games |
-| Bunny bandwidth to copy the 150 games once | About $2, on PickleCam's Bunny bill |
-| CVAT, GitHub, CI, the scheduled fetch | Free: self-hosted CVAT, a public repo, free Actions minutes |
+| Bunny bandwidth to copy the 150 games once | About $2, on PickleCam's Bunny bill, which PickleCam covers |
+| CVAT, GitHub and CI | Free: self-hosted CVAT, a public repo, free Actions minutes |
 
 The total from setup to the end of the beta is roughly $150 to $450, or about $15 to $40 a
 month, inside the $50 monthly budget. Owners' labelling time is the real cost of this phase,
@@ -980,7 +1016,9 @@ and Claude Code subscriptions are an existing expense outside this estimate.
 
 ### 11.4 Production cost at 4,500 videos a day
 
-A pipeline built the straightforward way would be expensive.
+This section matters after the prototype. PickleCam asked us not to spend effort on cost
+before the prototype is good (ADR 0018). A pipeline built the straightforward way would be
+expensive.
 
 | Line | Straightforward pipeline | Optimized pipeline (this plan) |
 |---|---|---|
@@ -998,8 +1036,11 @@ day about $4,500 to $10,000. That makes cost per video the number to keep down.
 
 ### 11.5 What was too expensive, and how the plan fixes it
 
+These cuts are M4 work. The prototype processes every frame and adds a shortcut only if
+runs get too slow for us to iterate (ADR 0018).
+
 **GPU compute was the biggest line, at about $0.07 a video.** The plan cuts it in five ways, and
-M2 and M3 each report GPU-seconds per video by stage in the eval output.
+M2 and M3 report GPU-seconds per video by stage in the eval output as information.
 1. A cheap first pass at 1 frame per second finds the play segments, the player count and
    very short or singles recordings. Full processing runs only on game segments of doubles
    recordings of 5 minutes or more.
@@ -1014,11 +1055,11 @@ M2 and M3 each report GPU-seconds per video by stage in the eval output.
    reliably wins. Batch jobs can retry an interrupted video, so cheap interruptible GPUs are fine.
 
 **Bunny bandwidth was the second biggest line, at up to $2,000 a month.** It lands on PickleCam's
-Bunny bill. Appendix B asks PickleCam for a separate Bunny pull zone on the volume network for
-DinkData's downloads, which costs $0.005 per GB instead of $0.03, with our workers placed near
-one of its locations. It also asks whether Bunny can keep a 720p copy of each video, which would
-more than halve the bytes. M2 tests whether 720p keeps the ball tracker accurate enough, since
-the far ball is already small.
+Bunny bill. Appendix B asks PickleCam who pays it and for a separate Bunny pull zone on the
+volume network for DinkData's downloads, which costs $0.005 per GB instead of $0.03, with our
+workers placed near one of its locations. No library has a 720p version today. A 720p copy
+would more than halve the bytes, so we ask for one only if M2 shows that 720p keeps the ball
+tracker accurate enough, since the far ball is already small.
 
 **Copying every production video into R2 would add about $1,000 every month, forever.** In
 production, workers read each video from Bunny while PickleCam still has it, process it, and
@@ -1132,16 +1173,18 @@ TrackNetV3, and we write the ball tracker from the papers.
 
 ### 14.1 Milestones
 
-There is no deadline. Each milestone ends with a measurable result.
+There is no deadline. Each milestone ends with a measurable result. M0 to M3 build the
+prototype we show PickleCam's CEO, and M4 starts once PickleCam approves it (ADR 0018).
+Work that only serves integration or production cost waits for M4.
 
 | Milestone | Delivers | Done when |
 |---|---|---|
 | Setup | Section 14.2 | The docs and package layout are merged and the issues are ready |
-| M0 Foundations | Contracts v1, the endpoint spec sent, catalog, sample and fetch, 150 games in R2, cloud accounts with guardrails, stats v1 on hand-written logs and CVAT ball clicks with a converter (Robby). The Docker image, the highlight renderer on a hand-written rally list, the minimal rally labeller and the player spike with partner-identity accuracy (Marti). Rally-level labelling starts | Contract tests pass, 150 games with timestamps are in R2, stats tests cover every v1 rule, a reel renders from a hand-written list, and partner-identity accuracy is measured for near and far teams |
+| M0 Foundations | Contracts v1, the endpoint spec sent, 150 hand-picked and hand-downloaded games prepared with `dink ingest` and stored in R2, cloud accounts with guardrails, stats v1 on hand-written logs and CVAT ball clicks with a converter (Robby). The Docker image, the highlight renderer on a hand-written rally list, the minimal rally labeller and the player spike with partner-identity accuracy (Marti). Rally-level labelling starts | Contract tests pass, 150 games with timestamps are in R2, stats tests cover every v1 rule, a reel renders from a hand-written list, and partner-identity accuracy is measured for near and far teams |
 | M1 Ground truth | The calibration tool and calibrations, the camera-moved check, the studio with its events mode, the rest of the rally-level gold set and the first full-event games, the eval command with baselines and coverage per setup, and a first end-to-end version that produces a report and a reel | `dink run` produces a report and reels, `dink eval` prints every metric, and agreement is measured |
 | M2 Score and first reels | Serve states, game mode, rallies, the score decoder with rule deviations and rally-based reels, designed around the measured partner-identity accuracy (Marti). Ball tracker v1 (Robby) | The score and rally-reel gates pass, and the ball reaches 90% at 10 px |
 | M3 Ball stats and full reels | Silver labels, the spotter, the rally grammar and attribution, bounces and in/out, stats 2 to 5 and the landing map (Robby). Reels with winners and aces (Marti) | The stats and events gates pass, with coverage reported |
-| M4 Beta | The batch runner, review mode, automatic calibration, thresholds, delivery to beta players, retraining, the optimized Linux Docker image, and the provider benchmark on 100 games | A week of reviewed games with fewer than 1 stat in 10 changed, and cost under $0.01 a video |
+| M4 Integration and beta, after PickleCam approves the prototype | Automatic intake (endpoint, `dink catalog sync`, `dink sample`, `dink fetch` and the daily workflow), `dink run` on loose files with automatic camera matching, reels played over PickleCam's video, the play-segment and rally-only speed-ups, the batch runner, review mode, automatic calibration, thresholds, delivery to beta players, retraining, the optimized Linux Docker image, and the provider benchmark on 100 games | A week of reviewed games with fewer than 1 stat in 10 changed, and cost under $0.01 a video |
 
 Later work includes dink success rate, an all-shots heat map, unforced errors, forehand versus
 backhand, singles and rally scoring, the WASB comparison, self-training, production in the
@@ -1191,9 +1234,9 @@ the PDF renders from the Markdown and no personal data appears anywhere.
 | 2 | Send the endpoint spec and Appendix B to the backend developer | Robby | M0 |
 | 3 | R2 bucket, keys, rclone and the nightly backup of labels and calibrations | Robby | M0 |
 | 4 | Pick the held-out facilities and download the first games by hand from training facilities | Both | M0 |
-| 5 | `dink catalog sync`, against a recorded response first | Robby | M0 |
-| 6 | `dink sample` with facility hold-out and setup coverage | Robby | M0 |
-| 7 | `dink fetch`: download or remux, drop audio, timestamps, upload, daily scheduled workflow | Robby | M0 |
+| 5 | `dink catalog sync`, against a recorded response first | Robby | M4 |
+| 6 | `dink sample` with facility hold-out and setup coverage | Robby | M4 |
+| 7 | `dink ingest`: drop audio, timestamps, HMAC id, catalog row and upload for a hand-downloaded game. `dink fetch` and the daily workflow follow in M4 | Robby | M0 |
 | 8 | `dinkdata.video`: a frame-accurate reader with timestamps | Robby | M0 |
 | 9 | Stats v1 as pure functions, tested on hand-written logs | Robby | M0 |
 | 10 | CVAT for ball clicks, and a converter to `ball_labels` with a frame-alignment test | Robby | M0 |
@@ -1221,31 +1264,30 @@ The M2 to M4 issues are written when those milestones start.
 | Partners can't be told apart, or swap ids, and the score breaks | Measure partner identity in the M0 spike for near and far teams before designing M2. Appearance check at each serve, the decoder's parity check, and shipping the score only for setups that pass |
 | Players break the serving rules | Rule-break transitions in the decoder, deviations shown in the report and accuracy reported separately, as section 6.10 describes |
 | Stacking and other unusual positions | Weak evidence, not rules, measured on the rally-level gold set |
-| The endpoint arrives late | A recorded response, and downloading the first games by hand |
+| The endpoint arrives late | It isn't needed until after the prototype. We download games by hand |
 | Many camera models | Group by facility, share lens parameters, automatic calibration in M4 |
 | A camera gets bumped | The camera-moved check from M1 |
 | Overfitting to small test sets | Facility hold-out, intervals, results by setup and growing test sets |
 | Agents write plausible but wrong code | Run-time contracts, tests, eval gates and review |
-| Videos expire before we copy them | A daily scheduled fetch |
+| Videos expire before we copy them | Download each picked game within 14 days, and after the prototype a daily scheduled fetch |
 | Development cloud bills run over budget | Prepaid credit, Modal's spending limit, idle shutdown, a $50 monthly cap with an alert at $30, and GPU cost shown in every eval |
 | Cheap GPUs get interrupted mid-run | Checkpoints at least every 30 minutes, and jobs that resume |
 | Personal data leaks into the public repo | Hashed ids, gitleaks, the rules in `CLAUDE.md` and review |
-| Production costs grow with volume, from about 4,500 videos a day | The optimizations and provider benchmark in section 11.5, a target under $0.01 a video, and cost per video reported in every eval |
-| Bunny bandwidth costs PickleCam up to $2,000 a month | A volume-network pull zone and a 720p copy, as Appendix B asks |
+| Production costs grow with volume, from about 4,500 videos a day | In M4: the optimizations and provider benchmark in section 11.5 and a target under $0.01 a video |
+| Bunny bandwidth costs PickleCam up to $2,000 a month | A volume-network pull zone, as Appendix B asks, and a 720p copy if M2 shows it is accurate enough |
 | A closed PickleCam version is wanted later | Every model and library is permissively licensed, and only the owners contribute, so PickleCam can relicense its own code |
 
 These questions are still open.
-1. When will the read-only endpoint exist?
-2. Are originals kept, and do dropped frames survive Bunny's processing?
-3. Which camera models are installed, and where?
-4. How common are stacking, rule breaks and mid-game end switches? The rally-level gold set will tell.
-5. How well do two people agree on hits and bounces? We'll measure it in M1.
-6. What reprojection error can we reach? The first 20 calibrations will tell.
-7. How do beta players receive reports and reels, through PickleCam with the video or from the owners directly?
-8. Is a 70% coverage floor right?
-9. Which stats and which kinds of clips do beta players value most?
-10. Will PickleCam set up a volume-network pull zone and a 720p copy for us, and who pays the Bunny bandwidth?
-11. Does PickleCam run on AWS or another cloud, and how fast does it expect to grow beyond 4,500 videos a day?
+1. When will the read-only endpoint exist? PickleCam builds it after the prototype.
+2. How common are stacking, rule breaks and mid-game end switches? The rally-level gold set will tell.
+3. How well do two people agree on hits and bounces? We'll measure it in M1.
+4. What reprojection error can we reach? The first 20 calibrations will tell.
+5. How do beta players receive reports and reels, through PickleCam with the video or from the owners directly?
+6. Is a 70% coverage floor right?
+7. Which stats and which kinds of clips do beta players value most?
+8. Will PickleCam set up a volume-network pull zone for production? It pays our download
+   bandwidth for the prototype.
+9. How fast does PickleCam expect to grow beyond 4,500 videos a day?
 
 ## 16. Sources
 
@@ -1301,18 +1343,23 @@ review.
 | 27 | Full human review only in the beta, then spot checks | Reviewing 4,500 games a day would take 750 hours |
 | 28 | Labels made in a browser store time as `t`, and `frame` is filled later | A browser player reports `currentTime` but can't land on exact frames. Contracts v1 grilling |
 | 29 | Hand-downloaded games get their `video_id` from the same HMAC function as the catalog | Labels made before `dink catalog sync` exists keep their ids. Contracts v1 grilling |
+| 30 | One read-only call, a recording list with each MP4's download link, replaces the list and links calls | The dashboard already has the fields, and PickleCam owns the link format. ADR 0017 |
+| 31 | Fetch prefers Bunny's 1080p MP4 over the original upload | Only 1 of 6 libraries keeps originals, they are about 4 times larger, and the MP4 keeps dropped-frame gaps. ADR 0017 |
+| 32 | An accurate prototype for PickleCam's CEO comes first. Automatic intake, delivery and cost work come after it | PickleCam's backend developer, 20 October 2026. ADR 0018 |
+| 33 | DinkData is a standalone app until PickleCam approves the prototype, and M4 becomes Integration and beta | PickleCam pays only for accurate, reliable stats. Prototype grilling, 21 October 2026 |
+| 34 | The prototype renders a reel MP4 for every player. The web player over PickleCam's video waits for M4 | The web player depends on PickleCam's systems. ADR 0012 |
+| 35 | The prototype processes every frame. Speed-ups and the cost target wait for M4, and eval reports GPU time as information | Shortcuts add code and can cost accuracy. ADR 0018 |
+| 36 | `dink run` takes an ingested game and finds its camera in the catalog. Each new camera gets a one-time hand calibration | Loose files and automatic camera matching and calibration are M4. ADR 0018 |
+| 37 | R2 stays as the development store, and `dink run` reads models from a local folder | Labels and games need one shared, backed-up place. ADR 0006 |
+| 38 | A training run that measurably improves accuracy can exceed the $50 monthly budget if both owners agree first | Accuracy wins over saving money |
 
 ## Appendix B: Questions for the PickleCam backend developer
 
-1. Can you add the two read-only calls in section 8.2, with a token for us and no personal data?
-2. Do the Bunny libraries keep original uploads, so `originalUrl` returns the camera's own file?
-3. Is MP4 download enabled on all libraries, and at what resolution?
-4. Which camera models are installed, and where?
-5. Is the title format `court<N>_<sessionId>` the same at every facility?
-6. Do dropped frames survive Bunny's processing, or are they filled with duplicates?
-7. How does PickleCam's existing highlights feature work?
-8. Do PickleCam's systems run on AWS or another cloud?
-9. For the beta, could PickleCam send our report and reels with the video to players who opt in?
-10. Can you add a Bunny pull zone on the volume network for DinkData's downloads? It costs $0.005 per GB instead of $0.03 on the Asian standard network.
-11. Can Bunny keep a 720p copy of each video for us, and does encoding it cost extra?
-12. Who pays the Bunny bandwidth for DinkData's downloads, and what are your busiest hours?
+We sent these on 20 October 2026, each with a short reason, and the backend developer answered
+the same day. We answered the other questions from an earlier draft ourselves from the
+facility dashboard. `docs/DATA.md` records both.
+
+1. Can you add one read-only call, protected by a token, that lists recordings across all facilities with the fields in section 8.2 and no personal data? Not before the prototype.
+2. Which camera models are installed, and at which facilities? Hard to find out, and training on several lenses helps. We calibrate each camera from its video anyway.
+3. Can you turn on MP4 fallback for the one library we found with it off? Our report was wrong. The MP4 hadn't finished encoding when we checked.
+4. Who pays the Bunny bandwidth for our downloads, and can you add a pull zone on the volume network that only we use? PickleCam pays, and cost work waits until after the prototype.

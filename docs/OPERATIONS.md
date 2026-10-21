@@ -11,7 +11,7 @@ exact commands.
 | Coding, tests, studio, short clips without a GPU | Our MacBooks |
 | Interactive GPU work and training | A RunPod pod with a community RTX 4090, or Vast.ai when cheaper |
 | Batch and eval runs over many games | Modal first, using its free monthly credit, or RunPod serverless |
-| Daily fetch and nightly label backup | Scheduled GitHub Actions workflows |
+| Nightly label backup, and the daily fetch after the prototype | Scheduled GitHub Actions workflows |
 | Production | The provider the M4 benchmark picks |
 
 All GPU work uses one Linux Docker image, the same in development and production. The Windows
@@ -37,8 +37,8 @@ month's spend together at the start of each month.
   balance.
 - Modal has a workspace spending limit set to the monthly cap.
 - Pods shut down after 30 minutes idle and have a maximum run time.
-- The development budget is $50 a month, with an alert at $30. The owners agree any month
-  that needs more first, such as a long training run.
+- The development budget is $50 a month, with an alert at $30. A training run that measurably
+  improves accuracy can go over it if both owners agree first.
 
 ## Secrets
 

@@ -1,7 +1,7 @@
 # Data, storage and privacy
 
 Where data lives, how we get it, and the rules that keep personal data out. `docs/DESIGN.md`
-sections 8 and 11 have the reasoning, and ADRs 0006 and 0007 record the decisions.
+sections 8 and 11 have the reasoning, and ADRs 0006, 0007, 0017 and 0018 record the decisions.
 
 ## Storage
 
@@ -25,9 +25,11 @@ models/{name}/{version}/                             checkpoint, config, eval re
 eval/{run_id}.csv                                    metric history
 ```
 
-In production, R2 holds results, not videos. Workers read each video from Bunny, process it and
-keep the JSON outputs and report, about 0.5 MB a video. Per-frame tracks and rendered reel MP4s
-are deleted after 30 days.
+During M0 to M3, R2 is the shared development store for the games, labels, calibrations and
+models. The prototype's `dink run` never reads R2: it reads models from a local folder. After
+the prototype, R2 holds results, not videos. Workers read each video from Bunny, process
+it and keep the JSON outputs and report, about 0.5 MB a video. Per-frame tracks and rendered
+reel MP4s are deleted after 30 days.
 
 ## Ids
 
@@ -39,38 +41,80 @@ are deleted after 30 days.
   `uv run --env-file .env dink id video` and paste the session id at the hidden prompt. It
   prints only the id, and `dink catalog sync` gives the same id later (ADR 0016).
 
-## Getting videos: the read-only endpoint
+## Getting videos for the prototype
 
-Every Bunny Stream library key can also delete videos, so no Bunny key leaves PickleCam. The
-PickleCam backend developer exposes two read-only calls, protected by a token kept in `.env`.
-
-| Call | Returns |
-|---|---|
-| `GET /dinkdata/videos?since=&page=` | A paged list across libraries: `session_id`, `facility_id`, `camera`, `uploaded_at`, `length_s`, `framerate`, `width`, `height`, `size_bytes`, `expires_at` |
-| `GET /dinkdata/videos/{session_id}/links` | Short-lived `original_url`, `mp4_url` and `hls_url` |
-
-The calls return no personal data. Until they exist, we develop against a recorded sample
-response.
-
-## Before the endpoint and R2 exist
+The prototype needs about 150 games, not a live feed (ADR 0018). We download them from the
+PickleCam facility dashboard, which costs PickleCam about $1.50 in Bunny bandwidth.
 
 1. Both owners pick the held-out test facilities first, at least one per camera setup, and
    write them into the catalog notes. Nobody downloads, labels or trains on those facilities
    except for test labels.
-2. Robby downloads the first games by hand from the PickleCam dashboard, only from training
-   facilities, and strips the audio with `ffmpeg -i in.mp4 -map 0:v -c copy out.mp4`.
-3. Until the R2 bucket exists, these games live on the owners' machines and on the cloud GPU
+2. Robby picks the games from training facilities, spread across facilities, cameras, court
+   colours and game lengths, and skips recordings under 5 minutes. He downloads each one's
+   1080p MP4 from its watch page within 14 days of upload, before PickleCam deletes it. We
+   asked PickleCam whether a script may download from the dashboard's links instead.
+3. `dink ingest` takes a downloaded MP4. It drops the audio track with `-map 0:v`, saves every
+   frame's timestamp with ffprobe, and flags dropped and duplicated frames. It asks for the
+   session id, facility and court at a hidden prompt, gives the game its HMAC `video_id` and
+   `camera_id`, adds a catalog row and uploads it to R2.
+4. Until the R2 bucket exists, these games live on the owners' machines and on the cloud GPU
    pod's disk, never in the repo. They move to R2 as soon as it exists.
 
-Fetch prefers the original upload, then the MP4, then remuxes the HLS stream with
-`ffmpeg -c copy`. It drops the audio track with `-map 0:v`, saves every frame's timestamp with
-ffprobe, flags dropped and duplicated frames, and uploads to R2. PickleCam deletes videos 14
-days after upload, so a scheduled workflow fetches selected games daily.
+A new recording's MP4 appears a few minutes after its original upload and HLS stream, because
+Bunny encodes it last. Download a game only once its watch page plays.
+
+## After the prototype: the read-only endpoint
+
+Every Bunny Stream library key can also delete videos, so no Bunny key leaves PickleCam. Once
+the prototype is approved, the PickleCam backend developer exposes one read-only call,
+protected by a token kept in `.env` (ADR 0017), built around what PickleCam already runs.
+
+| Call | Returns |
+|---|---|
+| `GET /dinkdata/recordings?since=&page=` | A paged list across facilities: `session_id`, `facility_id`, `camera_id`, `started_at`, `stopped_at`, `uploaded_at`, `expires_at`, `library_id`, `video_id` and `mp4_url`, the download link for the 1080p MP4 |
+
+The call returns no personal data. PickleCam builds `mp4_url`, so a change to its link format
+or pull zone needs no change on our side. `dink catalog sync` reads it, and `dink fetch`
+downloads each new game's MP4, then the original upload, then the HLS stream, which it remuxes
+with `ffmpeg -c copy`.
+
+## PickleCam's answers
+
+We sent the spec and four questions on 20 October 2026, and the backend developer answered the
+same day.
+
+| Question | Answer |
+|---|---|
+| Can you add the read-only call? | Not now. The priority is a working prototype, and automatic intake waits until after it |
+| Which camera models are installed? | Hard to find out. Training on several lenses makes the models more robust, and we calibrate each camera from its own video anyway (ADR 0004) |
+| Can you turn on MP4 fallback for one library? | Our report was wrong. That video's MP4 wasn't encoded yet when we checked. All six libraries have MP4 fallback on |
+| Who pays our download bandwidth? | PickleCam. Even the whole library would cost about $150, so cost work waits until the prototype is good |
+
+## What the dashboard showed
+
+On 20 October 2026 we answered the other backend questions ourselves from the PickleCam
+facility dashboard and Bunny's file headers, across six facilities. We read headers and each
+MP4's index only, never a whole video.
+
+| Question | Finding |
+|---|---|
+| Are original uploads kept? | At 1 of 6 libraries. The original there is about 4 times the size of the MP4 |
+| Is MP4 download on, and at what resolution? | On at all 6 libraries, at 1080p only. No library has a 720p version |
+| Is the title format the same everywhere? | Yes. Every title is `court<N>_<sessionId>` |
+| Do dropped frames survive Bunny's encoding? | Yes. Bunny rounds each frame time to a 1/30 s grid but keeps the gaps. One MP4 had 7 double-length gaps, and one original had 7 drops in 25 minutes |
+| How long do videos stay? | 14 days after upload, at every facility |
+| When are the courts busiest? | From about 10 AM to 10 PM local time, most of all from 6 to 10 PM |
+| What size is a game? | 0.14 to 0.43 GB for 10 to 15 minutes of 1080p MP4 |
+| Which camera models are installed? | Not visible. The dashboard shows only `court1`, `court2` and so on, and the files name only the recording software |
+
+PickleCam also has a small highlights feature. A highlight is a fixed 30-second clip that a
+command at the court creates, and 3 of 250 recordings we checked had one. Nothing picks
+highlights automatically, so DinkData's reels are new.
 
 ## Keys
 
 - Each machine or service has its own R2 key in `.env` or a CI secret, limited to the bucket.
-- Only the fetch workflow holds the endpoint token.
+- After the prototype, only the fetch workflow holds the endpoint token.
 - Claude Code may not read `.env`.
 
 ## Privacy rules
