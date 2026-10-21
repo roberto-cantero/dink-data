@@ -172,6 +172,7 @@ def ingest(
     secrets = [session_id, facility, str(video), video.name]
     try:
         game = intake.Game(session_id, facility, intake.parse_court(court))
+        typer.echo("Checking every frame. A 15-minute game takes about 2 minutes.")
         report = intake.ingest(
             video, game, key, r2.RcloneStore(), videos, cast(Split, split.value) if split else None
         )
