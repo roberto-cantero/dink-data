@@ -7,7 +7,7 @@
     ],
     "ask": ["Bash(git push:*)", "Bash(gh pr merge:*)", "Bash(uv add:*)", "Edit(contracts/**)", "Edit(src/dinkdata/contracts/**)", "Edit(.github/**)"],
     "deny": [
-      "Read(./.env)", "Read(./.env.*)", "Read(./data/**)", "Read(./ckpts/**)",
+      "Read(./.env)", "Read(./.env.*)", "Read(/data/**)", "Read(./ckpts/**)",
       "Bash(git push origin main:*)", "Bash(git push --force:*)", "Bash(git push -f:*)",
       "Bash(git push --no-verify:*)", "Bash(git commit --no-verify:*)", "Bash(rm -rf:*)"
     ]
