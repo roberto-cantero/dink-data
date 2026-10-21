@@ -25,9 +25,7 @@ from dinkdata.contracts.game_log import EventLog
 from dinkdata.contracts.games import check_frames
 from dinkdata.contracts.rallies import RallyLabels
 
-ClipReason = Literal[
-    "long_rally", "serve_point", "game_point", "final_rally", "winner", "ace", "dink_exchange"
-]
+ClipReason = Literal["long_rally", "serve_won", "final_rally", "winner", "ace", "dink_exchange"]
 ClipId = Annotated[str, Field(pattern=r"^g[1-9][0-9]*_p[1-4]_c[1-9][0-9]*$")]
 
 
@@ -90,7 +88,7 @@ class Reel(StrictModel):
 class Highlights(StrictModel):
     """The reels of one recording."""
 
-    schema_: Literal["dinkdata.highlights/v1"] = Field(alias="schema")
+    schema_: Literal["dinkdata.highlights/v2"] = Field(alias="schema")
     video_id: VideoId
     reels: list[Reel]
 

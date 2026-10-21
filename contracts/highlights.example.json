@@ -1,5 +1,5 @@
 {
-  "schema": "dinkdata.highlights/v1",
+  "schema": "dinkdata.highlights/v2",
   "video_id": "v_5eed00000000a001",
   "reels": [
     {
@@ -14,7 +14,7 @@
           "start_frame": null,
           "end_frame": null,
           "reasons": [
-            "serve_point"
+            "serve_won"
           ],
           "score": 1.0
         },
@@ -38,7 +38,6 @@
           "start_frame": null,
           "end_frame": null,
           "reasons": [
-            "game_point",
             "final_rally"
           ],
           "score": 2.0
@@ -61,7 +60,7 @@
           "start_frame": null,
           "end_frame": null,
           "reasons": [
-            "serve_point"
+            "serve_won"
           ],
           "score": 1.0
         },
@@ -74,7 +73,7 @@
           "end_frame": null,
           "reasons": [
             "long_rally",
-            "serve_point"
+            "serve_won"
           ],
           "score": 2.6
         },
@@ -86,8 +85,7 @@
           "start_frame": null,
           "end_frame": null,
           "reasons": [
-            "serve_point",
-            "game_point",
+            "serve_won",
             "final_rally"
           ],
           "score": 3.0
@@ -107,7 +105,7 @@
           "start_frame": null,
           "end_frame": null,
           "reasons": [
-            "serve_point"
+            "serve_won"
           ],
           "score": 1.0
         },

@@ -15,21 +15,16 @@ from dinkdata.contracts.common import (
     Frame,
     GameId,
     PlayerId,
+    Seconds,
     StrictModel,
     Team,
     VideoId,
+    check_span,
     check_unique,
     team_of,
 )
 from dinkdata.contracts.events import EndReason, Event, WinnerSource
-from dinkdata.contracts.games import (
-    FinalScore,
-    RallyBase,
-    Segment,
-    Target,
-    check_frames,
-    check_game,
-)
+from dinkdata.contracts.games import RallyBase, Segment, check_frames, check_game
 
 
 class Video(StrictModel):
@@ -79,31 +74,29 @@ class Rally(RallyBase):
 
 
 class Game(StrictModel):
+    """One game, found from breaks in play. It has no score, target or winner (ADR 0019)."""
+
     id: GameId
-    format: Literal["sideout"]
-    target: Target
-    finished: bool = Field(description="false when the recording cut the game off.")
-    winner_team: Team | None
-    final_score: FinalScore
+    start_frame: Frame
+    end_frame: Frame
+    start_t: Seconds
+    end_t: Seconds
     rallies: list[Rally]
 
     @model_validator(mode="after")
     def _game_rules(self) -> "Game":
-        check_game(
-            self.id,
-            list(self.rallies),
-            self.target,
-            self.finished,
-            self.winner_team,
-            self.final_score,
-        )
+        check_span(self.start_frame, self.end_frame, self.id, "frame")
+        check_game(self.id, self.start_t, self.end_t, list(self.rallies))
+        for r in self.rallies:
+            if not self.start_frame <= r.start_frame < r.end_frame <= self.end_frame:
+                raise ValueError(f"{r.id} must be inside game {self.id}")
         return self
 
 
 class EventLog(StrictModel):
     """The game log of one recording. Rules JSON Schema can't express are checked in code."""
 
-    schema_: Literal["dinkdata.events/v1"] = Field(alias="schema")
+    schema_: Literal["dinkdata.events/v2"] = Field(alias="schema")
     video: Video
     camera: Camera
     players: list[Player] = Field(min_length=4, max_length=4)

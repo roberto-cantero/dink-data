@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/roberto-cantero/dink-data/contracts/events.schema.json",
   "title": "DinkData game log (events.json)",
-  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the gold score, are checked by the pydantic models.",
   "$defs": {
     "Bounce": {
       "additionalProperties": false,
@@ -134,29 +134,9 @@
       "title": "Camera",
       "type": "object"
     },
-    "FinalScore": {
-      "additionalProperties": false,
-      "properties": {
-        "A": {
-          "minimum": 0,
-          "title": "A",
-          "type": "integer"
-        },
-        "B": {
-          "minimum": 0,
-          "title": "B",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "A",
-        "B"
-      ],
-      "title": "FinalScore",
-      "type": "object"
-    },
     "Game": {
       "additionalProperties": false,
+      "description": "One game, found from breaks in play. It has no score, target or winner (ADR 0019).",
       "properties": {
         "id": {
           "description": "g1, g2, ... in time order.",
@@ -164,42 +144,29 @@
           "title": "Id",
           "type": "string"
         },
-        "format": {
-          "const": "sideout",
-          "title": "Format",
-          "type": "string"
-        },
-        "target": {
-          "enum": [
-            11,
-            15,
-            21
-          ],
-          "title": "Target",
+        "start_frame": {
+          "description": "0-based index of a decoded frame.",
+          "minimum": 0,
+          "title": "Start Frame",
           "type": "integer"
         },
-        "finished": {
-          "description": "false when the recording cut the game off.",
-          "title": "Finished",
-          "type": "boolean"
+        "end_frame": {
+          "description": "0-based index of a decoded frame.",
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
         },
-        "winner_team": {
-          "anyOf": [
-            {
-              "enum": [
-                "A",
-                "B"
-              ],
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Winner Team"
+        "start_t": {
+          "description": "Seconds from the first frame's timestamp.",
+          "minimum": 0,
+          "title": "Start T",
+          "type": "number"
         },
-        "final_score": {
-          "$ref": "#/$defs/FinalScore"
+        "end_t": {
+          "description": "Seconds from the first frame's timestamp.",
+          "minimum": 0,
+          "title": "End T",
+          "type": "number"
         },
         "rallies": {
           "items": {
@@ -211,11 +178,10 @@
       },
       "required": [
         "id",
-        "format",
-        "target",
-        "finished",
-        "winner_team",
-        "final_score",
+        "start_frame",
+        "end_frame",
+        "start_t",
+        "end_t",
         "rallies"
       ],
       "title": "Game",
@@ -412,12 +378,6 @@
         "serve": {
           "$ref": "#/$defs/Serve"
         },
-        "score_before": {
-          "description": "Score call before the serve: serving team, receiving team, server number.",
-          "pattern": "^[0-9]+-[0-9]+-[12]$",
-          "title": "Score Before",
-          "type": "string"
-        },
         "winner_team": {
           "anyOf": [
             {
@@ -435,16 +395,9 @@
           "title": "Winner Team"
         },
         "replay": {
-          "description": "The rally is replayed: same server, side and score.",
+          "description": "The rally is replayed: same server and side.",
           "title": "Replay",
           "type": "boolean"
-        },
-        "rule_deviations": {
-          "items": {
-            "$ref": "#/$defs/RuleDeviation"
-          },
-          "title": "Rule Deviations",
-          "type": "array"
         },
         "start_frame": {
           "description": "Frame of the serve.",
@@ -462,7 +415,7 @@
           "anyOf": [
             {
               "enum": [
-                "serve_state",
+                "next_serve",
                 "ball",
                 "label"
               ],
@@ -538,10 +491,8 @@
         "start_t",
         "end_t",
         "serve",
-        "score_before",
         "winner_team",
         "replay",
-        "rule_deviations",
         "start_frame",
         "end_frame",
         "winner_source",
@@ -551,37 +502,6 @@
         "events"
       ],
       "title": "Rally",
-      "type": "object"
-    },
-    "RuleDeviation": {
-      "additionalProperties": false,
-      "description": "A rule break by the players (GLOSSARY: Rule deviation, ADR 0014).\n\nwrong_server: the right team and server number, but the other partner served.\nwrong_side: the right player served from the wrong side.\nextra_serve: the serving team lost as server 1 and served again at the same call.\nmissed_side_out: the serving team lost with server 2, or with the only server at 0-0-2,\nand kept the serve.\nearly_side_out: the serving team lost with server 1, outside 0-0-2, and handed the serve to\nthe other team, skipping server 2.\ngame_end_mismatch: the players stopped at a score that doesn't end the game, or played on\npast one. Only on a game's last rally.",
-      "properties": {
-        "type": {
-          "enum": [
-            "wrong_server",
-            "wrong_side",
-            "extra_serve",
-            "missed_side_out",
-            "early_side_out",
-            "game_end_mismatch"
-          ],
-          "title": "Type",
-          "type": "string"
-        },
-        "conf": {
-          "description": "Confidence, 0 to 1. Gold labels use 1.",
-          "maximum": 1,
-          "minimum": 0,
-          "title": "Conf",
-          "type": "number"
-        }
-      },
-      "required": [
-        "type",
-        "conf"
-      ],
-      "title": "RuleDeviation",
       "type": "object"
     },
     "Segment": {
@@ -655,15 +575,6 @@
           "title": "Server",
           "type": "string"
         },
-        "server_number": {
-          "description": "1 or 2, as played.",
-          "enum": [
-            1,
-            2
-          ],
-          "title": "Server Number",
-          "type": "integer"
-        },
         "side": {
           "description": "The side of the court the server stood on.",
           "enum": [
@@ -701,7 +612,6 @@
       },
       "required": [
         "server",
-        "server_number",
         "side",
         "receiver",
         "conf"
@@ -750,7 +660,7 @@
   "description": "The game log of one recording. Rules JSON Schema can't express are checked in code.",
   "properties": {
     "schema": {
-      "const": "dinkdata.events/v1",
+      "const": "dinkdata.events/v2",
       "title": "Schema",
       "type": "string"
     },

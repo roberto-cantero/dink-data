@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/roberto-cantero/dink-data/contracts/stats.schema.json",
   "title": "DinkData per-player stats (stats.json)",
-  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the gold score, are checked by the pydantic models.",
   "$defs": {
     "Depth": {
       "additionalProperties": false,
@@ -100,46 +100,23 @@
       "additionalProperties": false,
       "properties": {
         "game": {
-          "anyOf": [
-            {
-              "description": "g1, g2, ... in time order.",
-              "pattern": "^g[1-9][0-9]*$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "null for games_won, which covers the recording.",
-          "title": "Game"
+          "description": "g1, g2, ... in time order.",
+          "pattern": "^g[1-9][0-9]*$",
+          "title": "Game",
+          "type": "string"
         },
         "subject": {
-          "anyOf": [
-            {
-              "enum": [
-                "p1",
-                "p2",
-                "p3",
-                "p4"
-              ],
-              "type": "string"
-            },
-            {
-              "enum": [
-                "A",
-                "B"
-              ],
-              "type": "string"
-            }
+          "enum": [
+            "p1",
+            "p2",
+            "p3",
+            "p4"
           ],
-          "title": "Subject"
+          "title": "Subject",
+          "type": "string"
         },
         "stat": {
           "enum": [
-            "final_score",
-            "games_won",
-            "rallies_won",
-            "points_scored",
             "serve_in_pct",
             "serve_depth",
             "return_in_pct",
@@ -245,7 +222,7 @@
   "description": "The stats of one recording from one pipeline run.",
   "properties": {
     "schema": {
-      "const": "dinkdata.stats/v1",
+      "const": "dinkdata.stats/v2",
       "title": "Schema",
       "type": "string"
     },

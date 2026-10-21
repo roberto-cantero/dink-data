@@ -7,8 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from dinkdata.contracts.common import dump, load
-from dinkdata.contracts.games import RuleDeviation, RuleDeviationType
-from dinkdata.contracts.rallies import RallyLabels
+from dinkdata.contracts.rallies import RallyLabels, RuleDeviation, RuleDeviationType, upgrade_v1
 from tests.contracts.examples import example
 
 
@@ -121,14 +120,14 @@ def test_rules_across_rallies(change, message):
 @pytest.mark.parametrize(
     "change",
     [
-        pytest.param(lambda d: d.update(schema="dinkdata.rallies/v2"), id="wrong version"),
+        pytest.param(lambda d: d.update(schema="dinkdata.rallies/v1"), id="wrong version"),
         pytest.param(lambda d: d.update(video_id="session-1234"), id="raw session id"),
         pytest.param(lambda d: d.update(labeller="Marti L"), id="labeller not a handle"),
         pytest.param(lambda d: d.update(notes="x"), id="unknown top-level field"),
         pytest.param(lambda d: rally(d, 1).update(comment="x"), id="unknown rally field"),
         pytest.param(lambda d: rally(d, 1)["serve"].update(server="p5"), id="fifth player"),
         pytest.param(lambda d: rally(d, 1)["serve"].update(side="middle"), id="unknown side"),
-        pytest.param(lambda d: rally(d, 1)["serve"].update(server_number=3), id="server 3"),
+        pytest.param(lambda d: rally(d, 2).update(score_before="1-0-3"), id="server 3"),
         pytest.param(lambda d: rally(d, 1)["serve"].update(conf=1.5), id="conf above 1"),
         pytest.param(lambda d: rally(d, 1).update(start_t=-1.0), id="negative t"),
         pytest.param(lambda d: rally(d, 1).update(end_t=float("nan")), id="nan t"),
@@ -150,3 +149,22 @@ def test_schema_rejects(change):
     change(labels)
     with pytest.raises(ValidationError):
         RallyLabels.model_validate(labels)
+
+
+def v1_example() -> dict:
+    """The example as the v1 labeller saved it: the old schema and a server number per serve."""
+    data = example("rallies")
+    data["schema"] = "dinkdata.rallies/v1"
+    for game in data["games"]:
+        for r in game["rallies"]:
+            r["serve"]["server_number"] = int(r["score_before"][-1])
+    return data
+
+
+def test_a_v1_file_upgrades_to_v2():
+    assert upgrade_v1(v1_example()) == RallyLabels.model_validate(example("rallies"))
+
+
+def test_only_v1_files_upgrade():
+    with pytest.raises(ValueError, match="not a rallies v1 file"):
+        upgrade_v1(example("rallies"))

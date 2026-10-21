@@ -3,7 +3,7 @@
 import pytest
 
 from dinkdata.contracts.rallies import RallyLabels
-from dinkdata.score.replay import ServeMark, replay_game
+from dinkdata.serves.replay import ServeMark, replay_game
 from tests.contracts.examples import example
 
 
@@ -75,7 +75,8 @@ def test_the_example_game_replays_to_the_committed_labels():
     game = replay_game(marks, finished=True, target=g1.target)
     assert calls(game) == [r.score_before for r in g1.rallies]
     assert winners(game) == [r.winner_team for r in g1.rallies]
-    assert [r.server_number for r in game.rallies] == [r.serve.server_number for r in g1.rallies]
+    # The call's last digit is the server number, as played.
+    assert [r.server_number for r in game.rallies] == [int(r.score_before[-1]) for r in g1.rallies]
     assert [list(r.deviations) for r in game.rallies] == [
         [d.type for d in r.rule_deviations] for r in g1.rallies
     ]
