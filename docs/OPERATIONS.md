@@ -9,8 +9,8 @@ exact commands.
 | Job | Where |
 |---|---|
 | Coding, tests, studio, short clips without a GPU | Our MacBooks |
-| Interactive GPU work and training | A RunPod pod with a community RTX 4090, or Vast.ai when cheaper |
-| Batch and eval runs over many games | Modal first, using its free monthly credit, or RunPod serverless |
+| Interactive GPU work and training | A RunPod pod with a community RTX 4090, or Secure Cloud when community GPUs are unavailable or keep getting interrupted |
+| Batch and eval runs over many games | RunPod pods for now. The first ticket that runs batch eval decides whether to add Modal |
 | Nightly label backup, and the daily fetch after the prototype | Scheduled GitHub Actions workflows |
 | Production | The provider the M4 benchmark picks |
 
@@ -27,17 +27,22 @@ PCs aren't part of the plan.
 
 ## Who pays
 
-Robby's accounts and card pay for RunPod, Vast.ai, Modal and Cloudflare R2 for now, and Marti
-pays Robby back for his share. Spending alerts go to Robby's email, and both owners look at the
+Robby's accounts and card pay for RunPod and Cloudflare R2 for now. Marti is a member of
+Robby's RunPod team, so he can start and stop pods but can't change billing. Marti pays Robby
+back half of each month's RunPod spend. Spending alerts go to Robby's email, and both owners look at the
 month's spend together at the start of each month.
 
 ## Guardrails
 
-- RunPod and Vast.ai use prepaid credit, topped up $25 at a time, so spending can't pass the
-  balance.
-- Modal has a workspace spending limit set to the monthly cap.
-- Pods shut down after 30 minutes idle and have a maximum run time.
-- The development budget is $50 a month, with an alert at $30. A training run that measurably
+- The prepaid balance is the cap. Auto-pay stays off, so spending can't pass the balance. When
+  the balance reaches $0, RunPod stops every pod.
+- Top-ups are $25 at a time, at most $50 a month. A second top-up in one month means both
+  owners check the spend together.
+- RunPod emails Robby when the balance drops below $5.
+- RunPod can't stop a pod when it goes idle, so every pod starts with a 4-hour timer (below).
+- No network volume in M0. Pod disks are scratch space and R2 is the lasting store, so a pod
+  that stops at $0 loses nothing we need.
+- The development budget is $50 a month. A training run that measurably
   improves accuracy can go over it if both owners agree first.
 
 ## Secrets
@@ -52,4 +57,26 @@ month's spend together at the start of each month.
 
 1. Check the balance and this month's spend.
 2. Start the pod or job from the Docker image.
-3. Stop the pod when done, even if idle shutdown would catch it.
+3. Terminate the pod when done. The timer is a safety net, and a stopped pod still bills for
+   its disk.
+
+## Starting a pod
+
+Install the CLI once with `brew install runpod/runpodctl/runpodctl`, then run
+`runpodctl doctor` and paste your own API key when it asks. The key stays in `~/.runpod/`.
+
+```bash
+runpodctl pod create --name dinkdata-<handle> --cloud-type COMMUNITY \
+  --gpu-id "NVIDIA GeForce RTX 4090" \
+  --image runpod/pytorch:1.0.3-cu1281-torch291-ubuntu2404 --container-disk-in-gb 20 \
+  --docker-args 'bash -c "sleep 14400; runpodctl stop pod \$RUNPOD_POD_ID"'
+```
+
+- `--cloud-type COMMUNITY` matters, because `runpodctl` picks Secure Cloud by default. Use
+  `SECURE` when no community GPU is free.
+- The start command stops the pod after 4 hours. Every pod has `RUNPOD_POD_ID` and a
+  `runpodctl` that can only control that pod.
+- A start command replaces the image's default one. Add your own commands before `sleep`, or
+  put the timer in the background with `&`.
+- Stop and remove a pod with `runpodctl pod stop <id>` and `runpodctl pod delete <id>`.
+- The Docker image from #44 replaces the standard image, through a saved template.

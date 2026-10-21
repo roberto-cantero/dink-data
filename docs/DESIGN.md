@@ -4,8 +4,8 @@ The product requirements, technical design and system design for DinkData. This 
 
 | | |
 |---|---|
-| Version | 1.8 |
-| Date | 20 October 2026 |
+| Version | 1.9 |
+| Date | 21 October 2026 |
 | Owners | Robby (`@roberto-cantero`) and Marti (`@probablynotmarti`) |
 | Prepared with | Claude Code, after a review session with Robby and review comments from Marti |
 | Replaces | `docs/DinkDataRebuildPlan.pdf` and every doc based on the `legacy/` prototype |
@@ -958,8 +958,8 @@ spare capacity for a long training run, but nothing depends on them.
 | Job | Where |
 |---|---|
 | Coding, tests, studio, short clips without a GPU | MacBook Airs |
-| Interactive GPU work and training | RunPod pods with a community RTX 4090, or a Vast.ai RTX 4090 when cheaper. A pod is a remote Linux machine with a GPU, started for a session and then stopped |
-| Batch runs over many games, and eval runs | Modal, using its $30 of free credit each month first, or RunPod serverless. A run spreads the games across many GPUs and then shuts down |
+| Interactive GPU work and training | RunPod pods with a community RTX 4090, or RunPod Secure Cloud when community GPUs are unavailable. A pod is a remote Linux machine with a GPU, started for a session and then stopped |
+| Batch runs over many games, and eval runs | RunPod pods until a ticket needs more. The first batch eval ticket decides on Modal, which spreads the games across many GPUs and then shuts down. Vast.ai waits for the M4 benchmark |
 | Daily fetch of selected videos, after the prototype | A scheduled GitHub Actions workflow, which is free for public repos and needs no GPU |
 | Production | The cheapest provider that passes the accuracy gates and finishes each day's videos, chosen by the M4 benchmark |
 
@@ -972,11 +972,10 @@ model size, the amount of labelled data, or the accuracy gates. In production, t
 must meet the same accuracy as in testing, and a cheaper option that misses a gate is rejected.
 
 **Guardrails stop surprise bills.**
-- RunPod and Vast.ai run on prepaid credit, topped up $25 at a time, so spending can't run past
-  the balance.
-- Modal has a workspace spending limit, set to the monthly cap.
-- Pods shut down after 30 minutes idle and have a maximum run time.
-- The development budget is $50 a month, with an alert at $30. A training run that measurably
+- RunPod runs on prepaid credit with auto-pay off, topped up $25 at a time and at most $50 a
+  month, so spending can't run past the balance. RunPod emails Robby below $5.
+- RunPod can't stop an idle pod, so every pod starts with a 4-hour stop timer.
+- The development budget is $50 a month. A training run that measurably
   improves accuracy can go over it if both owners agree first. Accuracy wins over saving
   money, but nothing is spent without a reason.
 - Every eval run records its GPU cost, so the cost of an experiment is visible in the PR.
@@ -1240,7 +1239,7 @@ the PDF renders from the Markdown and no personal data appears anywhere.
 | 8 | `dinkdata.video`: a frame-accurate reader with timestamps | Robby | M0 |
 | 9 | Stats v1 as pure functions, tested on hand-written logs | Robby | M0 |
 | 10 | CVAT for ball clicks, and a converter to `ball_labels` with a frame-alignment test | Robby | M0 |
-| 11 | RunPod, Vast.ai and Modal accounts on Robby's card, with prepaid credit, the $50 cap and the $30 alert | Robby | M0 |
+| 11 | A RunPod account and team on Robby's card, with prepaid credit, auto-pay off, a $5 low-balance email and a 4-hour pod timer | Robby | M0 |
 | 12 | The Docker image, tested on a pod, and `OPERATIONS.md` commands | Marti | M0 |
 | 13 | Highlight renderer: cut, mark and join clips from a hand-written rally list | Marti | M0 |
 | 14 | Minimal rally labeller: a local web page that writes `rallies.json` | Marti | M0 |
@@ -1270,7 +1269,7 @@ The M2 to M4 issues are written when those milestones start.
 | Overfitting to small test sets | Facility hold-out, intervals, results by setup and growing test sets |
 | Agents write plausible but wrong code | Run-time contracts, tests, eval gates and review |
 | Videos expire before we copy them | Download each picked game within 14 days, and after the prototype a daily scheduled fetch |
-| Development cloud bills run over budget | Prepaid credit, Modal's spending limit, idle shutdown, a $50 monthly cap with an alert at $30, and GPU cost shown in every eval |
+| Development cloud bills run over budget | Prepaid credit with auto-pay off, a $5 low-balance email, a 4-hour pod timer, a $50 monthly cap and GPU cost shown in every eval |
 | Cheap GPUs get interrupted mid-run | Checkpoints at least every 30 minutes, and jobs that resume |
 | Personal data leaks into the public repo | Hashed ids, gitleaks, the rules in `CLAUDE.md` and review |
 | Production costs grow with volume, from about 4,500 videos a day | In M4: the optimizations and provider benchmark in section 11.5 and a target under $0.01 a video |
@@ -1352,6 +1351,7 @@ review.
 | 36 | `dink run` takes an ingested game and finds its camera in the catalog. Each new camera gets a one-time hand calibration | Loose files and automatic camera matching and calibration are M4. ADR 0018 |
 | 37 | R2 stays as the development store, and `dink run` reads models from a local folder | Labels and games need one shared, backed-up place. ADR 0006 |
 | 38 | A training run that measurably improves accuracy can exceed the $50 monthly budget if both owners agree first | Accuracy wins over saving money |
+| 39 | M0 uses RunPod only, with prepaid credit as the cap and a 4-hour timer on every pod. Modal waits for batch eval and Vast.ai for the M4 benchmark | One account until a ticket needs more. RunPod can't stop idle pods |
 
 ## Appendix B: Questions for the PickleCam backend developer
 
