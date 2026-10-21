@@ -103,15 +103,42 @@ PickleCam facility dashboard, which costs PickleCam about $1.50 in Bunny bandwid
    colours and game lengths, and skips recordings under 5 minutes. He downloads each one's
    1080p MP4 from its watch page within 14 days of upload, before PickleCam deletes it. We
    asked PickleCam whether a script may download from the dashboard's links instead.
-3. `dink ingest` takes a downloaded MP4. It drops the audio track with `-map 0:v`, saves every
-   frame's timestamp with ffprobe, and flags dropped and duplicated frames. It asks for the
-   session id, facility and court at a hidden prompt, gives the game its HMAC `video_id` and
-   `camera_id`, adds a catalog row and uploads it to R2.
-4. Until the R2 bucket exists, these games live on the owners' machines and on the cloud GPU
-   pod's disk, never in the repo. They move to R2 as soon as it exists.
+3. `dink ingest` prepares each downloaded MP4 (section "Ingesting a game" below).
+4. The prepared games live in R2 and in each owner's local `data/videos/`, never in the repo.
 
 A new recording's MP4 appears a few minutes after its original upload and HLS stream, because
 Bunny encodes it last. Download a game only once its watch page plays.
+
+### Ingesting a game
+
+Install ffmpeg once with `brew install ffmpeg`. If the browser named the download after its
+title, rename it first, such as to `game.mp4`, because the title holds the session id. Then
+run:
+
+```bash
+uv run --env-file .env dink ingest game.mp4 --split train
+```
+
+Ingest asks for the session id twice, then the facility as the dashboard names it and the
+court number, all at a hidden prompt. It then:
+
+- copies the video without its audio, metadata or chapters, using `-map 0:v:0 -c copy`, to
+  `data/videos/<video_id>.mp4`
+- reads every frame's timestamp with ffprobe and an MD5 of every decoded picture with
+  ffmpeg, and writes `videos/<video_id>.frames.parquet`. A gap of about n usual frame lengths
+  marks n - 1 dropped frames, and a picture equal to the one before is a duplicate
+- gives the game its `video_id`, `facility_id` and `camera_id` with the same HMAC as `dink id`.
+  A camera is one court at one facility, so `camera_id` hashes `<facility>/court<N>`
+- uploads the video and its frames, then adds a row to `catalog/id_map.parquet` and to
+  `catalog/catalog.parquet`, with `fetched` true and `uploaded_at` and `setup` null
+
+`--split` is needed only for the first game of a facility. Later games of that facility take
+its split, and a different `--split` is an error. Ingest prints "new facility" or "known
+facility", so a typo in the facility name shows up before it splits one facility in two.
+
+Running ingest again on the same game uploads only the files missing from R2, and does nothing
+once the game is complete. It prints only opaque ids and frame counts, and removes the session
+id, facility and file path from any error.
 
 ## After the prototype: the read-only endpoint
 

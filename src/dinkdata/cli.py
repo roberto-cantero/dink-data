@@ -8,7 +8,7 @@ import os
 from enum import StrEnum
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 
@@ -118,6 +118,76 @@ def make_id(kind: IdKind) -> None:
     except ValueError as error:
         typer.echo(str(error), err=True)
         raise typer.Exit(code=1) from None
+
+
+class SplitChoice(StrEnum):
+    train = "train"
+    dev = "dev"
+    test = "test"
+
+
+@app.command()
+def ingest(
+    video: Annotated[
+        Path, typer.Argument(help="The downloaded MP4. Rename it first if its name has an id.")
+    ],
+    split: Annotated[
+        SplitChoice | None,
+        typer.Option(help="Split for a game from a new facility.", show_default=False),
+    ] = None,
+    videos: Annotated[
+        Path, typer.Option(help="Local folder for the prepared video, as the studio reads it.")
+    ] = Path("data/videos"),
+) -> None:
+    """Prepare one hand-downloaded game and upload it to R2.
+
+    Run with `uv run --env-file .env dink ingest game.mp4`. It asks for the session id,
+    facility and court at a hidden prompt, so they stay out of shell history and output.
+    """
+    from dinkdata.contracts import ids
+    from dinkdata.contracts.common import Split
+    from dinkdata.data import ingest as intake
+    from dinkdata.data import r2
+    from dinkdata.video import ffmpeg
+
+    missing = intake.missing_tools()
+    if missing:
+        typer.echo(
+            f"Missing {', '.join(missing)}. Install ffmpeg with `brew install ffmpeg` and "
+            "rclone with scripts/r2-setup.sh.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    try:
+        key = ids.key_from_env(os.environ)
+    except ValueError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from None
+    if not video.is_file():
+        typer.echo("That video file doesn't exist.", err=True)
+        raise typer.Exit(code=1)
+    session_id = typer.prompt("PickleCam session id", hide_input=True, confirmation_prompt=True)
+    facility = typer.prompt("Facility, as the dashboard names it", hide_input=True)
+    court = typer.prompt("Court number", hide_input=True)
+    secrets = [session_id, facility, str(video), video.name]
+    try:
+        game = intake.Game(session_id, facility, intake.parse_court(court))
+        report = intake.ingest(
+            video, game, key, r2.RcloneStore(), videos, cast(Split, split.value) if split else None
+        )
+    except (ValueError, ffmpeg.FfmpegError, r2.RcloneError) as error:
+        typer.echo(intake.redact(str(error), secrets), err=True)
+        raise typer.Exit(code=1) from None
+
+    where = "New facility" if report.new_facility else "Known facility"
+    typer.echo(f"{where} {report.facility_id}, {report.split} split. Camera {report.camera_id}.")
+    if report.already_ingested:
+        typer.echo(f"{report.video_id} is already in R2 and the catalog. Nothing to do.")
+        return
+    typer.echo(f"{report.frames} frames, {report.dropped} dropped, {report.duplicates} duplicated.")
+    for path in report.uploaded:
+        typer.echo(f"Uploaded {path}")
+    typer.echo(report.video_id)
 
 
 @app.command()
