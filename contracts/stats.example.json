@@ -1,0 +1,15 @@
+{
+  "schema": "dinkdata.stats/v1",
+  "video_id": "v_5eed00000000e001",
+  "run_id": "2026-10-21_ball-v1",
+  "stats": [
+    {"game": null, "subject": "A", "stat": "games_won", "value": 1, "num": null, "den": null, "conf": 0.9, "shipped": true, "reason": null},
+    {"game": "g1", "subject": "A", "stat": "final_score", "value": 11, "num": null, "den": null, "conf": 0.9, "shipped": true, "reason": null},
+    {"game": "g1", "subject": "B", "stat": "final_score", "value": 7, "num": null, "den": null, "conf": 0.9, "shipped": true, "reason": null},
+    {"game": "g1", "subject": "p1", "stat": "serve_in_pct", "value": 0.875, "num": 7, "den": 8, "conf": 0.86, "shipped": true, "reason": null},
+    {"game": "g1", "subject": "p1", "stat": "serve_depth", "value": {"deep": 3, "medium": 3, "short": 1}, "num": null, "den": null, "conf": 0.7, "shipped": true, "reason": null},
+    {"game": "g1", "subject": "p3", "stat": "net_errors", "value": 2, "num": null, "den": null, "conf": 0.8, "shipped": true, "reason": null},
+    {"game": "g1", "subject": "p4", "stat": "return_depth", "value": null, "num": null, "den": null, "conf": 0.3, "shipped": false, "reason": "near_court_not_visible"},
+    {"game": "g1", "subject": "p1", "stat": "landing_map", "value": {"serve": [[6.1, 9.4], [4.0, 3.2]], "return": [], "out_error": [[21.5, 10.0]]}, "num": null, "den": null, "conf": 0.8, "shipped": true, "reason": null}
+  ]
+}

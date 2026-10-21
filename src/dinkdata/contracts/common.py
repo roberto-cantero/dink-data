@@ -37,6 +37,21 @@ VideoId = Annotated[
 CameraId = Annotated[
     str, Field(pattern=CAMERA_ID_PATTERN, description="Opaque camera id (dinkdata.contracts.ids).")
 ]
+FACILITY_ID_PATTERN = r"^f_[0-9a-f]{16}$"
+FacilityId = Annotated[
+    str,
+    Field(pattern=FACILITY_ID_PATTERN, description="Opaque facility id (dinkdata.contracts.ids)."),
+]
+Handle = Annotated[
+    str, Field(pattern=r"^[a-z][a-z0-9_-]{0,31}$", description="A person's short handle.")
+]
+RunId = Annotated[
+    str,
+    Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$", description="A pipeline run, as in runs/."),
+]
+CameraSetup = Literal["dtl_low", "dtl_high", "diagonal"]
+"""Down-the-line at 2 m or below, down-the-line above 2 m, or off a corner (DESIGN 2)."""
+Split = Literal["train", "dev", "test"]
 GameId = Annotated[str, Field(pattern=r"^g[1-9][0-9]*$", description="g1, g2, ... in time order.")]
 RallyId = Annotated[
     str, Field(pattern=r"^g[1-9][0-9]*_r[1-9][0-9]*$", description="g1_r1: game, then rally.")

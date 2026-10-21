@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/roberto-cantero/dink-data/contracts/ball.schema.json",
+  "title": "DinkData ball track (ball.parquet rows)",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$defs": {
+    "BallRow": {
+      "additionalProperties": false,
+      "description": "One row of ball.parquet.",
+      "properties": {
+        "frame": {
+          "description": "0-based index of a decoded frame.",
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "t": {
+          "description": "Seconds from the first frame's timestamp.",
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        },
+        "x": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Pixels. null when not visible.",
+          "title": "X"
+        },
+        "y": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Pixels. null when not visible.",
+          "title": "Y"
+        },
+        "visible": {
+          "title": "Visible",
+          "type": "boolean"
+        },
+        "conf": {
+          "description": "Confidence that the ball is where x, y say, or absent.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Conf",
+          "type": "number"
+        },
+        "interpolated": {
+          "description": "true for a gap filled between detections.",
+          "title": "Interpolated",
+          "type": "boolean"
+        },
+        "peaks": {
+          "description": "(x, y, score), best first.",
+          "items": {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "description": "Confidence, 0 to 1. Gold labels use 1.",
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "maxItems": 3,
+          "title": "Peaks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "frame",
+        "t",
+        "x",
+        "y",
+        "visible",
+        "conf",
+        "interpolated",
+        "peaks"
+      ],
+      "title": "BallRow",
+      "type": "object"
+    }
+  },
+  "items": {
+    "$ref": "#/$defs/BallRow"
+  },
+  "type": "array"
+}

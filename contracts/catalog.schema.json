@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/roberto-cantero/dink-data/contracts/catalog.schema.json",
+  "title": "DinkData video catalog (catalog.parquet rows)",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$defs": {
+    "CatalogRow": {
+      "additionalProperties": false,
+      "description": "One row of catalog.parquet: one video.",
+      "properties": {
+        "video_id": {
+          "description": "Opaque video id (dinkdata.contracts.ids).",
+          "pattern": "^v_[0-9a-f]{16}$",
+          "title": "Video Id",
+          "type": "string"
+        },
+        "facility_id": {
+          "description": "Opaque facility id (dinkdata.contracts.ids).",
+          "pattern": "^f_[0-9a-f]{16}$",
+          "title": "Facility Id",
+          "type": "string"
+        },
+        "camera_id": {
+          "description": "Opaque camera id (dinkdata.contracts.ids).",
+          "pattern": "^c_[0-9a-f]{16}$",
+          "title": "Camera Id",
+          "type": "string"
+        },
+        "uploaded_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null when unknown for a hand download.",
+          "title": "Uploaded At"
+        },
+        "duration_s": {
+          "exclusiveMinimum": 0,
+          "title": "Duration S",
+          "type": "number"
+        },
+        "fps_nominal": {
+          "description": "Never use it for time.",
+          "exclusiveMinimum": 0,
+          "title": "Fps Nominal",
+          "type": "number"
+        },
+        "size_bytes": {
+          "exclusiveMinimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "setup": {
+          "anyOf": [
+            {
+              "enum": [
+                "dtl_low",
+                "dtl_high",
+                "diagonal"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null until the camera is calibrated.",
+          "title": "Setup"
+        },
+        "split": {
+          "enum": [
+            "train",
+            "dev",
+            "test"
+          ],
+          "title": "Split",
+          "type": "string"
+        },
+        "fetched": {
+          "description": "true once the video and its frames.parquet are in R2.",
+          "title": "Fetched",
+          "type": "boolean"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Free text. No names or emails.",
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "video_id",
+        "facility_id",
+        "camera_id",
+        "uploaded_at",
+        "duration_s",
+        "fps_nominal",
+        "size_bytes",
+        "setup",
+        "split",
+        "fetched",
+        "notes"
+      ],
+      "title": "CatalogRow",
+      "type": "object"
+    }
+  },
+  "items": {
+    "$ref": "#/$defs/CatalogRow"
+  },
+  "type": "array"
+}

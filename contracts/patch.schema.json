@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/roberto-cantero/dink-data/contracts/patch.schema.json",
+  "title": "DinkData corrections to a run (patch.json)",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the score, are checked by the pydantic models.",
+  "$defs": {
+    "Add": {
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "enum": [
+            "game",
+            "rally",
+            "event"
+          ],
+          "title": "Target",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "author": {
+          "description": "A person's short handle.",
+          "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+          "title": "Author",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "title": "At",
+          "type": "string"
+        },
+        "op": {
+          "const": "add",
+          "title": "Op",
+          "type": "string"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The game of a new rally, the rally of a new event.",
+          "title": "Parent"
+        },
+        "value": {
+          "additionalProperties": true,
+          "description": "The new object, as in events.json.",
+          "title": "Value",
+          "type": "object"
+        }
+      },
+      "required": [
+        "target",
+        "id",
+        "author",
+        "at",
+        "op",
+        "parent",
+        "value"
+      ],
+      "title": "Add",
+      "type": "object"
+    },
+    "Change": {
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "enum": [
+            "game",
+            "rally",
+            "event"
+          ],
+          "title": "Target",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "author": {
+          "description": "A person's short handle.",
+          "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+          "title": "Author",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "title": "At",
+          "type": "string"
+        },
+        "op": {
+          "const": "change",
+          "title": "Op",
+          "type": "string"
+        },
+        "set": {
+          "additionalProperties": true,
+          "description": "The new values of changed fields.",
+          "minProperties": 1,
+          "title": "Set",
+          "type": "object"
+        },
+        "old": {
+          "additionalProperties": true,
+          "description": "The values they replace.",
+          "title": "Old",
+          "type": "object"
+        }
+      },
+      "required": [
+        "target",
+        "id",
+        "author",
+        "at",
+        "op",
+        "set",
+        "old"
+      ],
+      "title": "Change",
+      "type": "object"
+    },
+    "Delete": {
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "enum": [
+            "game",
+            "rally",
+            "event"
+          ],
+          "title": "Target",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "author": {
+          "description": "A person's short handle.",
+          "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+          "title": "Author",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "title": "At",
+          "type": "string"
+        },
+        "op": {
+          "const": "delete",
+          "title": "Op",
+          "type": "string"
+        },
+        "old": {
+          "additionalProperties": true,
+          "description": "The deleted object, as in events.json.",
+          "title": "Old",
+          "type": "object"
+        }
+      },
+      "required": [
+        "target",
+        "id",
+        "author",
+        "at",
+        "op",
+        "old"
+      ],
+      "title": "Delete",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The corrections to one run's events.json.",
+  "properties": {
+    "schema": {
+      "const": "dinkdata.patch/v1",
+      "title": "Schema",
+      "type": "string"
+    },
+    "run_id": {
+      "description": "A pipeline run, as in runs/.",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "video_id": {
+      "description": "Opaque video id (dinkdata.contracts.ids).",
+      "pattern": "^v_[0-9a-f]{16}$",
+      "title": "Video Id",
+      "type": "string"
+    },
+    "ops": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "add": "#/$defs/Add",
+            "change": "#/$defs/Change",
+            "delete": "#/$defs/Delete"
+          },
+          "propertyName": "op"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/Add"
+          },
+          {
+            "$ref": "#/$defs/Change"
+          },
+          {
+            "$ref": "#/$defs/Delete"
+          }
+        ]
+      },
+      "title": "Ops",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "run_id",
+    "video_id",
+    "ops"
+  ],
+  "type": "object"
+}
