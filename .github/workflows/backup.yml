@@ -1,0 +1,46 @@
+name: Backup
+
+# Copies labels/ and cameras/ from the dinkdata bucket to dinkdata-backup every night
+# (docs/DATA.md). Those files are written once to versioned paths, so the copy never deletes
+# or overwrites. --immutable fails the run if a file that is already backed up has changed.
+
+on:
+  schedule:
+    - cron: "17 4 * * *"  # every day at 04:17 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Install rclone
+        env:
+          RCLONE_VERSION: v1.75.2
+          RCLONE_SHA256: 349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/rclone.zip" \
+            "https://downloads.rclone.org/$RCLONE_VERSION/rclone-$RCLONE_VERSION-linux-amd64.zip"
+          echo "$RCLONE_SHA256  $RUNNER_TEMP/rclone.zip" | sha256sum --check --strict
+          unzip -q -j "$RUNNER_TEMP/rclone.zip" "*/rclone" -d "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Copy labels and cameras
+        # The repo is public, so the log shows only the totals, not file names.
+        env:
+          RCLONE_CONFIG_R2_TYPE: s3
+          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+          RCLONE_CONFIG_R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
+        run: |
+          rclone copy r2:dinkdata r2:dinkdata-backup \
+            --include "/labels/**" --include "/cameras/**" \
+            --immutable --fast-list \
+            --stats 1m --stats-one-line --stats-log-level NOTICE

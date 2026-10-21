@@ -31,6 +31,56 @@ the prototype, R2 holds results, not videos. Workers read each video from Bunny,
 it and keep the JSON outputs and report, about 0.5 MB a video. Per-frame tracks and rendered
 reel MP4s are deleted after 30 days.
 
+## Setting up R2
+
+Both buckets, `dinkdata` and `dinkdata-backup`, are on Robby's Cloudflare account. Each has
+Standard storage, automatic location and no public access. There are three R2 account API
+tokens, each with Object Read & Write.
+
+| Token | Buckets | Where the key lives |
+|---|---|---|
+| `dinkdata-robby` | `dinkdata` | Robby's `.env` |
+| `dinkdata-marti` | `dinkdata` | Marti's `.env` |
+| `dinkdata-ci-backup` | `dinkdata`, `dinkdata-backup` | GitHub secrets `R2_BACKUP_ACCESS_KEY_ID` and `R2_BACKUP_SECRET_ACCESS_KEY` |
+
+The account's S3 endpoint is in each `.env` and in the GitHub secret `R2_ENDPOINT`. No key can
+read `dinkdata-backup` except the CI key. To restore from the backup, Robby creates a
+short-lived token on that bucket in the dashboard.
+
+To set up a Mac, install Homebrew and run the wizard from the repo root:
+
+```bash
+scripts/r2-setup.sh
+```
+
+The wizard asks first whether you are creating the buckets and keys. Robby answers yes once. It
+then walks him through the dashboard, writes his key to `.env` and sets the three GitHub
+secrets. It never saves Marti's key. Robby sends that in a password manager share or a
+disappearing Signal message, never by email, Slack or GitHub. Everyone else answers no and
+pastes the endpoint and key they were sent. Both runs install rclone with Homebrew, write,
+read and delete a test file in `dinkdata`, and offer to upload the local `labels/` folder.
+
+rclone has no config file here. The `r2` remote comes from six `RCLONE_CONFIG_R2_*` variables
+in `.env`, so pass the file to every rclone command:
+
+```bash
+uv run --env-file .env rclone lsf r2:dinkdata
+```
+
+```bash
+uv run --env-file .env rclone copy labels r2:dinkdata/labels --immutable --exclude '.*'
+```
+
+The second command uploads new studio labels. Run it after each labelling session until the
+studio writes to R2 itself. `--immutable` never overwrites a file and stops if a file in R2
+differs from yours.
+
+The `Backup` workflow (`.github/workflows/backup.yml`) runs every day at 04:17 UTC and can be
+started by hand from the Actions tab. It copies `labels/` and `cameras/` from `dinkdata` to
+`dinkdata-backup` inside R2 with `--immutable`. It never deletes, and it fails if a file it
+already backed up has changed. The repo is public, so its log shows only totals. Videos,
+runs and models aren't backed up.
+
 ## Ids
 
 - `video_id`, `camera_id` and `facility_id` are HMAC-SHA256 hashes of PickleCam's ids, keyed
@@ -113,7 +163,8 @@ highlights automatically, so DinkData's reels are new.
 
 ## Keys
 
-- Each machine or service has its own R2 key in `.env` or a CI secret, limited to the bucket.
+- Each person or service has its own R2 key in `.env` or a CI secret, limited to the buckets
+  it needs ("Setting up R2" above).
 - After the prototype, only the fetch workflow holds the endpoint token.
 - Claude Code may not read `.env`.
 
