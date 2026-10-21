@@ -294,6 +294,8 @@ stage_upload_labels() {
 run_wizard() {
 
 cd "$(git rev-parse --show-toplevel)"
+# write_env keeps an existing file's mode, so make sure .env holding keys is readable only by you.
+if [[ -e "$ENV_FILE" ]]; then chmod 600 "$ENV_FILE"; fi
 
 printf '\n'
 if confirm "Are you creating the buckets and keys in Cloudflare (Robby, once)?"; then
