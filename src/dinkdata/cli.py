@@ -26,7 +26,6 @@ PLACEHOLDERS = {
     "run": "Run the pipeline on recordings.",
     "eval": "Score a pipeline run against the gold set.",
     "report": "Build the one-page report for a game.",
-    "highlights": "Build the highlight reels for a game.",
 }
 
 
@@ -230,6 +229,108 @@ def studio(
         raise typer.Exit(code=1) from None
     typer.echo(f"Rally mode for {rallies}: http://127.0.0.1:{port}")
     uvicorn.run(studio_app, host="127.0.0.1", port=port)
+
+
+highlights_app = typer.Typer(help="Reel player data and the on-request MP4 renderer (DESIGN 6.12).")
+app.add_typer(highlights_app, name="highlights")
+
+
+@highlights_app.command("build")
+def highlights_build(
+    picks: Annotated[Path, typer.Option(help="Hand-written rally list (RallyList JSON).")],
+    rallies: Annotated[Path, typer.Option(help="rallies.json labels for the same video.")],
+    out: Annotated[Path, typer.Option(help="Where to write highlights.json.")] = Path(
+        "highlights.json"
+    ),
+) -> None:
+    """Build highlights.json from a hand-written rally list and rallies.json (M0, no selector)."""
+    from dinkdata.contracts.common import dump, load
+    from dinkdata.contracts.rallies import RallyLabels
+    from dinkdata.highlights.build import RallyList, build_highlights
+
+    try:
+        rally_list = load(RallyList, picks)
+        labels = load(RallyLabels, rallies)
+        highlights = build_highlights(rally_list, labels)
+    except ValueError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from None
+    dump(highlights, out)
+    typer.echo(f"Wrote {out}")
+
+
+@highlights_app.command("render")
+def highlights_render(
+    highlights: Annotated[Path, typer.Option(help="highlights.json to render from.")],
+    video: Annotated[Path, typer.Option(help="The game's video.")],
+    game_number: Annotated[int, typer.Option(help="Game number shown on the title card.")],
+    date: Annotated[str, typer.Option(help="Date shown on the title card, YYYY-MM-DD.")],
+    out_dir: Annotated[Path, typer.Option(help="Folder for the rendered MP4s.")] = Path(
+        "out/highlights"
+    ),
+    photo: Annotated[
+        Path | None, typer.Option(help="Player's photo crop for the title card.")
+    ] = None,
+    game: Annotated[str | None, typer.Option(help="Only render this game id, such as g1.")] = None,
+    player: Annotated[
+        str | None, typer.Option(help="Only render this player id, such as p1.")
+    ] = None,
+) -> None:
+    """Render one reel, or every reel, to an MP4 (DESIGN 6.12 point 4). Run this on request."""
+    import datetime as dt
+
+    from dinkdata.contracts.common import load
+    from dinkdata.contracts.highlights import Highlights
+    from dinkdata.highlights.render import FfmpegError, RenderError, TitleCard, render_reel
+
+    try:
+        parsed_date = dt.date.fromisoformat(date)
+    except ValueError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from None
+    data = load(Highlights, highlights)
+    reels = [
+        r
+        for r in data.reels
+        if (game is None or r.game_id == game) and (player is None or r.player_id == player)
+    ]
+    if not reels:
+        typer.echo("No matching reel in that highlights.json.", err=True)
+        raise typer.Exit(code=1)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    card = TitleCard(photo_crop=photo, game_number=game_number, date=parsed_date)
+    for reel in reels:
+        mp4_path = out_dir / f"{reel.game_id}_{reel.player_id}.mp4"
+        try:
+            render_reel(video, reel, card, mp4_path)
+        except (FfmpegError, RenderError) as error:
+            typer.echo(str(error), err=True)
+            raise typer.Exit(code=1) from None
+        typer.echo(f"Wrote {mp4_path}")
+
+
+@highlights_app.command("player")
+def highlights_player(
+    highlights: Annotated[Path, typer.Option(help="highlights.json to read.")],
+    game: Annotated[str, typer.Option(help="Game id, such as g1.")],
+    player: Annotated[str, typer.Option(help="Player id, such as p1.")],
+    video_src: Annotated[str, typer.Option(help="URL or path the browser should play from.")],
+    out: Annotated[Path, typer.Option(help="Where to write the HTML page.")] = Path(
+        "out/reel.html"
+    ),
+) -> None:
+    """Write a simple web page that plays one reel's clips from clip times (DESIGN 6.12 point 1)."""
+    from dinkdata.contracts.common import load
+    from dinkdata.contracts.highlights import Highlights
+    from dinkdata.highlights.player import write_player_page
+
+    data = load(Highlights, highlights)
+    reel = next((r for r in data.reels if r.game_id == game and r.player_id == player), None)
+    if reel is None:
+        typer.echo(f"No reel for {game}/{player} in {highlights}.", err=True)
+        raise typer.Exit(code=1)
+    write_player_page(reel, video_src, out)
+    typer.echo(f"Wrote {out}")
 
 
 @app.callback()
