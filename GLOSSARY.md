@@ -74,7 +74,7 @@ A soft shot that lands in the opponents' kitchen.
 A high shot over the opponents.
 
 **Winner**:
-The last shot of a rally won by the hitter's team, which no opponent touched.
+The last shot of a rally won by the hitter's team, which no opponent returned. A ball that hits an opponent counts.
 
 **Net error**:
 A rally-ending shot that didn't cross the net.

@@ -223,7 +223,7 @@ Every stat is a pure function of `events.json`, with unit tests built from hand-
 | Return in % | Returns whose first bounce lands in the serving team's half, divided by returns |
 | Return depth | Feet from the return's bounce to the serving team's baseline, with the same buckets |
 | Net and out errors | The player hit the shot that ended the rally, and it didn't cross the net or first bounced outside the court. Serve faults are counted separately |
-| Winners | The last shot of a rally the player's team won, which no opponent touched |
+| Winners | The last shot of a rally the player's team won, which no opponent returned. A ball that hits an opponent counts |
 | Landing map | A top-down court showing the player's serve and return bounces and the bounce spots of their out-errors |
 
 Serve faults come free from the same events. DinkData shows no number that players could
@@ -689,7 +689,7 @@ a few of these. DinkData treats this as normal, in three ways.
 
 Each stat is a pure function that returns a value, numerator, denominator, confidence, shipped
 flag and reason. Unit tests cover every rule. A serve on the kitchen line is a fault, a winner
-requires that no opponent touched the ball, and a serve into an area the camera can't see is
+requires that no opponent returned the ball, and a serve into an area the camera can't see is
 left out. The report is one static HTML file built from a Jinja2 template, laid out for
 phones, with an inline SVG landing map. It shows no score and no rule deviations.
 
