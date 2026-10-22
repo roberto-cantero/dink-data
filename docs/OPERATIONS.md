@@ -92,10 +92,10 @@ Install the CLI once with `brew install runpod/runpodctl/runpodctl`, then run
 `runpodctl doctor` and paste your own API key when it asks. The key stays in `~/.runpod/`.
 Add your SSH public key in the RunPod console under Settings, SSH Public Keys.
 
-Start a pod from the saved `dinkdata` template:
+Start a pod from the saved `dinkdata` template, id `w9rs32bv7m`:
 
 ```bash
-runpodctl pod create --name dinkdata-<handle> --template-id <TEMPLATE_ID> \
+runpodctl pod create --name dinkdata-<handle> --template-id w9rs32bv7m \
   --cloud-type COMMUNITY --gpu-id "NVIDIA GeForce RTX 4090"
 ```
 
@@ -115,9 +115,11 @@ cd /opt/dinkdata && uv run pytest -m gpu -v
 
 - Terminate the pod when you're done with `runpodctl pod delete <pod-id>`. A stopped pod still
   bills for its disk.
+- For a different timer on one pod, pass `--env` with `DINK_STOP_AFTER_S` and every variable
+  from the template below, because a pod's `--env` may replace the template's.
 
-The template was made once with this command. Change it the same way with
-`runpodctl template update`.
+The template was made once with this command. Change it with
+`runpodctl template update w9rs32bv7m`, which takes the same flags.
 
 ```bash
 runpodctl template create --name dinkdata --image ghcr.io/roberto-cantero/dink-data:main \
