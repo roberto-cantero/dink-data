@@ -1,0 +1,22 @@
+# Never in the image: secrets, data, labels, models and local environments (docs/DATA.md).
+.env
+.env.*
+data/
+labels/
+runs/
+ckpts/
+out/
+frames/
+.venv/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+*.mp4
+*.mov
+*.pt
+*.pth
+*.onnx
+*.engine
+.claude/settings.local.json
+.claude/worktrees/
