@@ -18,10 +18,11 @@ ENV DEBIAN_FRONTEND=noninteractive \
     UV_PYTHON_PREFERENCE=only-managed \
     PATH=/opt/dinkdata/.venv/bin:$PATH
 
-# git and make run `make check`. ffmpeg runs `dink ingest` and its tests. openssh-server lets
-# people SSH into a pod.
+# git and make run `make check`, and pyright's Node needs libatomic1. tzdata lets pyarrow read
+# UTC timestamps. ffmpeg runs `dink ingest` and its tests. openssh-server lets people SSH in.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg git make openssh-server unzip \
+    && apt-get install -y --no-install-recommends \
+       ca-certificates curl ffmpeg git libatomic1 make openssh-server tzdata unzip \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=ghcr.io/astral-sh/uv:0.13.0 /uv /uvx /bin/
@@ -52,7 +53,8 @@ COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --extra cv --extra cu126 --extra studio \
     && git config --global --add safe.directory /opt/dinkdata \
-    && uv run pre-commit install-hooks
+    && uv run pre-commit install-hooks \
+    && uv run pyright --version
 
 COPY docker/start.sh /usr/local/bin/dink-start
 
