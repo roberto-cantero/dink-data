@@ -231,6 +231,27 @@ def studio(
     uvicorn.run(studio_app, host="127.0.0.1", port=port)
 
 
+@app.command()
+def stats(
+    events: Annotated[Path, typer.Option(help="The game log, events.json.")],
+    run_id: Annotated[str, typer.Option(help="The pipeline run the game log came from.")],
+    out: Annotated[Path, typer.Option(help="Where to write stats.json.")] = Path("stats.json"),
+) -> None:
+    """Compute every v1 stat for every player from events.json (docs/STATS.md)."""
+    from dinkdata.contracts.common import dump, load
+    from dinkdata.contracts.game_log import EventLog
+    from dinkdata.stats.compute import compute_stats
+
+    try:
+        result = compute_stats(load(EventLog, events), run_id)
+    except ValueError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from None
+    dump(result, out)
+    shipped = sum(s.shipped for s in result.stats)
+    typer.echo(f"Wrote {out}: {shipped} of {len(result.stats)} stats shipped.")
+
+
 highlights_app = typer.Typer(help="Reel player data and the on-request MP4 renderer (DESIGN 6.12).")
 app.add_typer(highlights_app, name="highlights")
 
