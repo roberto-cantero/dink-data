@@ -65,6 +65,8 @@ class _Track:
         return cls(track_id, mean, np.diag(np.square(std)), step, confirmed)
 
     def predict(self) -> None:
+        if self.lost:  # as in the reference code, a lost box keeps its size
+            self.mean[7] = 0.0
         h = self.mean[3]
         std = [
             *(STD_POSITION * h, STD_POSITION * h, 1e-2, STD_POSITION * h),

@@ -69,3 +69,16 @@ def test_boxes_far_apart_never_match():
     step(tracker, [box(900, 300)], [0.9])
     (other,) = step(tracker, [box(900, 300)], [0.9])
     assert other != pid
+
+
+def test_a_lost_track_stops_growing_so_the_returning_person_still_matches():
+    """A person walks toward the camera, so their box grows, then is hidden for a while. As in
+    the reference code, a lost track keeps no height velocity, so its predicted box doesn't
+    swell past the person when they reappear at the size they had."""
+    tracker = ByteTrack(max_lost=30)
+    pid = -1
+    for i in range(12):
+        (pid,) = step(tracker, [box(300, 300, w=0.4 * (100 + 10 * i), h=100 + 10 * i)], [0.9])
+    for _ in range(29):
+        step(tracker, [], [])
+    assert step(tracker, [box(300, 300, w=0.4 * 210, h=210)], [0.9]) == [pid]

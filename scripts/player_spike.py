@@ -21,28 +21,29 @@ import json
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import cv2
 import numpy as np
 from scipy.optimize import least_squares
 
-from dinkdata.contracts.common import load, team_of
+from dinkdata.contracts.common import PlayerId, load, team_of
 from dinkdata.contracts.rallies import LabelGame, RallyLabels, upgrade_v1
+from dinkdata.court import zones
+from dinkdata.court.zones import Half
 from dinkdata.players.appearance import colour_feature
 from dinkdata.players.bytetrack import ByteTrack
 from dinkdata.players.foot import foot_point
-from dinkdata.players.identity import Profile, assign_pair
 from dinkdata.players.models import DinoEmbedder, PersonDetector, RTMPose
 from dinkdata.players.serve_check import (
-    COURT_L,
-    COURT_W,
-    NET_Y,
-    Half,
+    PARTNER,
+    GoldServe,
+    ProfileMethod,
     ServeResult,
-    half_of,
+    Sighting,
+    check_game,
     nearest_two,
     on_court,
     serving_half,
@@ -64,9 +65,10 @@ COARSE_MARGIN = 15.0
 WINDOW = (-1.0, -0.15)
 """Seconds around the serve hit in which the players stand in formation."""
 
+LOG_EVERY = 600
+"""Sampled frames between progress lines."""
+
 SOURCES = {"ankles": 0, "box": 1, "hips": 2}
-PARTNER = {"p1": "p2", "p2": "p1", "p3": "p4", "p4": "p3"}
-TEAM = {"A": ("p1", "p2"), "B": ("p3", "p4")}
 
 
 # Floor mapping -------------------------------------------------------------------------------
@@ -119,9 +121,11 @@ def fit_floor(rows: list[list[float]], width: int, height: int) -> tuple[FloorMa
 
 def court_lines() -> list[np.ndarray]:
     n = np.linspace(0, 1, 40)[:, None]
-    lines = [((0, 0), (0, COURT_L)), ((COURT_W, 0), (COURT_W, COURT_L))]
-    lines += [((0, y), (COURT_W, y)) for y in (0, 15, NET_Y, 29, COURT_L)]
-    lines += [((COURT_W / 2, 0), (COURT_W / 2, 15)), ((COURT_W / 2, 29), (COURT_W / 2, COURT_L))]
+    w, length, cx = zones.WIDTH, zones.LENGTH, zones.CENTRE_X
+    far_k, near_k = zones.FAR_KITCHEN_Y, zones.NEAR_KITCHEN_Y
+    lines = [((0, 0), (0, length)), ((w, 0), (w, length))]
+    lines += [((0, y), (w, y)) for y in (0, far_k, zones.NET_Y, near_k, length)]
+    lines += [((cx, 0), (cx, far_k)), ((cx, near_k), (cx, length))]
     return [np.array(a) + n * (np.array(b) - np.array(a)) for a, b in lines]
 
 
@@ -160,23 +164,29 @@ def extract_game(
     floor: FloorMap,
     models: tuple[PersonDetector, RTMPose, DinoEmbedder],
     log: Callable[[str], None],
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
+    """Per-person columns for one game, or None when no frame or no player was found."""
     detector, posenet, dino = models
     frames = sampled(video.times, game.start_t + WINDOW[0] - 1, game.end_t)
+    if not frames:
+        log(f"  {game.id}: no frames between {game.start_t:.0f} and {game.end_t:.0f} s")
+        return None
     wanted = set(frames)
     tracker = ByteTrack(max_lost=MAX_LOST)
     cols: dict[str, list[Any]] = defaultdict(list)
-    for n, frame in enumerate(video.iter_frames(frames[0], frames[-1] + 1)):
+    done = 0
+    for frame in video.iter_frames(frames[0], frames[-1] + 1):
         if frame.index not in wanted:
             continue
+        done += 1
         image = frame.image
         height = image.shape[0]
         det = detector(image)
         bottoms = np.c_[(det.boxes[:, 0] + det.boxes[:, 2]) / 2, det.boxes[:, 3]]
         near = (
             [
-                -COARSE_MARGIN <= x <= COURT_W + COARSE_MARGIN
-                and -COARSE_MARGIN <= y <= COURT_L + COARSE_MARGIN
+                -COARSE_MARGIN <= x <= zones.WIDTH + COARSE_MARGIN
+                and -COARSE_MARGIN <= y <= zones.LENGTH + COARSE_MARGIN
                 for x, y in floor.to_court(bottoms)
             ]
             if len(det.boxes)
@@ -210,8 +220,11 @@ def extract_game(
             cols["source"].append(np.int8(SOURCES[fp.source]))
             cols["colour"].append(colour_feature(image, boxes[i], kps[i]))
             cols["dino"].append(dinos[j])
-        if n % 600 == 0:
+        if done % LOG_EVERY == 0:
             log(f"  {game.id}: t {frame.t:.0f} of {game.end_t:.0f} s")
+    if not cols:
+        log(f"  {game.id}: nobody on the court")
+        return None
     return {k: np.stack(v) for k, v in cols.items()}
 
 
@@ -230,7 +243,8 @@ def cmd_extract(args: argparse.Namespace) -> None:
                     print(f"  {target.name} exists, skipped", flush=True)
                     continue
                 data = extract_game(video, game, floor, models, lambda s: print(s, flush=True))
-                np.savez_compressed(target, **data)
+                if data is not None:
+                    np.savez_compressed(target, **data)
 
 
 def cmd_court(args: argparse.Namespace) -> None:
@@ -293,7 +307,7 @@ def halves(data: dict[str, np.ndarray], rows: list[int]) -> dict[Half, list[int]
     """One frame's people by half, at most the two nearest the lines in each."""
     out: dict[Half, list[int]] = {}
     for half in ("near", "far"):
-        mine = [r for r in rows if half_of(data["foot_ft"][r][1]) == half]
+        mine = [r for r in rows if zones.half(tuple(data["foot_ft"][r])) == half]
         keep = nearest_two([tuple(data["foot_ft"][r]) for r in mine])
         out[half] = [mine[i] for i in keep]
     return out
@@ -314,7 +328,7 @@ def formation(data: dict[str, np.ndarray], t: float) -> Half | None:
 
 def serve_view(data: dict[str, np.ndarray], t: float, half: Half, side: str) -> View:
     view = View([], [], [])
-    other: Half = "far" if half == "near" else "near"
+    other = zones.other_half(half)
     for rows in window_rows(data, t).values():
         by_half = halves(data, rows)
         mine, theirs = by_half[half], by_half[other]
@@ -343,108 +357,101 @@ def track_mean(data: dict[str, np.ndarray], key: str, track: int, until: float) 
     return mean_of(data, key, rows.tolist())
 
 
-Answer = tuple[str, str | None, float]
-"""Method, the player it names as the server or None, and its margin."""
+S = TypeVar("S")
 
 
-def score_serve(
-    data: dict[str, np.ndarray],
-    view: View,
-    team: str,
-    t: float,
-    profiles: dict[str, dict[str, Profile]],
-    online: dict[str, dict[str, Profile]],
-    track_of: dict[int, str],
-) -> list[Answer]:
-    """Every method's answer at one serve. Updates the online profiles."""
-    if not view.server:
-        return [(method, None, 0.0) for method in METHODS]
-    first, second = TEAM[team]
-    answers: list[Answer] = []
-    for key in ("colour", "dino"):
-        feats = np.stack([mean_of(data, key, view.server), mean_of(data, key, view.partner)])
-        order, margin = assign_pair(feats, [profiles[p][key].vector for p in (first, second)])
-        answers.append((key, (first, second)[order[0]], margin))
-        order, margin = assign_pair(feats, [online[p][key].vector for p in (first, second)])
-        named = (first, second)[order[0]]
-        answers.append((f"{key} online", named, margin))
-        online[named][key].add(feats[0])
-        online[PARTNER[named]][key].add(feats[1])
-
-    s_track, p_track = main_track(data, view.server), main_track(data, view.partner)
-    if s_track in track_of:
-        by_track: str | None = track_of[s_track]
-    elif p_track in track_of:
-        by_track = PARTNER[track_of[p_track]]
-    else:
-        by_track = None
-    answers.append(("track", by_track, 0.0))
-
-    until = t + WINDOW[1]
-    if s_track >= 0 and p_track >= 0:
-        rows = [track_mean(data, "dino", s_track, until), track_mean(data, "dino", p_track, until)]
-    else:
-        rows = [mean_of(data, "dino", view.server), mean_of(data, "dino", view.partner)]
-    order, margin = assign_pair(
-        np.stack(rows), [profiles[p]["dino"].vector for p in (first, second)]
+def sighting(view: View, see: Callable[[list[int]], S]) -> Sighting[S]:
+    """What one method sees at a serve, from the rows of each person across the window."""
+    receivers = [r for r, _ in view.others], [r for _, r in view.others]
+    return Sighting(
+        see(view.server) if view.server else None,
+        see(view.partner) if view.partner else None,
+        see(receivers[0]) if view.others else None,
+        see(receivers[1]) if view.others else None,
     )
-    answers.append(("track + dino", (first, second)[order[0]], margin))
-    return answers
 
 
-def score_game(video_id: str, game: LabelGame, data: dict[str, np.ndarray]) -> list[ServeResult]:
+@dataclass
+class TrackMethod:
+    """ByteTrack ids alone. A person whose track wasn't enrolled is named from their partner's
+    track if that one was. An untracked person is track -1."""
+
+    name: str = "track"
+    track_of: dict[int, PlayerId] = field(default_factory=dict)
+
+    def enrol(self, player: PlayerId, seen: int) -> None:
+        if seen >= 0:
+            self.track_of[seen] = player
+
+    def name_server(
+        self, pair: tuple[PlayerId, PlayerId], server: int, partner: int
+    ) -> tuple[PlayerId | None, float]:
+        if server in self.track_of:
+            return self.track_of[server], 0.0
+        if partner in self.track_of:
+            return PARTNER[self.track_of[partner]], 0.0
+        return None, 0.0
+
+
+def score_game(
+    video_id: str, game: LabelGame, data: dict[str, np.ndarray], first_of_recording: bool
+) -> list[ServeResult]:
     serves = sorted(game.rallies, key=lambda r: r.start_t)
-    votes = [(team_of(r.serve.server), formation(data, r.start_t)) for r in serves]
-    a_half, agree = team_a_half([(team, v) for team, v in votes if v is not None])
+    votes: list[tuple[str, Half]] = []
+    for rally in serves:
+        vote = formation(data, rally.start_t)
+        if vote is not None:
+            votes.append((team_of(rally.serve.server), vote))
+    a_half, agree = team_a_half(votes)
     if a_half is None:
         print(f"{video_id} {game.id}: no formation votes", file=sys.stderr)
         return []
     print(f"{video_id} {game.id}: team A {a_half}, {agree:.0%} of formation votes agree")
 
-    profiles: dict[str, dict[str, Profile]] = {}
-    online: dict[str, dict[str, Profile]] = {}
-    track_of: dict[int, str] = {}
-    results: list[ServeResult] = []
+    gold: list[GoldServe] = []
+    seen: dict[str, list[Sighting[Any]]] = defaultdict(list)
     side_checks = []
-
-    def enrol(pid: str, rows: list[int]) -> None:
-        profiles[pid] = {k: Profile.of([mean_of(data, k, rows)]) for k in ("colour", "dino")}
-        online[pid] = {k: Profile.of([mean_of(data, k, rows)]) for k in ("colour", "dino")}
-        track = main_track(data, rows)
-        if track >= 0:
-            track_of[track] = pid
-
-    for n, rally in enumerate(serves):
+    for rally in serves:
         team = team_of(rally.serve.server)
-        half: Half = a_half if team == "A" else ("far" if a_half == "near" else "near")
+        half = a_half if team == "A" else zones.other_half(a_half)
         view = serve_view(data, rally.start_t, half, rally.serve.side)
         if view.others:  # the receiver stands deeper than their partner at the kitchen
             on_side, off_side = view.others[-1]
-            gap = [abs(data["foot_ft"][r][1] - NET_Y) for r in (on_side, off_side)]
+            gap = [abs(data["foot_ft"][r][1] - zones.NET_Y) for r in (on_side, off_side)]
             side_checks.append(gap[0] > gap[1])
-        server, partner = rally.serve.server, PARTNER[rally.serve.server]
-        if n == 0 and view.others:  # p3 receives the first serve
-            enrol("p3", [r for r, _ in view.others])
-            enrol("p4", [r for _, r in view.others])
-        if server not in profiles:
-            if view.server:
-                enrol(server, view.server)
-                enrol(partner, view.partner)
-            continue
+        gold.append(GoldServe(rally.id, rally.start_t, rally.serve.server, half))
+        until = rally.start_t + WINDOW[1]
 
-        answers = score_serve(data, view, team, rally.start_t, profiles, online, track_of)
-        results += [
-            ServeResult(video_id, rally.id, rally.start_t, half, method, server, named, margin)
-            for method, named, margin in answers
-        ]
+        def tracked_dino(rows: list[int], until: float = until) -> np.ndarray:
+            track = main_track(data, rows)
+            if track < 0:
+                return mean_of(data, "dino", rows)
+            return track_mean(data, "dino", track, until)
 
+        for key in ("colour", "dino"):
+            look = sighting(view, lambda rows, key=key: mean_of(data, key, rows))
+            seen[key].append(look)
+            seen[f"{key} online"].append(look)
+        seen["track"].append(sighting(view, lambda rows: main_track(data, rows)))
+        seen["track + dino"].append(sighting(view, tracked_dino))
+
+    methods = [
+        ProfileMethod("colour"),
+        ProfileMethod("colour online", online=True),
+        ProfileMethod("dino"),
+        ProfileMethod("dino online", online=True),
+        TrackMethod(),
+        ProfileMethod("track + dino"),
+    ]
+    results: list[ServeResult] = []
+    for method in methods:
+        results += check_game(
+            video_id, gold, seen[method.name], method, first_of_recording=first_of_recording
+        )
     if side_checks:
         share = np.mean(side_checks)
         print(f"  receiver on the gold side at {share:.0%} of {len(side_checks)} serves")
     return results
-
-
-METHODS = ("colour", "colour online", "dino", "dino online", "track", "track + dino")
 
 
 def cmd_score(args: argparse.Namespace) -> None:
@@ -453,11 +460,17 @@ def cmd_score(args: argparse.Namespace) -> None:
         video_id, game_id = path.stem.rsplit("_", 1)
         labels = read_labels(args.labels, video_id)
         game = next(g for g in labels.games if g.id == game_id)
+        first = min(labels.games, key=lambda g: g.start_t)
         with np.load(path) as npz:
             data = {k: npz[k] for k in npz.files}
-        results += score_game(video_id, game, data)
-        hips = data["source"][data["foot_ft"][:, 1] > NET_Y] == SOURCES["hips"]
-        print(f"  near-half foot points from the hips: {hips.mean():.0%}")
+        if "t" not in data:
+            print(f"{path.name} has no players, skipped", file=sys.stderr)
+            continue
+        results += score_game(video_id, game, data, first_of_recording=game.id == first.id)
+        near = data["foot_ft"][:, 1] > zones.NET_Y
+        if near.any():
+            hips = data["source"][near] == SOURCES["hips"]
+            print(f"  near-half foot points from the hips: {hips.mean():.0%}")
     with (args.out / "results.csv").open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=list(ServeResult.__dataclass_fields__))
         writer.writeheader()

@@ -58,13 +58,16 @@ def body_regions(box: Box, keypoints: np.ndarray) -> tuple[Region, Region]:
     return shirt, shorts
 
 
-def _histogram(hsv: np.ndarray, region: Region) -> np.ndarray:
-    h, w = hsv.shape[:2]
+def _histogram(image: np.ndarray, region: Region) -> np.ndarray:
+    """The normalised HSV histogram of one region of an RGB image. Only the region is
+    converted, not the frame."""
+    h, w = image.shape[:2]
     x1, y1, x2, y2 = region
     xa, xb = int(np.clip(x1, 0, w - 1)), int(np.clip(np.ceil(x2), 1, w))
     ya, yb = int(np.clip(y1, 0, h - 1)), int(np.clip(np.ceil(y2), 1, h))
-    patch = hsv[ya : max(yb, ya + 1), xa : max(xb, xa + 1)]
-    hist = cv2.calcHist([patch], [0, 1, 2], None, list(BINS), [0, 180, 0, 256, 0, 256])
+    patch = image[ya : max(yb, ya + 1), xa : max(xb, xa + 1)]
+    hsv = cv2.cvtColor(np.ascontiguousarray(patch), cv2.COLOR_RGB2HSV)
+    hist = cv2.calcHist([hsv], [0, 1, 2], None, list(BINS), [0, 180, 0, 256, 0, 256])
     hist = hist.flatten()
     total = hist.sum()
     return hist / total if total > 0 else hist
@@ -73,8 +76,7 @@ def _histogram(hsv: np.ndarray, region: Region) -> np.ndarray:
 def colour_feature(image: np.ndarray, box: Box, keypoints: np.ndarray) -> np.ndarray:
     """The unit-length colour feature of one person in an RGB image."""
     shirt, shorts = body_regions(box, keypoints)
-    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-    feature = np.concatenate([_histogram(hsv, shirt), _histogram(hsv, shorts)])
+    feature = np.concatenate([_histogram(image, shirt), _histogram(image, shorts)])
     # The square root turns histogram overlap into cosine similarity (the Hellinger kernel).
     feature = np.sqrt(feature)
     norm = np.linalg.norm(feature)

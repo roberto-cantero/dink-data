@@ -6,29 +6,34 @@ serving team's player on the gold side is the server. An identity method then ha
 of the team's two players that person is, and the check compares its answer with the gold
 server. Results are split by the half the serving team stands in, near or far.
 
-Court coordinates follow docs/COURT.md: x runs 0 to 20 across the court as the camera sees it,
-y runs 0 to 44 toward the camera, and the net is at y = 22. The near team faces away from the
-camera, so its right is larger x. The far team faces the camera, so its right is smaller x.
+Court coordinates follow docs/COURT.md and `dinkdata.court.zones`. The near team faces away
+from the camera, so its right is larger x. The far team faces the camera, so its right is
+smaller x.
 """
 
 import math
 from collections import Counter
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
-from typing import Literal
+from dataclasses import dataclass, field
+from typing import Generic, Protocol, TypeVar
 
-Half = Literal["near", "far"]
+import numpy as np
 
-NET_Y = 22.0
-COURT_W, COURT_L = 20.0, 44.0
+from dinkdata.contracts.common import PlayerId, team_of
+from dinkdata.court.zones import CENTRE_X, LENGTH, NET_Y, WIDTH, Half, other_half
+from dinkdata.players.identity import Profile, assign_pair
+
 SIDE_MARGIN = 4.0
 BACK_MARGIN = 16.0
 """Feet outside the sidelines and behind the baselines that still count as our court."""
 
+PARTNER: dict[PlayerId, PlayerId] = {"p1": "p2", "p2": "p1", "p3": "p4", "p4": "p3"}
+PAIRS: dict[str, tuple[PlayerId, PlayerId]] = {"A": ("p1", "p2"), "B": ("p3", "p4")}
+
 
 def on_court(x: float, y: float) -> bool:
     """Whether a foot point in feet is on our court, with margins for play outside the lines."""
-    return -SIDE_MARGIN <= x <= COURT_W + SIDE_MARGIN and -BACK_MARGIN <= y <= COURT_L + BACK_MARGIN
+    return -SIDE_MARGIN <= x <= WIDTH + SIDE_MARGIN and -BACK_MARGIN <= y <= LENGTH + BACK_MARGIN
 
 
 def nearest_two(points: Sequence[tuple[float, float]]) -> list[int]:
@@ -37,19 +42,15 @@ def nearest_two(points: Sequence[tuple[float, float]]) -> list[int]:
 
     def outside(p: tuple[float, float]) -> float:
         x, y = p
-        return max(-x, x - COURT_W, 0.0) + max(-y, y - COURT_L, 0.0)
+        return max(-x, x - WIDTH, 0.0) + max(-y, y - LENGTH, 0.0)
 
     return sorted(sorted(range(len(points)), key=lambda i: outside(points[i]))[:2])
-
-
-def half_of(y: float) -> Half:
-    return "near" if y > NET_Y else "far"
 
 
 def split_server(xs: Sequence[float], half: Half, side: str) -> tuple[int, int]:
     """Which of a team's two people serves from `side` ("left" or "right", from the players'
     own view), as (server index, partner index)."""
-    rightness = [x - COURT_W / 2 if half == "near" else COURT_W / 2 - x for x in xs]
+    rightness = [x - CENTRE_X if half == "near" else CENTRE_X - x for x in xs]
     right = 0 if rightness[0] >= rightness[1] else 1
     server = right if side == "right" else 1 - right
     return server, 1 - server
@@ -67,14 +68,12 @@ def serving_half(
     return "near" if near_gap > far_gap else "far"
 
 
-def team_a_half(votes: Iterable[tuple[str, str]]) -> tuple[Half | None, float]:
+def team_a_half(votes: Iterable[tuple[str, Half]]) -> tuple[Half | None, float]:
     """Team A's half in a game from (gold serving team, formation's serving half) votes, and the
     share of votes that agree with it."""
     counts: Counter[Half] = Counter()
     for team, serving in votes:
-        mine: Half = "near" if serving == "near" else "far"
-        other: Half = "far" if mine == "near" else "near"
-        counts[mine if team == "A" else other] += 1
+        counts[serving if team == "A" else other_half(serving)] += 1
     if not counts:
         return None, 0.0
     half, n = counts.most_common(1)[0]
@@ -103,6 +102,120 @@ class ServeResult:
     predicted: str | None
     """None when the method couldn't name the server, for example with no server box."""
     margin: float
+
+
+# One game's serves -------------------------------------------------------------------------
+
+S = TypeVar("S")
+S_in = TypeVar("S_in", contravariant=True)
+
+
+@dataclass(frozen=True)
+class GoldServe:
+    rally_id: str
+    t: float
+    server: PlayerId
+    half: Half
+    """The serving team's half."""
+
+
+@dataclass(frozen=True)
+class Sighting(Generic[S]):
+    """What one method sees of the players at one serve, such as a feature vector or a track id.
+    None where the person wasn't found."""
+
+    server: S | None = None
+    partner: S | None = None
+    receiver: S | None = None
+    """The receiving team's player on the serve's side, who receives it."""
+    receiver_partner: S | None = None
+
+
+class Method(Protocol[S_in]):
+    name: str
+
+    def enrol(self, player: PlayerId, seen: S_in) -> None: ...
+
+    def name_server(
+        self, pair: tuple[PlayerId, PlayerId], server: S_in, partner: S_in
+    ) -> tuple[PlayerId | None, float]:
+        """Which of `pair` the server is, or None, and the margin of the answer."""
+        ...
+
+
+@dataclass
+class ProfileMethod:
+    """Appearance profiles from each player's enrolment. With `online`, every answer also adds
+    the two people's features to the profiles it named them as, without looking at gold."""
+
+    name: str
+    online: bool = False
+    profiles: dict[PlayerId, Profile] = field(default_factory=dict)
+
+    def enrol(self, player: PlayerId, seen: np.ndarray) -> None:
+        self.profiles[player] = Profile.of([seen])
+
+    def name_server(
+        self, pair: tuple[PlayerId, PlayerId], server: np.ndarray, partner: np.ndarray
+    ) -> tuple[PlayerId | None, float]:
+        order, margin = assign_pair(
+            np.stack([server, partner]), [self.profiles[p].vector for p in pair]
+        )
+        named = pair[order[0]]
+        if self.online:
+            self.profiles[named].add(server)
+            self.profiles[PARTNER[named]].add(partner)
+        return named, margin
+
+
+def check_game(
+    video_id: str,
+    serves: Sequence[GoldServe],
+    sightings: Sequence[Sighting[S]],
+    method: Method[S],
+    *,
+    first_of_recording: bool,
+) -> list[ServeResult]:
+    """Partner identity at each serve of one game, in time order.
+
+    A team enrols at its first serve where both its people are seen: the gold server and their
+    partner. Only the recording's first serve also enrols the receiving team, because p3 is
+    defined as the recording's first receiver (GLOSSARY), not each game's. A serve that enrols
+    its team isn't scored. A scored serve with either person unseen names nobody.
+    """
+    enrolled: set[PlayerId] = set()
+    results: list[ServeResult] = []
+    for n, (serve, seen) in enumerate(zip(serves, sightings, strict=True)):
+        pair = PAIRS[team_of(serve.server)]
+        receiver, receiver_partner = seen.receiver, seen.receiver_partner
+        if n == 0 and first_of_recording and receiver is not None and receiver_partner is not None:
+            receivers = PAIRS["B" if team_of(serve.server) == "A" else "A"]
+            method.enrol(receivers[0], receiver)
+            method.enrol(receivers[1], receiver_partner)
+            enrolled.update(receivers)
+        if not set(pair) <= enrolled:
+            if seen.server is not None and seen.partner is not None:
+                method.enrol(serve.server, seen.server)
+                method.enrol(PARTNER[serve.server], seen.partner)
+                enrolled.update(pair)
+            continue
+        if seen.server is None or seen.partner is None:
+            named, margin = None, 0.0
+        else:
+            named, margin = method.name_server(pair, seen.server, seen.partner)
+        results.append(
+            ServeResult(
+                video_id,
+                serve.rally_id,
+                serve.t,
+                serve.half,
+                method.name,
+                serve.server,
+                named,
+                margin,
+            )
+        )
+    return results
 
 
 @dataclass(frozen=True)
