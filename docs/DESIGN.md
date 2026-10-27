@@ -560,9 +560,14 @@ event spotter also uses wrist keypoints and heat map peaks.
 1. RF-DETR finds people in the court crop, and RTMPose finds their body keypoints. Both are
    pretrained, so they need no labelling, and both are Apache-2.0. Each sits behind a small
    interface.
-2. ByteTrack, through the MIT-licensed `supervision` library, links detections into tracks.
-   ByteTrack uses motion only, so an appearance model, such as OSNet from torchreid (MIT),
-   re-links people after occlusion and tells partners apart.
+2. ByteTrack links detections into tracks within a rally. We wrote it from the paper, because
+   `supervision` 0.31 dropped it. ByteTrack uses motion only, and in the M0 spike a track
+   lasted from one serve to the next at only 27 of 185 serves, so tracks never carry identity.
+   Colour profiles carry it instead. Each profile is an HSV histogram of a player's shirt and
+   shorts, placed with the keypoints and updated after each serve. In the spike, colour
+   profiles named the server at 96% of serves and DINOv2-small features at 84%. OSNet from
+   torchreid was ruled out, because its PyPI package is an unofficial repackage with
+   research-only weights.
 3. A player's foot point is the midpoint of the ankles, or the bottom of the box. If the box
    touches the bottom of the frame, the foot point comes from the hips and gets a lower
    confidence. The floor mapping then places it on the court.
@@ -570,17 +575,25 @@ event spotter also uses wrist keypoints and heat map peaks.
    the baselines, become the players. Fragments of one person merge by side and appearance.
 5. Ids follow one convention in the pipeline and in gold labels. p1 is the first server in
    the recording and p2 is p1's partner. p3 receives the first serve and p4 is p3's partner.
-   Team A is p1 and p2, and team B is p3 and p4. Appearance carries ids across games and end
-   switches. Keeping partners apart matters most, so each serve checks the server against both
-   stored profiles.
+   Team A is p1 and p2, and team B is p3 and p4. Colour profiles carry ids across games and end
+   switches. Each player is enrolled from their clearest sighting in the first rallies, and a
+   box cut by the frame edge is never used. Keeping partners apart matters most, so each serve
+   checks the server against both stored profiles.
 6. **Partner identity is the riskiest assumption in the plan.** Per-player serve stats and the
    next-serve winner hint depend on telling p1 from p2 at every serve. Partners often dress alike, the far team is small on low
    down-the-line cameras (64% of videos), and the near team is seen from behind. The player
    spike in M0 therefore measures partner-identity accuracy at the serve, separately for the
    near and far team, on serves the owners label by hand. The eval command keeps reporting it.
-   M2's design is locked only after the spike shows the accuracy we can reach. If the far
-   team falls short, per-player serve stats ship only for the camera setups that pass, and
-   rally winners lean on the ball from M3.
+   M2's design is locked only after the spike shows the accuracy we can reach. The spike
+   (#31) scored 185 serves on 5 games. With all four court corners in frame, colour profiles
+   named the server at 58 of 58 serves. On a camera whose near baseline corners fall outside
+   the frame, the near server was missing at 17 of 61 serves and named right at 37 of the
+   other 44, while the far team stayed at 66 of 66. So the framing, not the far team's size,
+   is the risk. M2 gives a serve with an unseen or cut-off near server an unknown identity
+   instead of a guess. Calibration records whether all four corners are in frame, and the
+   eval reports partner identity per framing, for the near and far team. Per-player serve
+   stats ship only for the camera setups that pass. On the others, rally winners lean on the
+   ball from M3.
 7. At each serve formation the serve state records which team serves, which player, from
    which side and who receives. Internally it also notes whether each team stands on its
    starting sides, which hints at score parity. Players who lose track of the score and teams
@@ -592,8 +605,8 @@ event spotter also uses wrist keypoints and heat map peaks.
    players relax and the next serve formation appears. In M2 rallies simply run from serve to
    serve.
 
-The main risks are occlusion near the net, spectators near the court, end switches and
-partners swapping ids. The appearance check catches swaps, with the parity hint as a tiebreak.
+The main risks are occlusion near the net, spectators near the court, end switches, near
+players outside the frame at the serve and partners swapping ids. The appearance check catches swaps, with the parity hint as a tiebreak.
 
 ### 6.7 Event spotter (`dinkdata.events`, Robby)
 
@@ -1159,12 +1172,12 @@ CLA.
 | Component | License | Note |
 |---|---|---|
 | RF-DETR, sizes Nano to Large | Apache-2.0 | The XL and 2XL sizes use a different license (PML), so we don't use them |
-| RTMPose, through rtmlib or MMPose | Apache-2.0 | |
-| ByteTrack, through supervision | MIT | |
-| OSNet, through torchreid | MIT | Appearance model for re-identification |
+| RTMPose, run with onnxruntime | Apache-2.0 | We decode its output ourselves instead of using rtmlib |
+| ByteTrack | Our code | Written from the paper, because supervision 0.31 dropped it |
+| DINOv2-small, through transformers | Apache-2.0 | Only in the M0 spike's comparison, not in the pipeline |
 | PyTorch, PyAV, NumPy, SciPy, scikit-learn, uvicorn, Jinja2, httpx | BSD | PyAV bundles an LGPL build of FFmpeg, which is fine for a library |
 | OpenCV, pyarrow, boto3 | Apache-2.0 | |
-| pydantic, polars, typer, FastAPI, rclone | MIT | |
+| pydantic, polars, typer, FastAPI, rclone, onnxruntime | MIT | |
 | CVAT, used as a separate tool | MIT | Not part of our code |
 
 We switched from Ultralytics YOLO before training anything. Ultralytics is AGPL-3.0 and says the
