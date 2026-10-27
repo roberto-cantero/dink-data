@@ -9,8 +9,8 @@ The prototype's problems are summarised in ADR 0001.
 | ID | Area | Problem | Severity | Status |
 |---|---|---|---|---|
 | K1 | CI | The gitleaks pre-commit hook scans only staged changes, so in CI it checks nothing | Medium | Open |
-| K2 | Data | Two people running `dink ingest` at the same time can lose catalog and id-map rows | Medium | Open |
 | K2 | Video | On macOS, OpenCV and PyAV each bundle FFmpeg, and importing both prints duplicate-class warnings | Low | Open |
+| K3 | Data | Two people running `dink ingest` at the same time can lose catalog and id-map rows | Medium | Open |
 
 ## K1 · Gitleaks doesn't scan in CI
 
@@ -30,16 +30,20 @@ The prototype's problems are summarised in ADR 0001.
 - Fix: none yet. If a crash shows up, keep OpenCV out of video reading (the reader uses PyAV)
   and import `cv2` only in processes that need it.
 
-## K2 · Parallel ingests lose catalog rows
+## K3 · Parallel ingests lose catalog rows
 
 - Where: `src/dinkdata/data/ingest.py`, in `ingest`
 - What: ingest reads `catalog/catalog.parquet` and `catalog/id_map.parquet` when it starts and
   overwrites both when it ends, a few minutes later. If another ingest writes them in between,
   its new rows are lost. The video and its frames stay in R2, but the game has no catalog row,
-  and its id-map row may be gone too.
+  and its id-map row may be gone too. Worse, `choose_split` takes a game's split from its
+  facility's catalog rows. If the lost row was the facility's only one, the next ingest from
+  that facility looks like a new facility and accepts any `--split`. A test facility's games
+  could then land in dev or train.
 - Fix: until it is fixed, only one person runs ingest at a time. Running ingest again on a game
-  that lost its row adds the row back. The fix is to read and merge both tables just before
-  writing them, or to write one catalog file per game.
+  that lost its row adds the row back. Re-ingest a lost game before ingesting anything else from
+  its facility. The fix is to read and merge both tables just before writing them, or to write
+  one catalog file per game.
 
 ## Entry format
 
