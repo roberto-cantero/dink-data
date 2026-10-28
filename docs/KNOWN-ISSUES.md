@@ -32,18 +32,23 @@ The prototype's problems are summarised in ADR 0001.
 
 ## K3 · Parallel ingests lose catalog rows
 
-- Where: `src/dinkdata/data/ingest.py`, in `ingest`
+- Where: `src/dinkdata/data/ingest.py`. `ingest` reads the catalog and id map at lines 176-177
+  and writes them at lines 223 and 241. `choose_split` is at line 102.
 - What: ingest reads `catalog/catalog.parquet` and `catalog/id_map.parquet` when it starts and
   overwrites both when it ends, a few minutes later. If another ingest writes them in between,
   its new rows are lost. The video and its frames stay in R2, but the game has no catalog row,
-  and its id-map row may be gone too. Worse, `choose_split` takes a game's split from its
-  facility's catalog rows. If the lost row was the facility's only one, the next ingest from
-  that facility looks like a new facility and accepts any `--split`. A test facility's games
-  could then land in dev or train.
-- Fix: until it is fixed, only one person runs ingest at a time. Running ingest again on a game
-  that lost its row adds the row back. Re-ingest a lost game before ingesting anything else from
-  its facility. The fix is to read and merge both tables just before writing them, or to write
-  one catalog file per game.
+  and its id-map row may be gone too. Lost rows also break `choose_split`, which takes a game's
+  split from its facility's catalog rows. If the lost row was the facility's only one, the next
+  ingest from that facility looks like a new facility and accepts any `--split`. A test
+  facility's games could then land in dev or train.
+- Fix: none yet, tracked in #79. Until then, only one person runs ingest at a time. To restore
+  a lost game, run ingest again with its original `--split`, before ingesting anything else
+  from its facility. Ingest needs the game's MP4 on disk, so keep the download until its rows
+  are in the catalog. The re-ingest gives the game the same `video_id` and adds its rows back. A read and merge just before the write only shrinks the race, because
+  `RcloneStore.put` has no lock or conditional write. The merge must also re-run `choose_split`
+  on the merged table, or two new-facility ingests with different splits break every later
+  ingest from that facility. A lock or a conditional write closes the race. One catalog file
+  per game avoids it, if the split check runs when the files are read.
 
 ## Entry format
 

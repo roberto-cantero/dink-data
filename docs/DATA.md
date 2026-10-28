@@ -136,6 +136,9 @@ court number, all at a hidden prompt. It then:
 its split, and a different `--split` is an error. Ingest prints "new facility" or "known
 facility", so a typo in the facility name shows up before it splits one facility in two.
 
+Only one person runs ingest at a time. Two ingests that overlap can lose the first one's catalog
+rows (K3 in `docs/KNOWN-ISSUES.md`). Tell the other owner before you start and when you finish.
+
 Running ingest again on the same game uploads only the files missing from R2, and does nothing
 once the game is complete. It prints only opaque ids and frame counts, and removes the session
 id, facility and file path from any error.
