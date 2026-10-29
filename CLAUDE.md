@@ -37,7 +37,8 @@ Rows marked _planned_ don't exist yet. If you couldn't run something, say so.
 | Opaque id for a hand-downloaded game | `uv run --env-file .env dink id video` |
 | Prepare a hand-downloaded game and upload it to R2 (needs `brew install ffmpeg`) | `uv run --env-file .env dink ingest game.mp4 --split train` |
 | Upgrade saved v1 rally labels to v2 | `uv run dink contracts upgrade-rallies` |
-| Label rallies in the browser (video in `data/videos/<video_id>.mp4`) | `uv run dink studio --rallies <video_id> --labeller <handle>` |
+| Label rallies in the browser (video in `data/videos/<video_id>.mp4`) | `uv run --env-file .env dink studio --rallies <video_id> --labeller <handle>` |
+| Label hits, bounces and net frame by frame, on top of rally gold | `uv run --env-file .env dink studio --label <video_id> --labeller <handle>` |
 | Rebuild the design PDF after editing `docs/DESIGN.md` | `make design-pdf` |
 | Run the pipeline on a recording | _planned_ `uv run dink run <video_id>` |
 | Accuracy eval | _planned_ `uv run dink eval --run <run_id> --split test` |
