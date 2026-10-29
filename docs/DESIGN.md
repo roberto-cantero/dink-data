@@ -733,18 +733,18 @@ uses detected rallies and their winners. In M3 it adds winners and aces.
 
 The studio is a local web app for every human task. A FastAPI server decodes frames by exact
 timestamp, because browsers can't land on an exact frame, reads and writes R2, and validates
-every save against the contracts. A small TypeScript page shows the frame, overlays and a
-timeline.
+every save against the contracts. A small page in plain JavaScript, with no build step, shows
+the frame, overlays and a timeline. Saves go to a local folder first, then to R2.
 
 | Mode | Milestone | Keys |
 |---|---|---|
-| Events | M1 | Left and right arrows move one frame, with Shift for 10. R marks rally start or end. H then 1 to 4 marks a hit and its hitter. B then a click marks a bounce. X marks a bounce out of view. N marks the net. W then A or B marks the winner. Enter accepts a suggestion, Delete rejects it and J jumps to the next uncertain item |
+| Events | M1 | Builds on the video's rally gold, whose rallies, serves and winners arrive as suggestions at their nearest frames. Left and right arrows move one frame, with Shift for 10. R moves the nearest rally start or end. H then 1 to 4 marks a hit and its hitter. B then a click marks a bounce. X marks a bounce out of view. N marks the net. W then A or B marks the winner. E then 1 to 6 marks the end reason. Enter accepts a suggestion, Delete rejects it and J jumps to the next uncertain item |
 | Rally level | M0, as a minimal tool | A single local web page with a video player. Mark each serve's time, server and side, and each rally's winner. It needs no exact frames, so a browser player is enough. The studio absorbs it later and proposes serves from M2 |
 | Calibrate | M1, after the click tool | Click points, lines and net tops, then check the fitted court and its error |
 | Ball | CVAT first | Ball clicks start in CVAT in M0. A converter turns CVAT's export into our `ball_labels` contract and has a test that checks frame alignment, because misaligned frames broke the prototype's labels. Once a ball model exists, CVAT can show its predictions for people to accept or fix. A studio ball mode is optional later |
 | Review | M4 | Items appear lowest confidence first, including highlight selections. Edits are saved as patches |
 
-After H or W, the next key names a player or team, so the keys don't clash. The studio writes
+After H, W or E, the next key names a player, team or end reason, so the keys don't clash. The studio writes
 our contract directly, its pickleball shortcuts are faster than a generic tool's, and it
 becomes the review tool. Labelling is the critical path, though, so no label set waits for the
 full studio. Rally-level labels start in M0 with the minimal tool, ball clicks start in M0 in
@@ -808,6 +808,8 @@ The example shows four things. The return's bounce, e4, lands below the frame, s
 position and `in` are `null`. The ball doesn't show how the rally ended, so `end_reason` is
 `null`. The next serve, p1 again from the left, shows that team A won, so `winner_source` is
 `next_serve`. And `t` differs from `frame / 30` because 14 frames were dropped earlier.
+Before a camera is calibrated, `camera` is `null`, and every bounce has `court_xy` and `in`
+set to `null`. Full-event gold starts this way.
 
 The end reasons are these.
 - `net`: the shot didn't cross the net.
@@ -903,16 +905,20 @@ side. Frame rate, resolution and size come from the file at fetch time.
 Labels are files that point into the unchanged video by frame and timestamp. That's why exact
 frame access matters.
 
-To label a full-event game, open it with `dink studio --label <video_id>` and calibrate its
-camera first if needed.
+To label a full-event game, label its rallies in rally mode first, because events mode builds
+on them. Then open it with `dink studio --label <video_id> --labeller <handle>`. Rally gold
+keeps the rallies, games and serves, so fix those in rally mode and reopen. Until the camera is
+calibrated, each bounce keeps the pixel you clicked.
 1. In a rally pass at 2× speed, press R at each serve contact and again when the ball is dead.
+   R moves the nearest rally start or end, and Enter accepts one that is already right.
 2. In an event pass, step frame by frame. Press H and a player number at each contact, B and
    a click at each bounce, X if the bounce is out of view, and N for the net.
-3. Confirm the proposed end reason and winner of each rally.
-4. The studio replays the rules over your rallies and flags any rally where the score doesn't
-   fit. Mark it as a rule deviation if the players really did it, otherwise fix your labels.
-5. Save. The file goes to `labels/gold-events/<video_id>/<your name>/v<n>.json`, and nothing
-   is overwritten.
+3. Confirm the proposed end reason and winner of each rally, or press E and a number for the
+   end reason.
+4. Rally mode already replayed the rules over your rallies. If you change a winner, the studio
+   flags that rally, so check its score in rally mode.
+5. Save. The file goes to `labels/gold-events/<video_id>/<your name>/v<n>.json` and then to
+   R2, and nothing is overwritten.
 
 A full-event game realistically takes 3 to 5 hours, so the 12 games take each owner 18 to 30
 hours during M1. Start with 2 dev and 2 test games, so the eval command has data early.
