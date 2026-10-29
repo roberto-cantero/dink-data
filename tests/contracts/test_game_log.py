@@ -73,6 +73,8 @@ def test_rules_across_the_log(change, message):
     "change",
     [
         pytest.param(lambda d: d.update(schema="dinkdata.events/v0"), id="wrong version"),
+        pytest.param(lambda d: d.update(schema="dinkdata.events/v2"), id="old version"),
+        pytest.param(lambda d: d.pop("camera"), id="camera left out"),
         pytest.param(lambda d: d["camera"].update(id="cam-41"), id="raw camera id"),
         pytest.param(lambda d: rally(d, 1).pop("start_frame"), id="pipeline rally needs frames"),
         pytest.param(lambda d: rally(d, 1).update(end_reason="let"), id="unknown end reason"),
@@ -106,3 +108,12 @@ def test_unknowns_are_allowed():
     event(log, 1, 1)["player"] = None
     log["players"][0]["crop"] = None
     EventLog.model_validate(log)
+
+
+def test_a_log_before_calibration_has_no_camera_and_no_court_points():
+    log = example("events")
+    log["camera"] = None
+    for e in rally(log, 1)["events"]:
+        if e["type"] == "bounce":
+            e.update(court_xy=None, **{"in": None})
+    assert EventLog.model_validate(log).camera is None

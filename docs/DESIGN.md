@@ -785,7 +785,7 @@ personal data.
 | `patch.json` | Corrections to one pipeline run, with its `run_id`. Add, change and delete operations on games, rallies and events by id, with author handle, time and the old values. The patched `events.json` is saved next to it |
 
 ```json
-{"schema": "dinkdata.events/v2",
+{"schema": "dinkdata.events/v3",
  "video": {"id": "v_9c1e…", "fps_nominal": 30, "frames": "videos/v_9c1e….frames.parquet", "dropped_frames": 14},
  "camera": {"id": "c_41ab…", "version": 2},
  "players": [{"id": "p1", "team": "A", "label": "Player 1", "crop": "crops/p1.jpg"}],
