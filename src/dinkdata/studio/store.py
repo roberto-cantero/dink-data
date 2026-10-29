@@ -1,8 +1,9 @@
 """Versioned label files: every save is a new `v<n>` file, and nothing is overwritten.
 
-Labels live under a local `labels/` folder, which git ignores, until the R2 store exists
-(docs/DATA.md). The layout matches R2's: `labels/gold-rallies/<video_id>/<labeller>/v<n>.json`,
-with the player reference crops beside it in `crops/<player>/v<n>.png`.
+Labels are saved under a local `labels/` folder, which git ignores, then uploaded to R2
+(`dinkdata.studio.sync`, docs/DATA.md). The layout matches R2's:
+`labels/gold-rallies/<video_id>/<labeller>/v<n>.json`, with the player reference crops beside
+it in `crops/<player>/v<n>.png`, and `labels/gold-events/<video_id>/<labeller>/v<n>.json`.
 """
 
 import re
@@ -11,6 +12,7 @@ from pathlib import Path
 from dinkdata.contracts.common import PlayerId
 
 GOLD_RALLIES = "gold-rallies"
+GOLD_EVENTS = "gold-events"
 
 _VERSION = re.compile(r"v([1-9][0-9]*)")
 _CROP_FOLDERS: dict[str, str] = {"p1": "p1", "p2": "p2", "p3": "p3", "p4": "p4"}
