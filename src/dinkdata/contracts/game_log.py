@@ -96,9 +96,11 @@ class Game(StrictModel):
 class EventLog(StrictModel):
     """The game log of one recording. Rules JSON Schema can't express are checked in code."""
 
-    schema_: Literal["dinkdata.events/v2"] = Field(alias="schema")
+    schema_: Literal["dinkdata.events/v3"] = Field(alias="schema")
     video: Video
-    camera: Camera
+    camera: Camera | None = Field(
+        description="The calibration behind every court_xy. null before the camera has one."
+    )
     players: list[Player] = Field(min_length=4, max_length=4)
     segments: list[Segment]
     games: list[Game]
