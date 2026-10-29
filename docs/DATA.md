@@ -67,13 +67,17 @@ in `.env`, so pass the file to every rclone command:
 uv run --env-file .env rclone lsf r2:dinkdata
 ```
 
+The studio uploads its own saves when it runs with `uv run --env-file .env`. It saves to the
+local `labels/` folder first, then uploads with `--immutable`, and anything that didn't upload
+goes at the next save. Before each save it downloads that folder's versions from R2, so a new
+version numbers after one saved on another Mac. Labels saved with `--local`, or before the
+studio uploaded them, go up with this command:
+
 ```bash
 uv run --env-file .env rclone copy labels r2:dinkdata/labels --immutable --exclude '.*'
 ```
 
-The second command uploads new studio labels. Run it after each labelling session until the
-studio writes to R2 itself. `--immutable` never overwrites a file and stops if a file in R2
-differs from yours.
+`--immutable` never overwrites a file and stops if a file in R2 differs from yours.
 
 The `Backup` workflow (`.github/workflows/backup.yml`) runs every day at 04:17 UTC and can be
 started by hand from the Actions tab. It copies `labels/` and `cameras/` from `dinkdata` to

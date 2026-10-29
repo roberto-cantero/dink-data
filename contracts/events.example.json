@@ -1,5 +1,5 @@
 {
-  "schema": "dinkdata.events/v2",
+  "schema": "dinkdata.events/v3",
   "video": {
     "id": "v_5eed00000000e001",
     "fps_nominal": 30,

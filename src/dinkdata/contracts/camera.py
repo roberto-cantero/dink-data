@@ -73,6 +73,8 @@ class CameraCalibration(StrictModel):
 
 def check_log_camera(log: EventLog, camera: CameraCalibration) -> list[str]:
     """events.json names the calibration it was made with."""
+    if log.camera is None:
+        return [f"events.json has no camera, so it wasn't made with {camera.camera_id}"]
     if (log.camera.id, log.camera.version) != (camera.camera_id, camera.version):
         return [
             f"events.json uses {log.camera.id} v{log.camera.version}, "

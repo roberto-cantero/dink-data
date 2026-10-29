@@ -1,0 +1,67 @@
+/* Events mode, on top of rally.css. */
+
+#stage { overflow: hidden; }
+#stage video, #stage img, #stage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: contain;
+}
+#stage canvas { pointer-events: none; }
+#stage.clicking { cursor: crosshair; }
+#stage.playing img, #stage.playing canvas { visibility: hidden; }
+#stage:not(.playing) video { visibility: hidden; }
+
+#r2 { font-family: ui-monospace, monospace; color: var(--muted); }
+#r2.off, #r2.behind { color: var(--amber); }
+
+#timeline .rally { position: absolute; top: 4px; bottom: 4px; background: var(--game); min-width: 2px; }
+#timeline .rally.reviewed { background: var(--accent); opacity: 0.6; }
+#timeline .rally.problem { background: var(--red); }
+#timeline .rally.current { outline: 2px solid var(--text); }
+
+#strip {
+  position: relative;
+  height: 36px;
+  margin-top: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+#strip .span { position: absolute; top: 0; bottom: 0; background: var(--game); }
+#strip .mark { position: absolute; top: 2px; width: 2px; height: 14px; }
+#strip .mark.hit { background: var(--accent); }
+#strip .mark.bounce { background: #2a5db0; top: 18px; }
+#strip .mark.net { background: var(--text); top: 18px; }
+#strip .mark.uncertain { background: var(--amber); top: 30px; height: 4px; width: 6px; margin-left: -2px; }
+#strip .mark.selected { outline: 2px solid var(--text); }
+#strip-cursor, #cursor { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--text); z-index: 1; }
+
+#current {
+  padding: 8px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+}
+#current h2 { font-size: 15px; margin: 0 0 6px; }
+#current .fields { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; }
+#current .fields div { cursor: pointer; padding: 1px 4px; border-radius: 3px; }
+#current .fields .selected { background: var(--select); }
+#current .suggested { color: var(--amber); }
+#current .set { color: var(--accent); font-weight: 600; }
+#current .empty { color: var(--red); font-weight: 600; }
+#current table { margin-top: 6px; }
+#current tr.selected { background: var(--select); }
+#current p { margin: 4px 0; }
+#current .warning { color: var(--amber); }
+#current .problem { color: var(--red); }
+
+#orphans p { margin: 4px 0; color: var(--red); cursor: pointer; }
+#orphans p.selected { background: var(--select); }
+
+tbody tr.current { background: var(--select); }
+tbody tr.problem td:first-child { box-shadow: inset 4px 0 var(--red); }
+.reviewed { color: var(--accent); }

@@ -92,7 +92,7 @@ def test_a_save_the_contract_rejects_writes_nothing(client, labels):
 def test_crops_are_stored_beside_the_labels(client, labels):
     assert client.get("/api/crops/p1").status_code == 404
     response = client.post("/api/crops", json={"player": "p1", "t": 0.5, "png_base64": PNG})
-    assert response.json() == {"version": 1}
+    assert response.json() == {"version": 1, "uploaded": False}
     assert (labels / f"gold-rallies/{VIDEO_ID}/marti/crops/p1/v1.png").is_file()
     assert client.get("/api/crops/p1").content.startswith(b"\x89PNG")
     assert client.get("/api/session").json()["crops"] == ["p1"]

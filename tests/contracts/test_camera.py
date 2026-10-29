@@ -47,3 +47,9 @@ def test_events_json_names_its_calibration():
     assert check_log_camera(log, camera) == []
     older = camera.model_copy(update={"version": 1})
     assert check_log_camera(log, older)
+
+
+def test_a_log_without_a_camera_names_no_calibration():
+    log = EventLog.model_validate(example("events") | {"camera": None})
+    camera = CameraCalibration.model_validate(example("camera"))
+    assert check_log_camera(log, camera)
