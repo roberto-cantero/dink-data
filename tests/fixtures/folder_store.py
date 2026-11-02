@@ -24,3 +24,10 @@ class FolderStore:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(local, target)
         self.puts.append(path)
+
+    def files(self, folder: str) -> list[str]:
+        """Every file under `folder`, relative to it, as `rclone lsf -R --files-only` lists."""
+        base = self.root / folder
+        if not base.is_dir():
+            return []
+        return sorted(str(p.relative_to(base)) for p in base.rglob("*") if p.is_file())
