@@ -4,6 +4,7 @@ The clip paints each camera frame's number into its picture and drops frames 10 
 32, so these tests can tell which frame came back and whether its time is the right one.
 """
 
+import json
 import random
 
 import cv2
@@ -17,7 +18,7 @@ from dinkdata.contracts.frames import FRAMES, FrameRow, check_log_frames
 from dinkdata.contracts.game_log import EventLog
 from dinkdata.data.r2 import RcloneError
 from dinkdata.studio import rally, sync
-from dinkdata.studio.server import create_app
+from dinkdata.studio.server import R2_FAILED, create_app
 from tests.fixtures.folder_store import FolderStore
 from tests.fixtures.make_gappy_clip import KEPT, camera_t, read_number
 
@@ -230,7 +231,7 @@ def test_a_save_with_an_open_rally_writes_nothing(client, labels):
     assert not (labels / EVENTS).exists()
 
 
-def test_a_failed_upload_keeps_the_local_save_and_the_next_save_uploads_both(client, r2):
+def test_a_failed_upload_keeps_the_local_save_and_the_next_save_uploads_both(client, r2, caplog):
     marks = client.get("/api/session").json()["marks"]
     put = r2.put
 
@@ -240,8 +241,12 @@ def test_a_failed_upload_keeps_the_local_save_and_the_next_save_uploads_both(cli
     r2.put = offline
     first = client.post("/api/save", json=marks).json()
     assert first["version"] == 1 and first["uploaded"] is False
-    assert "no network" in first["r2_error"]
-    assert client.get("/api/session").json()["r2"]["pending"] == 1
+    # The page gets a fixed message. rclone's own words go to the terminal only.
+    assert first["r2_error"] == R2_FAILED
+    assert "no network" in caplog.text
+    session = client.get("/api/session").json()
+    assert session["r2"]["pending"] == 1
+    assert "no network" not in json.dumps(session)
 
     r2.put = put
     second = client.post("/api/save", json=marks).json()
@@ -349,6 +354,22 @@ def test_a_missing_video_without_r2_says_where_it_should_be(tmp_path):
 
 
 # ---- rally mode uploads too ----
+
+
+def test_rally_mode_sends_the_page_no_rclone_text(synthetic_clip, tmp_path, r2):
+    def offline(local, path, overwrite=False):
+        raise RcloneError("rclone failed: no network")
+
+    r2.put = offline
+    client = TestClient(
+        create_app(synthetic_clip, VIDEO_ID, "marti", tmp_path / "labels", store=r2)
+    )
+    marks = {
+        "games": [{"start_t": 0.1, "end_t": 1.9, "finished": False, "target": 11}],
+        "rallies": [{"t": 0.2, "end_t": 0.6, "server": "p1", "side": "right", "winner": "A"}],
+    }
+    saved = client.post("/api/save", json=marks).json()
+    assert saved["uploaded"] is False and saved["r2_error"] == R2_FAILED
 
 
 def test_rally_mode_saves_go_to_r2(synthetic_clip, tmp_path, r2):

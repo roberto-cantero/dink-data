@@ -13,6 +13,7 @@ written locally as a new version (`dinkdata.studio.store`), then uploaded to R2
 
 import base64
 import binascii
+import logging
 import re
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -32,7 +33,10 @@ from dinkdata.contracts.tables import column
 from dinkdata.data.r2 import RcloneError
 from dinkdata.studio import events, rally, store, sync
 
+logger = logging.getLogger(__name__)
+
 STATIC = Path(__file__).parent / "static"
+R2_FAILED = "R2 didn't answer. The studio's terminal has the details."
 MAX_CROP_BYTES = 2_000_000
 _PNG = b"\x89PNG\r\n\x1a\n"
 _PLAYERS: tuple[PlayerId, ...] = ("p1", "p2", "p3", "p4")
@@ -83,7 +87,8 @@ class R2:
         try:
             result = action(self.store, self.labels, self.folder)
         except (RcloneError, OSError) as error:
-            self.error = str(error)
+            logger.warning("R2 failed for %s: %s", self.folder, error)
+            self.error = R2_FAILED
             return None
         self.error = None
         return result
