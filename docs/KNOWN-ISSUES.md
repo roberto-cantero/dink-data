@@ -10,7 +10,7 @@ The prototype's problems are summarised in ADR 0001.
 |---|---|---|---|---|
 | K1 | CI | The gitleaks pre-commit hook scans only staged changes, so in CI it checks nothing | Medium | Open |
 | K2 | Video | On macOS, OpenCV and PyAV each bundle FFmpeg, and importing both prints duplicate-class warnings | Low | Open |
-| K3 | Data | Two people running `dink ingest` at the same time can lose catalog and id-map rows | Medium | Open |
+| K3 | Data | Two people running `dink ingest` at the same time can lose catalog and id-map rows | Medium | Fixed (#79) |
 
 ## K1 · Gitleaks doesn't scan in CI
 
@@ -41,14 +41,13 @@ The prototype's problems are summarised in ADR 0001.
   split from its facility's catalog rows. If the lost row was the facility's only one, the next
   ingest from that facility looks like a new facility and accepts any `--split`. A test
   facility's games could then land in dev or train.
-- Fix: none yet, tracked in #79. Until then, only one person runs ingest at a time. To restore
-  a lost game, run ingest again with its original `--split`, before ingesting anything else
-  from its facility. Ingest needs the game's MP4 on disk, so keep the download until its rows
-  are in the catalog. The re-ingest gives the game the same `video_id` and adds its rows back. A read and merge just before the write only shrinks the race, because
-  `RcloneStore.put` has no lock or conditional write. The merge must also re-run `choose_split`
-  on the merged table, or two new-facility ingests with different splits break every later
-  ingest from that facility. A lock or a conditional write closes the race. One catalog file
-  per game avoids it, if the split check runs when the files are read.
+- Fix: fixed for #79. Ingest now updates each catalog file with a conditional write through
+  boto3. It reads the file and its ETag, adds its row to what it read, and writes only if the
+  ETag is unchanged (`If-Match`), or only if the file is still missing (`If-None-Match: *`).
+  When another ingest wrote first, R2 refuses the write and ingest reads again, up to 5 times.
+  The split check runs again on each try, so the second of two first ingests from a new
+  facility fails with the split error instead of giving the facility a second split.
+  `dink catalog sync` (#37) must write the catalog the same way.
 
 ## Entry format
 

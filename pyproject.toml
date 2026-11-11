@@ -7,6 +7,7 @@ license = "AGPL-3.0-only"
 requires-python = ">=3.11,<3.13"
 # Core: enough for contracts, stats, eval and the CLI, with no PyTorch.
 dependencies = [
+    "boto3>=1.44.0",
     "numpy>=2.0",
     "pyarrow>=17",
     "pydantic>=2.8",

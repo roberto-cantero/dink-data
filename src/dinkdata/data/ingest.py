@@ -4,13 +4,18 @@ Ingest drops the audio, saves every frame's timestamp, gives the game its HMAC i
 uploads the video and its frames to R2 and adds a row to the catalog and to the private id map.
 Files already in R2 are skipped, so a failed run can simply be run again.
 
+Two people can ingest at the same time (K3, issue #79). Each catalog file is updated with a
+conditional write: ingest reads the file and its ETag, adds its row to what it read, and writes
+only if no one changed the file since. Otherwise it reads again and retries. The split check
+runs again on every retry, so two first ingests from a new facility can't give it two splits.
+
 The session id, facility and court come from a hidden prompt as a `Game`. They go only into
 `catalog/id_map.parquet`, which stays in R2, and never into output, logs or errors.
 """
 
 import re
 import tempfile
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -28,6 +33,8 @@ from dinkdata.video import ffmpeg
 
 CATALOG_PATH = "catalog/catalog.parquet"
 ID_MAP_PATH = "catalog/id_map.parquet"
+ATTEMPTS = 5
+"""Conditional writes to try before giving up, when other ingests keep changing a file."""
 
 # Private, so it has no contract in contracts/ (see contracts/catalog.py).
 ID_MAP_SCHEMA = pa.schema(
@@ -145,13 +152,39 @@ def _load_catalog(store: Store, local: Path) -> pa.Table:
     return CATALOG.read(local)
 
 
-def _load_id_map(store: Store, local: Path) -> pa.Table:
-    table = _load(store, ID_MAP_PATH, local)
-    if table is None:
+def _read_catalog(local: Path | None) -> pa.Table:
+    return CATALOG.read(local) if local is not None else CATALOG.table([])
+
+
+def _read_id_map(local: Path | None) -> pa.Table:
+    if local is None:
         return ID_MAP_SCHEMA.empty_table()
+    table = pq.read_table(local)
     if not table.schema.equals(ID_MAP_SCHEMA, check_metadata=True):
         raise ValueError(f"{ID_MAP_PATH} doesn't match {ID_MAP_SCHEMA.metadata}")
     return table
+
+
+def _add_row(
+    store: Store,
+    path: str,
+    local: Path,
+    read: Callable[[Path | None], pa.Table],
+    add: Callable[[pa.Table], pa.Table | None],
+    write: Callable[[pa.Table, Path], None],
+) -> bool:
+    """Update a shared table in R2 with a conditional write, and retry if another ingest wrote
+    it first. `add` gets the latest table and returns it with the new row, or None when the row
+    is already there. Returns whether it wrote."""
+    for _ in range(ATTEMPTS):
+        etag = store.get_versioned(path, local)
+        table = add(read(local if etag is not None else None))
+        if table is None:
+            return False
+        write(table, local)
+        if store.put_if(local, path, etag):
+            return True
+    raise ValueError(f"{path} kept changing during {ATTEMPTS} tries. Run ingest again.")
 
 
 def ingest(
@@ -174,7 +207,6 @@ def ingest(
     with tempfile.TemporaryDirectory() as tmp:
         work = Path(tmp)
         catalog = _load_catalog(store, work / "catalog.parquet")
-        id_map = _load_id_map(store, work / "id_map.parquet")
 
         rows = {r.video_id: r for r in CATALOG.rows(catalog)}
         row = rows.get(made.video_id)
@@ -217,12 +249,20 @@ def ingest(
             uploaded.append(frames_key)
 
         # The catalog goes last, so it never lists a game whose files aren't in R2 yet.
-        if made.video_id not in id_map.column("video_id").to_pylist():
-            id_map = pa.concat_tables([id_map, _id_map_row(game, made)])
-            pq.write_table(id_map, work / "id_map.parquet")
-            store.put(work / "id_map.parquet", ID_MAP_PATH, overwrite=True)
+        def add_id_map_row(id_map: pa.Table) -> pa.Table | None:
+            if made.video_id in id_map.column("video_id").to_pylist():
+                return None
+            return pa.concat_tables([id_map, _id_map_row(game, made)])
+
+        if _add_row(
+            store, ID_MAP_PATH, work / "id_map.parquet", _read_id_map, add_id_map_row,
+            lambda table, path: pq.write_table(table, path),
+        ):  # fmt: skip
             uploaded.append(ID_MAP_PATH)
-        if row is None:
+
+        def add_catalog_row(latest: pa.Table) -> pa.Table | None:
+            if made.video_id in latest.column("video_id").to_pylist():
+                return None
             new_row = CatalogRow(
                 video_id=made.video_id,
                 facility_id=made.facility_id,
@@ -232,13 +272,17 @@ def ingest(
                 fps_nominal=ffmpeg.nominal_fps(info.pts, info.time_base),
                 size_bytes=local.stat().st_size,
                 setup=None,
-                split=chosen,
+                # Another ingest may have given a new facility its split since the first read.
+                split=choose_split(latest, made.facility_id, chosen),
                 fetched=True,
                 notes=None,
             )
-            catalog = pa.concat_tables([catalog, CATALOG.table([new_row])])
-            CATALOG.write(catalog, work / "catalog.parquet")
-            store.put(work / "catalog.parquet", CATALOG_PATH, overwrite=True)
+            return pa.concat_tables([latest, CATALOG.table([new_row])])
+
+        if _add_row(
+            store, CATALOG_PATH, work / "catalog.parquet", _read_catalog, add_catalog_row,
+            CATALOG.write,
+        ):  # fmt: skip
             uploaded.append(CATALOG_PATH)
 
     return replace(
