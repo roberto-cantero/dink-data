@@ -138,7 +138,8 @@ def _video_route(app: FastAPI, video: Path) -> None:
     @app.get("/video")
     def get_video() -> FileResponse:
         # No filename, so the response carries no Content-Disposition with the file's name.
-        return FileResponse(video, media_type="video/mp4")
+        # Every game is served at this same URL, so the browser must revalidate its copy.
+        return FileResponse(video, media_type="video/mp4", headers={"Cache-Control": "no-cache"})
 
 
 def _errors(error: ValidationError) -> list[str]:
@@ -240,8 +241,14 @@ def _events_app(
     gold_r2 = R2(labels_store, labels, str(gold_folder.relative_to(labels)))
     r2 = R2(labels_store, labels, str(events_folder.relative_to(labels)))
     gold_r2.pull()
+    rally_gold: dict[str, Any] = {
+        "refreshed": gold_r2.store is not None and gold_r2.error is None,
+        "error": gold_r2.error,
+    }
     r2.pull()
-    gold = _load_gold(gold_folder, labels_store, labels, video_id, source_handle)
+    gold, rally_gold["version"] = _load_gold(
+        gold_folder, labels_store, labels, video_id, source_handle
+    )
 
     table = FRAMES.read(frames)
     source = FrameSource(video, table)
@@ -276,6 +283,8 @@ def _events_app(
             "video_id": video_id,
             "labeller": labeller,
             "rallies_from": source_handle,
+            "rally_gold": rally_gold,
+            "frame_url": f"/api/frame/{video_id}",
             "version": len(store.versions(events_folder, ".json")),
             "frames": len(source),
             "width": source.width,
@@ -289,8 +298,12 @@ def _events_app(
     def frame_times() -> dict[str, list[float]]:
         return {"t": source.times}
 
-    @app.get("/api/frame/{index}")
-    def frame(index: int) -> Response:
+    # The video id is in the path because the studio always runs on the same port: a picture
+    # the browser cached for one game must never answer for the same index in another.
+    @app.get("/api/frame/{for_video}/{index}")
+    def frame(for_video: str, index: int) -> Response:
+        if for_video != video_id:
+            raise HTTPException(404, "that frame belongs to another video")
         if not 0 <= index < len(source):
             raise HTTPException(404, f"frame {index} is outside the video's {len(source)} frames")
         # A frame's picture never changes, so the browser may keep it.
@@ -352,7 +365,8 @@ def _load_gold(
     labels: Path,
     video_id: str,
     handle: str,
-) -> RallyLabels:
+) -> tuple[RallyLabels, int]:
+    """The latest rally gold in `folder`, and its version."""
     path = store.latest(folder, ".json")
     if path is None:
         try:
@@ -367,7 +381,7 @@ def _load_gold(
             f"its rallies first with `dink studio --rallies {video_id}`.{others}"
         )
     try:
-        return load(RallyLabels, path)
+        return load(RallyLabels, path), int(path.stem[1:])
     except ValidationError as error:
         raise ValueError(
             f"{path.relative_to(labels)} isn't valid rally gold ({_errors(error)[0]}). If it is "

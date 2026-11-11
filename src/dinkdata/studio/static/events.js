@@ -55,7 +55,12 @@ async function start() {
   $("who").textContent = `${session.video_id} · ${session.labeller} · rallies from ${session.rallies_from}`;
   showR2(session.r2);
   const loaded = session.version ? `Loaded v${session.version}.` : "No saved events yet.";
-  say(`${loaded} ${review.uncertain.length} items to check. J jumps to the next.`);
+  const gold = session.rally_gold;
+  if (session.r2.on && !gold.refreshed) {
+    say(`Couldn't refresh rally gold from R2, so this uses this Mac's v${gold.version}. ${loaded}`, true);
+  } else {
+    say(`${loaded} Rally gold v${gold.version}. ${review.uncertain.length} items to check. J jumps to the next.`);
+  }
   const first = marks.rallies[0];
   showFrame(first ? first.start_frame ?? 0 : 0);
 }
@@ -120,9 +125,9 @@ function nearest(t) {
 
 function showFrame(index) {
   frame = Math.max(0, Math.min(times.length - 1, index));
-  img.src = `/api/frame/${frame}`;
+  img.src = `${session.frame_url}/${frame}`;
   if (Math.abs(video.currentTime - times[frame]) > 0.001) video.currentTime = times[frame];
-  for (let k = 1; k <= PREFETCH && frame + k < times.length; k++) new Image().src = `/api/frame/${frame + k}`;
+  for (let k = 1; k <= PREFETCH && frame + k < times.length; k++) new Image().src = `${session.frame_url}/${frame + k}`;
   render();
 }
 

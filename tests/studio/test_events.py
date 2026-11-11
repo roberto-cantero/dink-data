@@ -138,14 +138,21 @@ def test_shot_index_volley_and_receiver_come_from_the_marks(basis):
     assert log.games[0].rallies[1].serve.receiver == "p4"
 
 
-def test_the_return_is_never_a_volley(basis):
+def test_a_return_hit_before_it_bounces_is_a_volley_and_flagged(basis):
+    """The two-bounce rule makes a volleyed return a fault, but players do it, and gold records
+    what happened. The serve is never a volley."""
     marks = settled(basis)
     r = marks.rallies[1]
     s = r.start_frame
     assert s is not None
     r.events = [hit("a", s + 1, "p1"), hit("b", s + 3, "p3")]
-    shots = {e.id: e.volley for e in events.review(marks, basis).rallies[1].events}
-    assert shots == {"a": False, "b": False}
+    view = events.review(marks, basis).rallies[1]
+    assert {e.id: e.volley for e in view.events} == {"a": False, "b": True}
+    assert any("fault" in w for w in view.warnings)
+    r.events.insert(1, bounce("x", s + 2))
+    view = events.review(marks, basis).rallies[1]
+    assert {e.id: e.volley for e in view.events if e.volley is not None} == {"a": False, "b": False}
+    assert not any("fault" in w for w in view.warnings)
 
 
 def test_events_are_put_in_frame_order_whatever_order_they_were_marked(basis):
