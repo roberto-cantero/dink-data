@@ -252,6 +252,67 @@ def stats(
     typer.echo(f"Wrote {out}: {shipped} of {len(result.stats)} stats shipped.")
 
 
+ball_app = typer.Typer(help="Ball clicks in CVAT: clip folders and the converter (DESIGN 9).")
+app.add_typer(ball_app, name="ball")
+
+
+@ball_app.command("clip")
+def ball_clip(
+    video_id: Annotated[str, typer.Argument(help="Video id, from `dink id video`.")],
+    start: Annotated[int, typer.Option(help="First frame of the clip.")],
+    split: Annotated[SplitChoice, typer.Option(help="The game's split, from the catalog.")],
+    count: Annotated[int, typer.Option(help="Frames in the clip.")] = 60,
+    videos: Annotated[
+        Path, typer.Option(help="Local folder of videos named <video_id>.mp4, as in R2.")
+    ] = Path("data/videos"),
+    frames: Annotated[
+        Path | None,
+        typer.Option(help="The video's frames.parquet, to check against.", show_default=False),
+    ] = None,
+    out: Annotated[Path, typer.Option(help="Folder for clip folders.")] = Path("data/cvat"),
+) -> None:
+    """Write a clip's frames as JPEGs named by frame, plus manifest.json, for one CVAT task."""
+    from dinkdata.ball import cvat
+    from dinkdata.contracts.common import Split
+    from dinkdata.contracts.frames import FRAMES
+
+    video = videos / f"{video_id}.mp4"
+    if not video.is_file():
+        typer.echo(f"No video at {video}. Save it there, named by its id.", err=True)
+        raise typer.Exit(code=1)
+    try:
+        table = FRAMES.read(frames) if frames is not None else None
+        clip = cvat.export_clip(video, video_id, cast(Split, split.value), start, count, out, table)
+    except ValueError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(f"Wrote {len(clip.manifest.frames)} frames to {clip.folder}")
+    typer.echo(f"Name the CVAT task {clip.folder.name}")
+
+
+@ball_app.command("convert")
+def ball_convert(
+    clip: Annotated[Path, typer.Argument(help="The clip folder the CVAT task was made from.")],
+    export: Annotated[Path, typer.Argument(help='The task\'s "CVAT for video 1.1" export zip.')],
+    labeller: Annotated[str, typer.Option(help="Your short handle, such as robby.")],
+    labels: Annotated[Path, typer.Option(help="Local folder for label files.")] = Path("labels"),
+) -> None:
+    """Convert a CVAT export to ball_labels, saved as a new version. Nothing is overwritten."""
+    from dinkdata.ball import cvat
+
+    try:
+        made = cvat.load_clip(clip)
+        rows = cvat.to_ball_labels(cvat.read_export(export), made.manifest)
+        path = cvat.save_labels(rows, made.manifest.video_id, labeller, labels)
+    except (ValueError, OSError) as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from None
+    clicked = sum(r.clicked for r in rows)
+    visible = sum(r.visible for r in rows)
+    typer.echo(f"{len(rows)} frames: {visible} with the ball, {clicked} clicked.")
+    typer.echo(f"Wrote {path}")
+
+
 highlights_app = typer.Typer(help="Reel player data and the on-request MP4 renderer (DESIGN 6.12).")
 app.add_typer(highlights_app, name="highlights")
 

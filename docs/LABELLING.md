@@ -63,12 +63,103 @@ replay is `dinkdata.serves.replay`, and the checks and the file are `dinkdata.st
 
 ## Ball clicks in CVAT
 
-1. Open the clip task in CVAT. Clips are 2 seconds long and come from training or test games.
-2. Click the ball centre in each frame, or mark the ball hidden.
-3. In a smooth flight you may click every few frames and let CVAT fill the frames between,
-   then check them.
-4. Export. The converter turns the export into `ball_labels.parquet` and its test confirms
-   that frame numbers line up with the video.
+Clips are 2 seconds long (60 frames) and come from training or test games. CVAT never gets
+the MP4, because it numbers and decodes frames its own way, which broke the prototype's labels.
+`dink ball clip` decodes the frames with our reader and saves each one as a JPEG named by its
+real frame number, with a `manifest.json` that the converter uses to map CVAT's frames back.
+A test in `tests/ball/test_cvat.py` checks that converted frames line up with the video across
+dropped frames.
+
+### Set up CVAT once
+
+Run CVAT on your Mac with Docker Desktop, or use CVAT's cloud plan.
+
+```bash
+git clone https://github.com/cvat-ai/cvat
+```
+
+Before the first start, save this as `docker-compose.override.yml` in the `cvat` folder. It
+keeps CVAT on your own Mac, so no one else on the network can reach the frames. It also runs
+CVAT's server images under Rosetta, because CVAT publishes them for Intel only.
+
+```yaml
+x-intel: &intel
+  platform: linux/amd64
+
+services:
+  traefik:
+    ports: !override
+      - 127.0.0.1:8080:8080
+      - 127.0.0.1:8090:8090
+  cvat_ui: *intel
+  cvat_server: *intel
+  cvat_worker_annotation: *intel
+  cvat_worker_chunks: *intel
+  cvat_worker_consensus: *intel
+  cvat_worker_export: *intel
+  cvat_worker_import: *intel
+  cvat_worker_quality_reports: *intel
+  cvat_worker_utils: *intel
+  cvat_worker_webhooks: *intel
+```
+
+Then, inside the `cvat` folder, start it and make your account. The first start downloads a
+few GB:
+
+```bash
+docker compose up -d
+```
+
+```bash
+docker exec -it cvat_server bash -ic 'python3 ~/manage.py createsuperuser'
+```
+
+Open http://localhost:8080 and sign in. Use `localhost`, because CVAT answers `127.0.0.1`
+with "404 page not found". Create a project named `ball` with one label, `ball`, of type
+Points. Every task goes in this project.
+
+### Make a clip
+
+Save the video as `data/videos/<video_id>.mp4`. Take the split from the game's catalog row.
+Pick a start frame inside a rally, for example from your rally labels.
+
+```bash
+uv run dink ball clip <video_id> --start <frame> --split train
+```
+
+It writes `data/cvat/<video_id>_f<start>/`, which git ignores, and prints the task name.
+
+### Click the ball
+
+1. In the `ball` project, create a task. Give it the exact name the clip command printed.
+   The converter refuses an export whose task name doesn't match the clip folder.
+2. Upload every `frame_*.jpg` in the clip folder, not `manifest.json`. Under Advanced, keep
+   sorting as Lexicographical and leave start frame, stop frame and frame step empty.
+3. Open the job. Draw a points shape with 1 point as a Track, on the ball's centre.
+4. In a smooth flight you may click every few frames. CVAT fills the frames between along a
+   straight line. Check each filled frame and click again where it is off.
+5. When the ball leaves the picture or is hidden, press O on that frame to mark the track
+   outside. If you can't see the ball, mark it outside. Never guess. When it comes back, draw a
+   new track or switch outside off.
+6. Keep one ball track on screen at a time. The converter refuses a frame with two balls.
+
+### Export and convert
+
+1. Export the task with Actions, then Export task dataset, in the "CVAT for video 1.1" format,
+   without images.
+2. Convert it:
+
+   ```bash
+   uv run dink ball convert data/cvat/<video_id>_f<start> <export.zip> --labeller <handle>
+   ```
+
+   It writes `labels/ball/<video_id>/<handle>/v<n>.parquet` with one row for every frame of
+   the clip. A clicked frame has `clicked` true. A frame CVAT filled has `clicked` false. A
+   frame marked outside, or with no ball, is not visible.
+3. Each conversion is a new version that holds the latest version's rows plus this clip's.
+   Converting a fixed clip again replaces that clip's rows in the new version. Older versions
+   stay as they are.
+4. Upload with the `rclone copy labels` command in `docs/DATA.md`.
 
 ## Calibrating a camera, about 2 minutes
 
