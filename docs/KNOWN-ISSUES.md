@@ -10,7 +10,7 @@ The prototype's problems are summarised in ADR 0001.
 |---|---|---|---|---|
 | K1 | CI | The gitleaks pre-commit hook scans only staged changes, so in CI it checks nothing | Medium | Open |
 | K2 | Video | On macOS, OpenCV and PyAV each bundle FFmpeg, and importing both prints duplicate-class warnings | Low | Open |
-| K3 | Data | Two people running `dink ingest` at the same time can lose catalog and id-map rows | Medium | Fixed (#79) |
+| K3 | Data | Two people running `dink ingest` at the same time can lose catalog and id-map rows | Medium | Fixed (#86) |
 
 ## K1 · Gitleaks doesn't scan in CI
 
@@ -41,7 +41,7 @@ The prototype's problems are summarised in ADR 0001.
   split from its facility's catalog rows. If the lost row was the facility's only one, the next
   ingest from that facility looks like a new facility and accepts any `--split`. A test
   facility's games could then land in dev or train.
-- Fix: fixed for #79. Ingest now updates each catalog file with a conditional write through
+- Fix: fixed in #86 for #79. Ingest now updates each catalog file with a conditional write through
   boto3. It reads the file and its ETag, adds its row to what it read, and writes only if the
   ETag is unchanged (`If-Match`), or only if the file is still missing (`If-None-Match: *`).
   When another ingest wrote first, R2 refuses the write and ingest reads again, up to 5 times.
