@@ -93,3 +93,22 @@ def test_upgrade_rallies_saves_a_new_version_and_keeps_the_old(tmp_path):
     assert json.loads((folder / "v2.json").read_text())["schema"] == "dinkdata.rallies/v2"
     again = runner.invoke(app, ["contracts", "upgrade-rallies", "--labels", str(tmp_path)])
     assert "Upgraded 0 file(s)." in again.output
+
+
+def test_studio_errors_go_to_stderr(monkeypatch):
+    import builtins
+
+    real_import = builtins.__import__
+
+    def no_uvicorn(name, *args, **kwargs):
+        if name == "uvicorn":
+            raise ImportError(name)
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", no_uvicorn)
+    result = runner.invoke(
+        app, ["studio", "--rallies", "v_5eed00000000a001", "--labeller", "marti", "--local"]
+    )
+    assert result.exit_code == 1
+    assert "extras" in result.stderr
+    assert "extras" not in result.stdout

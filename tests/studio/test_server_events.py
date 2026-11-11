@@ -25,6 +25,7 @@ from tests.fixtures.make_gappy_clip import KEPT, camera_t, read_number
 VIDEO_ID = "v_5eed00000000e051"
 GOLD = f"gold-rallies/{VIDEO_ID}/marti"
 EVENTS = f"gold-events/{VIDEO_ID}/marti"
+FRAME = f"/api/frame/{VIDEO_ID}"
 
 
 def frames_table(times: list[float], dropped: int = 0) -> pa.Table:
@@ -109,7 +110,7 @@ def test_every_frame_comes_back_exactly_in_any_order(client):
     order = list(range(len(KEPT)))
     random.Random(51).shuffle(order)
     for index in order:
-        assert read_number(picture(client.get(f"/api/frame/{index}"))) == KEPT[index]
+        assert read_number(picture(client.get(f"{FRAME}/{index}"))) == KEPT[index]
 
 
 @pytest.mark.parametrize("start", [0, 9, 10, 11, 12, 28, 29, 40])
@@ -117,7 +118,7 @@ def test_stepping_forward_back_and_by_ten_lands_on_the_right_frames(client, star
     """Around the dropped frame 10, the three dropped at 30 to 32 and the keyframes."""
     path = [start, start + 1, start + 11, start + 10, start + 9, start - 1]
     for index in [i for i in path if 0 <= i < len(KEPT)]:
-        assert read_number(picture(client.get(f"/api/frame/{index}"))) == KEPT[index]
+        assert read_number(picture(client.get(f"{FRAME}/{index}"))) == KEPT[index]
 
 
 @pytest.mark.parametrize(
@@ -137,9 +138,29 @@ def test_a_browser_time_snaps_to_the_nearest_frame(client, times, t, camera_fram
     assert snapped == {"frame": KEPT.index(camera_frame), "t": times[KEPT.index(camera_frame)]}
 
 
+def test_frame_urls_name_the_video_so_a_browser_cache_never_mixes_games(client):
+    """The studio always runs on the same port, so a cached picture from one game must not
+    answer for the same frame index in another game."""
+    assert client.get("/api/session").json()["frame_url"] == FRAME
+    response = client.get(f"{FRAME}/0")
+    assert "immutable" in response.headers["cache-control"]
+    assert client.get("/api/frame/v_5eed00000000ffff/0").status_code == 404
+    assert client.get("/api/frame/0").status_code == 404
+
+
+@pytest.mark.parametrize("mode", ["rally", "events"])
+def test_the_video_is_revalidated_so_another_game_never_comes_from_cache(
+    gappy_clip, frames, labels, mode
+):
+    app = create_app(gappy_clip, VIDEO_ID, "marti", labels, mode=mode, frames=frames)
+    response = TestClient(app).get("/video", headers={"Range": "bytes=0-99"})
+    assert response.headers["cache-control"] == "no-cache"
+    assert response.headers["etag"]
+
+
 def test_out_of_range_frames_are_404(client):
-    assert client.get(f"/api/frame/{len(KEPT)}").status_code == 404
-    assert client.get("/api/frame/-1").status_code in (404, 422)
+    assert client.get(f"{FRAME}/{len(KEPT)}").status_code == 404
+    assert client.get(f"{FRAME}/-1").status_code in (404, 422)
 
 
 def test_a_frames_table_that_disagrees_with_the_video_stops_the_app(
@@ -306,6 +327,24 @@ def test_rally_gold_and_crops_come_from_r2_when_missing_locally(gappy_clip, fram
     marks = client.get("/api/session").json()["marks"]
     log = load(EventLog, labels / client.post("/api/save", json=marks).json()["path"])
     assert [p.crop for p in log.players] == [None, f"labels/{GOLD}/crops/p2/v1.png", None, None]
+
+
+def test_the_session_says_when_rally_gold_couldnt_be_refreshed(gappy_clip, frames, labels, r2):
+    def offline(folder):
+        raise RcloneError("rclone failed: no network")
+
+    r2.files = offline
+    app = create_app(gappy_clip, VIDEO_ID, "marti", labels, mode="events", frames=frames, store=r2)
+    session = TestClient(app).get("/api/session").json()
+    assert session["rally_gold"] == {"version": 1, "refreshed": False, "error": R2_FAILED}
+
+
+def test_the_session_names_the_rally_gold_version_it_builds_on(client):
+    assert client.get("/api/session").json()["rally_gold"] == {
+        "version": 1,
+        "refreshed": True,
+        "error": None,
+    }
 
 
 def test_another_labellers_rally_gold_with_rallies_from(gappy_clip, frames, tmp_path):

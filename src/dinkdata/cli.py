@@ -241,7 +241,9 @@ def studio(
         from dinkdata.studio import sync
         from dinkdata.studio.server import create_app
     except ImportError:
-        typer.echo("The studio needs its extras: uv sync --extra cv --extra cpu --extra studio")
+        typer.echo(
+            "The studio needs its extras: uv sync --extra cv --extra cpu --extra studio", err=True
+        )
         raise typer.Exit(code=1) from None
     from dinkdata.data import r2
 
