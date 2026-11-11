@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Events labeller</title>
+  <link rel="stylesheet" href="/static/rally.css">
+  <link rel="stylesheet" href="/static/events.css">
+</head>
+<body>
+  <header>
+    <h1>Events labeller</h1>
+    <span id="who"></span>
+    <span id="r2"></span>
+    <span id="status" role="status"></span>
+    <button id="save" type="button" title="Save a new version (Cmd+S)">Save</button>
+  </header>
+
+  <main>
+    <section id="player">
+      <div id="stage">
+        <video id="video" src="/video" preload="auto" playsinline muted></video>
+        <img id="frame" alt="The exact frame">
+        <canvas id="overlay"></canvas>
+        <div id="hint" hidden></div>
+      </div>
+      <div id="timeline" title="Click to seek"><div id="cursor"></div></div>
+      <div id="strip" title="The current rally. Click to seek"><div id="strip-cursor"></div></div>
+      <div id="clock">
+        <span id="time">0:00.00</span> <span id="frame-no"></span> <span id="rate">1x</span>
+        <span id="left"></span>
+      </div>
+    </section>
+
+    <section id="side">
+      <div id="current"></div>
+      <div id="orphans"></div>
+      <table id="rallies">
+        <thead>
+          <tr><th>Rally</th><th>Start</th><th>Events</th><th>Winner</th><th>End</th><th>State</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <details id="keys" open>
+        <summary>Keys</summary>
+        <dl>
+          <dt>Space</dt><dd>Play or pause. Paused, the picture is the exact frame</dd>
+          <dt>Left, Right</dt><dd>Back or forward one frame, with Shift for 10</dd>
+          <dt>[ and ]</dt><dd>Slower or faster. The rally pass runs at 2x</dd>
+          <dt>Up, Down</dt><dd>The rally before or after</dd>
+          <dt>R</dt><dd>Move the nearest rally start or end here: the serve, or the ball is dead</dd>
+          <dt>H then 1 to 4</dt><dd>A hit by p1 to p4</dd>
+          <dt>B then click</dt><dd>A bounce where you click</dd>
+          <dt>X</dt><dd>A bounce out of view</dd>
+          <dt>N</dt><dd>The ball hits the net</dd>
+          <dt>W then A or B</dt><dd>The team that won the rally</dd>
+          <dt>E then 1 to 6</dt><dd>End reason: 1 net, 2 out, 3 double bounce, 4 unreturned, 5 fault, 6 unexplained</dd>
+          <dt>Enter</dt><dd>Accept the selected suggestion and go to the next</dd>
+          <dt>Delete</dt><dd>Reject the selected suggestion, or remove the selected mark</dd>
+          <dt>J</dt><dd>Jump to the next uncertain item</dd>
+          <dt>Esc</dt><dd>Cancel H, B, W or E</dd>
+        </dl>
+      </details>
+    </section>
+  </main>
+  <script src="/static/events.js"></script>
+</body>
+</html>

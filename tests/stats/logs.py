@@ -120,7 +120,7 @@ def game_log(*games: list[dict]) -> EventLog:
         n_rally = max(n_rally, game_start + 1)
     return EventLog.model_validate(
         {
-            "schema": "dinkdata.events/v2",
+            "schema": "dinkdata.events/v3",
             "video": {
                 "id": VIDEO_ID,
                 "fps_nominal": 30,
