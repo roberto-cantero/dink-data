@@ -338,6 +338,11 @@ def _review_rally(r: RallyMarks, basis: Basis, previous_end: int | None) -> Rall
     ordered = _ordered(r.events)
     view.events = _shots(ordered)
     view.proposed_end_reason = _propose_end_reason(ordered)
+    if any(s.shot_index == 2 and s.volley for s in view.events):
+        view.warnings.append(
+            "The return was hit before it bounced, which is a fault. Check the bounce and the "
+            "end reason."
+        )
     _check_frames(r, basis, previous_end, view)
     _check_events(r, ordered, basis, view)
     _check_serve(g, ordered, view)
@@ -423,7 +428,8 @@ def _ordered(events: list[EventMark]) -> list[EventMark]:
 
 def _shots(ordered: list[EventMark]) -> list[EventView]:
     """shot_index counts hits from the serve. A volley is a hit with no bounce since the shot
-    before it. The serve and the return are never volleys, because both must bounce first."""
+    before it. The serve is never one. The rules make a volleyed return a fault, but players
+    do it, and gold records what happened."""
     views = []
     shot = 0
     bounced = False
@@ -434,7 +440,7 @@ def _shots(ordered: list[EventMark]) -> list[EventView]:
             views.append(EventView(id=e.id))
             continue
         shot += 1
-        views.append(EventView(id=e.id, shot_index=shot, volley=shot >= 3 and not bounced))
+        views.append(EventView(id=e.id, shot_index=shot, volley=shot >= 2 and not bounced))
         bounced = False
     return views
 
