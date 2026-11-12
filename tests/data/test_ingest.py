@@ -254,8 +254,11 @@ def test_overlapping_first_ingests_of_a_facility_cannot_split_it(tmp_path, store
         lambda: ingest.ingest(source, other, KEY, store, tmp_path / "b", split="test"),
     )
 
-    with pytest.raises(ValueError, match="test split"):
+    with pytest.raises(ValueError, match="test split") as error:
         ingest.ingest(source, GAME, KEY, store, tmp_path / "a", split="train")
+    # The video, frames and id-map row are in R2, so the message says how to finish.
+    assert "no catalog row yet" in str(error.value)
+    assert "Run ingest again with --split test" in str(error.value)
 
     catalog = CATALOG.read(store.root / ingest.CATALOG_PATH)
     assert catalog.column("split").to_pylist() == ["test"]

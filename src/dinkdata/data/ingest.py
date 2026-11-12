@@ -263,6 +263,16 @@ def ingest(
         def add_catalog_row(latest: pa.Table) -> pa.Table | None:
             if made.video_id in latest.column("video_id").to_pylist():
                 return None
+            # Another ingest may have given a new facility its split since the first read.
+            try:
+                split = choose_split(latest, made.facility_id, chosen)
+            except ValueError as error:
+                known = choose_split(latest, made.facility_id, None)
+                raise ValueError(
+                    f"{error} Another ingest gave this facility its split first. This game's "
+                    "video and frames are in R2, but it has no catalog row yet. Run ingest "
+                    f"again with --split {known}."
+                ) from None
             new_row = CatalogRow(
                 video_id=made.video_id,
                 facility_id=made.facility_id,
@@ -272,8 +282,7 @@ def ingest(
                 fps_nominal=ffmpeg.nominal_fps(info.pts, info.time_base),
                 size_bytes=local.stat().st_size,
                 setup=None,
-                # Another ingest may have given a new facility its split since the first read.
-                split=choose_split(latest, made.facility_id, chosen),
+                split=split,
                 fetched=True,
                 notes=None,
             )
