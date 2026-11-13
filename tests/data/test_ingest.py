@@ -204,3 +204,62 @@ def test_only_missing_files_are_uploaded(tmp_path, store):
     report = ingest.ingest(source, GAME, KEY, store, tmp_path / "videos")
     assert not report.already_ingested
     assert store.puts == [f"videos/{video_id()}.frames.parquet"]
+
+
+def ingest_between(store: FolderStore, at: str, run) -> list[str]:
+    """Run `run` once, just before the next write to `at`, as a second person's ingest would.
+    Returns the paths it fired on, so a test can check that it did."""
+    fired: list[str] = []
+
+    def hook(path: str) -> None:
+        if path == at and not fired:
+            fired.append(path)
+            store.before_write = None
+            run()
+
+    store.before_write = hook
+    return fired
+
+
+@needs_ffmpeg
+@pytest.mark.parametrize("at", [ingest.ID_MAP_PATH, ingest.CATALOG_PATH])
+def test_overlapping_ingests_keep_both_games_rows(tmp_path, store, at):
+    """K3: B writes between A's read and A's write. Both games keep their rows."""
+    source = make_game_clip(tmp_path / "game.mp4")
+    other = ingest.Game(session_id="SESSION2", facility=GAME.facility, court="court1")
+    save_catalog(store, tmp_path, [])
+    fired = ingest_between(
+        store, at, lambda: ingest.ingest(source, other, KEY, store, tmp_path / "b", split="dev")
+    )
+
+    ingest.ingest(source, GAME, KEY, store, tmp_path / "a", split="dev")
+
+    assert fired == [at]
+    both = {video_id(), ids.video_id(other.session_id, KEY)}
+    catalog = CATALOG.read(store.root / ingest.CATALOG_PATH)
+    assert set(catalog.column("video_id").to_pylist()) == both
+    id_map = pq.read_table(store.root / ingest.ID_MAP_PATH)
+    assert set(id_map.column("video_id").to_pylist()) == both
+
+
+@needs_ffmpeg
+def test_overlapping_first_ingests_of_a_facility_cannot_split_it(tmp_path, store):
+    """K3: two first ingests from one new facility ask for different splits. The one that
+    writes second fails, so the facility's games stay in one split."""
+    source = make_game_clip(tmp_path / "game.mp4")
+    other = ingest.Game(session_id="SESSION2", facility=GAME.facility, court="court1")
+    ingest_between(
+        store,
+        ingest.CATALOG_PATH,
+        lambda: ingest.ingest(source, other, KEY, store, tmp_path / "b", split="test"),
+    )
+
+    with pytest.raises(ValueError, match="test split") as error:
+        ingest.ingest(source, GAME, KEY, store, tmp_path / "a", split="train")
+    # The video, frames and id-map row are in R2, so the message says how to finish.
+    assert "no catalog row yet" in str(error.value)
+    assert "Run ingest again with --split test" in str(error.value)
+
+    catalog = CATALOG.read(store.root / ingest.CATALOG_PATH)
+    assert catalog.column("split").to_pylist() == ["test"]
+    assert catalog.column("video_id").to_pylist() == [ids.video_id(other.session_id, KEY)]
