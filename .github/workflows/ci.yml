@@ -47,8 +47,28 @@ jobs:
           enable-cache: true
       - run: uv sync --locked --extra cv --extra cpu --extra studio
       # dink ingest calls ffmpeg and ffprobe. Without them its video tests skip.
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
-      - run: uv run pytest -m "not gpu and not data" --cov --cov-report=term
+      # A pinned static build from GitHub, checked against its sha256. apt-get hung here
+      # for 15 minutes when the Ubuntu mirrors stopped answering.
+      - name: Install ffmpeg 7.0.2 (static build)
+        timeout-minutes: 3
+        env:
+          FFMPEG_URL: https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1
+          FFMPEG_SHA256: bfe8a8fc511530457b528c48d77b5737527b504a3797a9bc4866aeca69c2dffa
+          FFPROBE_SHA256: 25d9b6ccb05e3d9de9e04e31e2506d8dd7f9f0418981965ac6df12e8d3afd067
+        run: |
+          bin="$RUNNER_TEMP/ffmpeg-bin"
+          mkdir -p "$bin"
+          curl -fsSL --retry 3 --connect-timeout 10 --max-time 120 \
+            -o "$bin/ffmpeg.gz" "$FFMPEG_URL/ffmpeg-linux-x64.gz" \
+            -o "$bin/ffprobe.gz" "$FFMPEG_URL/ffprobe-linux-x64.gz"
+          printf '%s  %s\n' "$FFMPEG_SHA256" "$bin/ffmpeg.gz" "$FFPROBE_SHA256" "$bin/ffprobe.gz" \
+            | sha256sum --check --strict
+          gunzip "$bin/ffmpeg.gz" "$bin/ffprobe.gz"
+          chmod +x "$bin/ffmpeg" "$bin/ffprobe"
+          echo "$bin" >> "$GITHUB_PATH"
+          "$bin/ffmpeg" -version | head -1
+          "$bin/ffprobe" -version | head -1
+      - run: uv run pytest -m "not gpu and not data" --cov --cov-report=term -rs
 
   test-macos:
     # Weekly, because macOS runners are slower. Our MacBooks are macOS; GPU work is Linux.
