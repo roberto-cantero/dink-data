@@ -15,6 +15,7 @@ catalog/id_map.parquet                               our ids to PickleCam sessio
 videos/{video_id}.mp4                                sample and gold videos, no audio
 videos/{video_id}.frames.parquet                     frame timestamps
 cameras/{camera_id}/v{n}/camera.json                 calibrations
+cameras/{camera_id}/v{n}/clicks.json                 the clicks each calibration was fitted from
 labels/gold-events/{video_id}/{labeller}/v{n}.json   full-event gold
 labels/gold-rallies/{video_id}/{labeller}/v{n}.json  rally-level gold
 labels/ball/{video_id}/{labeller}/v{n}.parquet       ball clicks
@@ -71,9 +72,14 @@ uv run --env-file .env rclone lsf r2:dinkdata
 uv run --env-file .env rclone copy labels r2:dinkdata/labels --immutable --exclude '.*'
 ```
 
+```bash
+uv run --env-file .env rclone copy r2:dinkdata/cameras data/cameras --immutable
+```
+
 The second command uploads new studio labels. Run it after each labelling session until the
-studio writes to R2 itself. `--immutable` never overwrites a file and stops if a file in R2
-differs from yours.
+studio writes to R2 itself. The third downloads every calibration, which `dink run` reads from
+`data/cameras/`. `dink calibrate` uploads its own saves. `--immutable` never overwrites a file
+and stops if a file differs from yours.
 
 The `Backup` workflow (`.github/workflows/backup.yml`) runs every day at 04:17 UTC and can be
 started by hand from the Actions tab. It copies `labels/` and `cameras/` from `dinkdata` to

@@ -503,19 +503,22 @@ the camera. x runs 0 to 20 across the court and y runs 0 to 44 toward the camera
 at y = 22 and the kitchen lines are at y = 15 and y = 29.*
 
 1. A person clicks the visible named court points, several points along each visible line,
-   and the top of the net, which is 36 in high at the sidelines and 34 in at the centre. A
-   command-line click tool comes first and a studio mode later.
+   and the top of the net, which is 36 in high at the sidelines and 34 in at the centre. The
+   click tool is a local browser page started by `dink calibrate <camera_id>`, and it is the
+   studio's Calibrate mode.
 2. A solver fits a pinhole camera with radial lens distortion, using
    `scipy.optimize.least_squares` with a robust loss. It moves points to their places, line
    points onto their lines and the net tops to their heights. Rec nets can sag, so the net
    heights are soft constraints.
-3. One partial court can't pin down a lens, so the solver fits lens parameters jointly across
-   cameras of the same model. Each camera then gets its own pose and a small distortion
-   correction.
-4. The reprojection error on held-back clicks decides whether a calibration passes. The first
-   20 calibrations set the threshold.
-5. The visibility mask is the image border projected onto the floor, clipped at the horizon.
-   A bounce outside it is not visible, rather than out.
+3. One partial court can't pin down a lens, so the solver can fit lens parameters jointly
+   across a lens group, giving each camera its own pose and a small distortion correction.
+   We don't know the camera models, so each camera is fitted alone first, and #50 picks the
+   groups from real residuals. The tool saves the raw clicks so any camera can be refitted
+   (ADR 0020).
+4. The leave-one-out error over the named floor keypoints decides whether a calibration
+   passes. The first 20 calibrations set the threshold.
+5. The visibility mask is the image border projected onto the floor, clipped at the horizon
+   and at 10 ft beyond the lines. A bounce outside it is not visible, rather than out.
 6. `image_to_court` and `court_to_image` convert between pixels and feet, with tests on
    synthetic cameras.
 
@@ -740,7 +743,7 @@ timeline.
 |---|---|---|
 | Events | M1 | Left and right arrows move one frame, with Shift for 10. R marks rally start or end. H then 1 to 4 marks a hit and its hitter. B then a click marks a bounce. X marks a bounce out of view. N marks the net. W then A or B marks the winner. Enter accepts a suggestion, Delete rejects it and J jumps to the next uncertain item |
 | Rally level | M0, as a minimal tool | A single local web page with a video player. Mark each serve's time, server and side, and each rally's winner. It needs no exact frames, so a browser player is enough. The studio absorbs it later and proposes serves from M2 |
-| Calibrate | M1, after the click tool | Click points, lines and net tops, then check the fitted court and its error |
+| Calibrate | M1, as `dink calibrate` | Click points, lines and net tops, then check the fitted court and its error. The click tool is this mode |
 | Ball | CVAT first | Ball clicks start in CVAT in M0. A converter turns CVAT's export into our `ball_labels` contract and has a test that checks frame alignment, because misaligned frames broke the prototype's labels. Once a ball model exists, CVAT can show its predictions for people to accept or fix. A studio ball mode is optional later |
 | Review | M4 | Items appear lowest confidence first, including highlight selections. Edits are saved as patches |
 
@@ -919,7 +922,7 @@ hours during M1. Start with 2 dev and 2 test games, so the eval command has data
 
 A rally-level game takes about 10 minutes in the minimal tool, available from M0. Play the
 video, press a key at each serve, pick the server and side, pick the winner after each rally,
-mark game starts, ends and cut-offs, and mark any rule deviation. To calibrate a camera, run `dink studio --calibrate <camera_id>`. Click the
+mark game starts, ends and cut-offs, and mark any rule deviation. To calibrate a camera, run `dink calibrate <camera_id>`. Click the
 visible points, pressing S to skip one, then 3 to 5 points per line and the net tops, then check that the
 fitted court sits on the painted lines. Set the camera setup and save. Ball clicks happen in CVAT, run on a Mac with Docker or on CVAT's cloud plan. Click the ball
 centre in each frame, or mark it hidden. CVAT can fill frames between clicks along a smooth
@@ -1372,6 +1375,7 @@ review.
 | 39 | M0 uses RunPod only, with prepaid credit as the cap and a 4-hour timer on every pod. Modal waits for batch eval and Vast.ai for the M4 benchmark | One account until a ticket needs more. RunPod can't stop idle pods |
 | 40 | No output shows the score or any number derived from it. The pipeline may track the score in memory as weak evidence, gold labels keep it, and v1 covers doubles under any scoring system | PickleCam's CEO, 21 October 2026: players often mis-score, and a score that differs from theirs looks wrong. ADR 0019 |
 | 41 | The rally labeller's reference crops are uploaded with the labels to the private `labels/` folder in R2 and its backup | Labellers need them to tell partners apart, and the bucket already holds the full videos |
+| 42 | Each camera is fitted alone first, the click tool saves the raw clicks, and the held-back error is leave-one-out over the keypoints | Camera models are unknown, so lens groups wait for real residuals, and refits need the clicks. ADR 0020 |
 
 ## Appendix B: Questions for the PickleCam backend developer
 
