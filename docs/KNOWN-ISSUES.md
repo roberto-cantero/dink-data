@@ -11,6 +11,7 @@ The prototype's problems are summarised in ADR 0001.
 | K1 | CI | The gitleaks pre-commit hook scans only staged changes, so in CI it checks nothing | Medium | Open |
 | K2 | Video | On macOS, OpenCV and PyAV each bundle FFmpeg, and importing both prints duplicate-class warnings | Low | Open |
 | K3 | Data | Two people running `dink ingest` at the same time can lose catalog and id-map rows | Medium | Fixed (#86) |
+| K4 | Studio | One labeller saving on two Macs while R2 is down can leave a version that never uploads | Low | Open |
 
 ## K1 · Gitleaks doesn't scan in CI
 
@@ -48,6 +49,16 @@ The prototype's problems are summarised in ADR 0001.
   The split check runs again on each try, so the second of two first ingests from a new
   facility fails with the split error instead of giving the facility a second split.
   `dink catalog sync` (#37) must write the catalog the same way.
+
+## K4 · Studio uploads compare file names only
+
+- Where: `src/dinkdata/studio/sync.py`, `push` and `pending`
+- What: the studio treats a label file as uploaded when R2 has a file with the same name. Say
+  one handle labels the same video on two Macs while R2 is unreachable. Both write `v3`, and
+  when R2 comes back the first upload wins. The other `v3` never uploads, and its page says R2
+  is up to date. Each Mac pulls R2 before it saves, so this needs both Macs and an outage.
+- Fix: none yet. Label each video on one Mac. A fix would compare sizes or hashes and save the
+  losing file as the next version.
 
 ## Entry format
 
