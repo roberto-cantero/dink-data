@@ -22,7 +22,7 @@ class LabelStore(Store, Protocol):
         ...
 
 
-@dataclass(frozen=True)
+@dataclass
 class RcloneLabelStore(RcloneStore):
     """The R2 bucket, with the folder listing the studio needs."""
 
