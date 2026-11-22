@@ -98,8 +98,9 @@ along y and never along x.
    or a fit that didn't converge.
 6. The visibility mask is the image border projected onto the floor, clipped at the horizon
    and at 10 ft beyond the lines on every side.
-7. The tool suggests the camera setup from the fit: a camera more than 2 m (6.56 ft) above the
-   floor is down-the-line high, and one turned more than 20° off the centre line is diagonal.
+7. The tool suggests the camera setup from the fit. A camera turned more than 20° off the
+   centre line is diagonal, however high it is. Otherwise one more than 2 m (6.56 ft) above the
+   floor is down-the-line high.
    The person confirms it, and saving sets it on the camera's catalog rows.
 8. The result is saved as `cameras/{camera_id}/v{n}/camera.json`, with the raw clicks in
    `clicks.json` beside it. A new calibration is a new version, and old versions are never
