@@ -13,7 +13,7 @@ results to `eval/{run_id}.csv` in R2. A small synthetic version runs in CI.
 
 | Stage | Metric |
 |---|---|
-| Calibration | Reprojection error in pixels on held-back clicks |
+| Calibration | Held-back error: mean leave-one-out pixel error over the keypoints |
 | Ball | Precision, recall and F1 within 10 px at 1080p, also at 5 and 20 px, and the median error |
 | Players | Partner identity at the serve, for the near and far team separately. Hitter identities that match gold. Foot error in feet on foot clicks |
 | Serve states | Server, side and team accuracy |

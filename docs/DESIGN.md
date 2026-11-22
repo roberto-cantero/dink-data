@@ -776,7 +776,7 @@ personal data.
 |---|---|
 | `catalog.parquet` | `video_id`, `facility_id`, `camera_id`, `uploaded_at`, `duration_s`, `fps_nominal`, `size_bytes`, `setup`, `split`, `fetched`, `notes`. `uploaded_at` can be null for a hand download and `setup` stays null until calibration. Every game of a facility has the same split |
 | `{video_id}.frames.parquet` | `frame`, `t`, `dropped_before`, `duplicate`. One row per decoded frame, and the first frame's `t` is 0 |
-| `camera.json` | Camera id and model, setup, image size, intrinsics, distortion (k1, k2), rotation, translation, reprojection error, visible region in court feet, overlay masks in pixels, source, version |
+| `camera.json` | Camera id and model, setup, image size, intrinsics, distortion (k1, k2), rotation, translation, held-back error (stored as `reprojection_error_px`), visible region in court feet, overlay masks in pixels, source, version |
 | `ball.parquet` | `frame`, `t`, `x`, `y`, `visible`, `conf`, `interpolated`, the top 3 `peaks` |
 | `players.parquet` | One row per frame per track: `frame`, `t`, `player_id`, `track_id`, `team`, `box`, 17 `keypoints`, `foot_court`, `estimated_foot`, `conf`, `foot_conf`. Tracks that aren't players have a null `player_id` |
 | `candidates.parquet` | For each candidate, `frame`, `t`, `conf`, the hit, bounce and net probabilities, and the hitter probabilities for p1 to p4 |
@@ -937,7 +937,7 @@ synthetic version runs in CI.
 
 | Stage | Metric |
 |---|---|
-| Calibration | Reprojection error in pixels on held-back clicks |
+| Calibration | Held-back error: mean leave-one-out pixel error over the keypoints |
 | Ball | Precision, recall and F1 within 10 px at 1080p, also at 5 and 20 px, and the median error |
 | Players | Partner identity at the serve, for the near and far team separately. Hitter identities that match gold. Foot error in feet on foot clicks |
 | Serve states | Server, side and team accuracy |
@@ -1301,7 +1301,7 @@ These questions are still open.
 1. When will the read-only endpoint exist? PickleCam builds it after the prototype.
 2. How common are stacking, rule breaks and mid-game end switches? The rally-level gold set will tell.
 3. How well do two people agree on hits and bounces? We'll measure it in M1.
-4. What reprojection error can we reach? The first 20 calibrations will tell.
+4. What held-back error can we reach? The first 20 calibrations will tell.
 5. How do beta players receive reports and reels, through PickleCam with the video or from the owners directly?
 6. Is a 70% coverage floor right?
 7. Which stats and which kinds of clips do beta players value most?

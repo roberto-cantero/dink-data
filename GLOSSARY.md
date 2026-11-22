@@ -153,7 +153,7 @@ Cameras that share fitted lens parameters.
 _Avoid_: camera model, unless the model is known
 
 **Held-back error**:
-A calibration's mean leave-one-out error over its keypoints, in pixels: each keypoint is refit without itself and measured.
+A calibration's mean leave-one-out error over its keypoints, in pixels: each keypoint is refit without itself and measured. `camera.json` v1 stores it in `reprojection_error_px`.
 _Avoid_: reprojection error, for the error of the full fit
 
 **Visibility mask**:

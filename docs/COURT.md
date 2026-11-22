@@ -71,8 +71,11 @@ The net's own floor line at y = 22 is left out, because the net hides it.
 The coordinates above are the court's boundaries. Painted lines are 2 in wide and lie inside
 the area they bound: the sidelines and baselines inside the 20 by 44 ft court, and each
 kitchen line inside its kitchen, so its centre is 6 ft 11 in from the net. A person clicks a
-line's centre, so the solver places each line, and each keypoint on a line, at the line's
-centre, 1 in in from these coordinates. Near a low camera 1 in is about 3 px.
+line's centre, so the solver places the baselines, sidelines and kitchen lines, and the
+keypoints on them, at the line's centre, 1 in in from these coordinates. Near a low camera 1 in
+is about 3 px. The centre line divides the two service courts, so its centre stays at x = 10.
+Only its ends move, with the baseline and the kitchen line, so the `*_centre` keypoints move
+along y and never along x.
 
 ## Calibration
 
@@ -86,8 +89,10 @@ centre, 1 in in from these coordinates. Near a low camera 1 in is about 3 px.
 3. Each camera is fitted alone first, with weak priors on the lens. A joint fit can share
    the lens across a lens group, with a small correction per camera. #50 decides the groups
    (ADR 0020).
-4. The held-back error is the mean leave-one-out error over the named floor keypoints. It
-   must stay under a threshold, set from the first 20 calibrations.
+4. The held-back error is the mean leave-one-out error over the named floor keypoints.
+   `camera.json` v1 stores it in `reprojection_error_px`. It must stay under a threshold, set
+   from the first 20 calibrations. That threshold is in pixels at full 1080p resolution, the
+   only size PickleCam records today, so another size would need it scaled.
 5. The solver refuses a fit that puts the camera below the floor or on the far side of the
    net, which usually means swapped names, a lens whose undistortion folds inside the image,
    or a fit that didn't converge.
