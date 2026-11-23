@@ -20,7 +20,7 @@ from pathlib import Path
 import numpy as np
 
 from dinkdata.contracts.camera import CameraCalibration
-from dinkdata.court.keypoints import COURT_LINES, CourtLineName
+from dinkdata.court.keypoints import COURT_LINES, CourtLine
 
 CAMERAS = Path("data/cameras")
 """Local calibrations, laid out as in R2. docs/DATA.md has the rclone command that fills it."""
@@ -157,7 +157,7 @@ LINE_SAMPLES = 64
 
 def court_lines_image(
     camera: CameraCalibration, *, video_size: VideoSize, samples: int = LINE_SAMPLES
-) -> dict[CourtLineName, np.ndarray]:
+) -> dict[CourtLine, np.ndarray]:
     """Each named court line as a polyline of raw video pixels, with the lens bend included.
 
     Each line is sampled at `samples` evenly spaced floor points from its first end to its
@@ -165,7 +165,7 @@ def court_lines_image(
     The lines are the court's boundaries from docs/COURT.md, not the painted lines' centres.
     """
     steps = np.linspace(0.0, 1.0, samples)[:, None]
-    lines: dict[CourtLineName, np.ndarray] = {}
+    lines: dict[CourtLine, np.ndarray] = {}
     for name, (start, end) in COURT_LINES.items():
         floor = np.asarray(start) + steps * (np.asarray(end) - np.asarray(start))
         lines[name] = court_to_image(camera, floor, video_size=video_size)
