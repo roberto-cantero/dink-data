@@ -2,8 +2,9 @@
 
 Saved as `cameras/{camera_id}/v{n}/clicks.json`, beside the `camera.json` fitted from it, so
 a camera can be refitted without new clicks. Pixels are full-resolution video pixels with
-sub-pixel precision, origin at the top-left corner of the image. A skipped point or court line
-is absent.
+sub-pixel precision. (0, 0) is the top-left corner of the image, so the centre of the top-left
+pixel is (0.5, 0.5) and a pixel may sit on the far edge at x = width or y = height. A skipped
+point or court line is absent.
 
 The keypoint, net top and court line names are the ones in `docs/COURT.md`. This module is
 their one definition: code imports them from here and never numbers them.
@@ -52,14 +53,12 @@ NET_TOPS: tuple[NetTop, ...] = get_args(NetTop)
 COURT_LINES: tuple[CourtLine, ...] = get_args(CourtLine)
 
 MIN_LINE_POINTS = 2
-MAX_LINE_POINTS = 5
 
 Pixel = tuple[Finite, Finite]
 LinePoints = Annotated[
     list[Pixel],
     Field(
         min_length=MIN_LINE_POINTS,
-        max_length=MAX_LINE_POINTS,
         description="Points clicked along one court line. The tool asks for 3 to 5.",
     ),
 ]
@@ -75,10 +74,10 @@ class CameraClicks(StrictModel):
     schema_: Literal["dinkdata.camera_clicks/v1"] = Field(alias="schema")
     camera_id: CameraId
     version: int = Field(ge=1, description="The camera.json version fitted from these clicks.")
-    video_id: VideoId = Field(description="The video the picture was taken from.")
+    video_id: VideoId = Field(description="The video the clicked image came from.")
     frames: list[Frame] = Field(
         min_length=1,
-        description="Frames behind the picture: about 25 for the median, or 1 for a single frame.",
+        description="Frames behind the clicked image: about 25 for the median, or 1 frame.",
     )
     image_size: ImageSize
     keypoints: dict[FloorKeypoint, Pixel] = Field(description="Floor keypoint clicks by name.")

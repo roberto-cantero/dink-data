@@ -47,13 +47,13 @@
       "type": "integer"
     },
     "video_id": {
-      "description": "The video the picture was taken from.",
+      "description": "The video the clicked image came from.",
       "pattern": "^v_[0-9a-f]{16}$",
       "title": "Video Id",
       "type": "string"
     },
     "frames": {
-      "description": "Frames behind the picture: about 25 for the median, or 1 for a single frame.",
+      "description": "Frames behind the clicked image: about 25 for the median, or 1 frame.",
       "items": {
         "description": "0-based index of a decoded frame.",
         "minimum": 0,
@@ -116,7 +116,6 @@
           ],
           "type": "array"
         },
-        "maxItems": 5,
         "minItems": 2,
         "type": "array"
       },
