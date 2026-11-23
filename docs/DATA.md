@@ -15,6 +15,7 @@ catalog/id_map.parquet                               our ids to PickleCam sessio
 videos/{video_id}.mp4                                sample and gold videos, no audio
 videos/{video_id}.frames.parquet                     frame timestamps
 cameras/{camera_id}/v{n}/camera.json                 calibrations
+cameras/{camera_id}/v{n}/clicks.json                 the clicks each calibration was fitted from
 labels/gold-events/{video_id}/{labeller}/v{n}.json   full-event gold
 labels/gold-rallies/{video_id}/{labeller}/v{n}.json  rally-level gold
 labels/ball/{video_id}/{labeller}/v{n}.parquet       ball clicks

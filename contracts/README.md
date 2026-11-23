@@ -14,6 +14,7 @@ hand. `docs/DESIGN.md` section 7 lists every format, and ADR 0005 records the de
 | `catalog.schema.json` | `catalog.CatalogRow`, rows of `catalog.parquet`. The parquet contract is `catalog.CATALOG` | Robby |
 | `frames.schema.json` | `frames.FrameRow`, rows of `{video_id}.frames.parquet`. The parquet contract is `frames.FRAMES` | Robby |
 | `camera.schema.json` | `camera.CameraCalibration`, one calibration of one camera | Robby |
+| `camera_clicks.schema.json` | `camera_clicks.CameraClicks`, the raw clicks one calibration was fitted from (`clicks.json`). It also holds the keypoint, net top and court line names | Robby |
 | `ball.schema.json` | `ball.BallRow`, rows of `ball.parquet`. The parquet contract is `ball.BALL` | Robby |
 | `candidates.schema.json` | `candidates.CandidateRow`, rows of `candidates.parquet`. The parquet contract is `candidates.CANDIDATES` | Robby |
 | `ball_labels.schema.json` | `ball.BallLabelRow`, rows of `ball_labels.parquet`. The parquet contract is `ball.BALL_LABELS` | Robby |

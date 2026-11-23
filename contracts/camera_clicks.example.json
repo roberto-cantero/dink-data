@@ -1,0 +1,31 @@
+{
+  "schema": "dinkdata.camera_clicks/v1",
+  "camera_id": "c_5eed00000000c001",
+  "version": 2,
+  "video_id": "v_5eed00000000e001",
+  "frames": [120, 4920, 9720],
+  "image_size": {"width": 1920, "height": 1080},
+  "keypoints": {
+    "far_left_corner": [702.4, 212.75],
+    "far_right_corner": [1214.0, 210.5],
+    "far_kitchen_left": [588.25, 380.0],
+    "far_kitchen_right": [1331.5, 377.25],
+    "far_kitchen_centre": [960.0, 378.5]
+  },
+  "line_points": {
+    "far_baseline": [[760.0, 212.5], [960.0, 211.5], [1150.0, 210.75]],
+    "left_sideline": [[680.0, 250.0], [640.5, 310.0], [600.25, 362.0]],
+    "far_kitchen_line": [[700.0, 379.5], [1220.0, 377.5]]
+  },
+  "net_tops": {
+    "net_top_left": [470.0, 430.5],
+    "net_top_centre": [960.0, 452.0],
+    "net_top_right": [1450.0, 428.0]
+  },
+  "overlay_rects": [
+    [1700.0, 20.0, 1900.0, 90.0],
+    [20.0, 990.0, 220.0, 1060.0]
+  ],
+  "labeller": "robby",
+  "saved_at": "2026-11-23T14:05:00Z"
+}
