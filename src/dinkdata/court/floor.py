@@ -81,9 +81,9 @@ def court_to_image(
         court[:, 2] = -points[:, 2]
     cam = court @ _rotation(camera).T + np.asarray(camera.translation)
     with np.errstate(divide="ignore", invalid="ignore"):
-        normal = cam[:, :2] / cam[:, 2:3]
-    normal[cam[:, 2] <= 0] = np.nan
-    return _to_pixels(camera, _distort(camera, normal))
+        ideal = cam[:, :2] / cam[:, 2:3]
+    ideal[cam[:, 2] <= 0] = np.nan
+    return _to_pixels(camera, _distort(camera, ideal))
 
 
 def image_to_court(
@@ -99,11 +99,9 @@ def image_to_court(
     pixels = np.asarray(pixels, dtype=float)
     if pixels.ndim != 2 or pixels.shape[1] != 2:
         raise ValueError(f"pixels must be (N, 2), not {pixels.shape}")
-    i = camera.intrinsics
-    distorted = (pixels - np.array([i.cx, i.cy])) / np.array([i.fx, i.fy])
-    normal = _undistort(camera, distorted)
+    ideal = _undistort(camera, _from_pixels(camera, pixels))
     rot = _rotation(camera)
-    rays = np.column_stack([normal, np.ones(len(normal))]) @ rot  # R^T @ ray, per row
+    rays = np.column_stack([ideal, np.ones(len(ideal))]) @ rot  # R^T @ ray, per row
     centre = -rot.T @ np.asarray(camera.translation)
     with np.errstate(divide="ignore", invalid="ignore"):
         scale = -centre[2] / rays[:, 2]
@@ -119,8 +117,9 @@ def feet_per_pixel(
 
     `points` is (N, 2) floor points. The value is the largest stretch of the local Jacobian
     of `image_to_court`: the floor distance one pixel covers in the direction where it covers
-    the most. Multiply a pixel error by it to get a distance on the floor. Returns (N,), NaN
-    where the camera can't see the point.
+    the most. Multiply a pixel error by it to get a distance on the floor. Returns (N,). A
+    value is NaN for a point behind the camera or past the lens fold. A point outside the
+    frame but in front of the camera still gets a value.
 
     The Jacobian is the inverse of `court_to_image`'s, which has a closed form.
     """
@@ -132,21 +131,21 @@ def feet_per_pixel(
     cam = points @ rot[:, :2].T + np.asarray(camera.translation)
     d_cam = rot[:, :2]  # d(camera coords) / d(x, y), the same for every floor point
     k1, k2 = camera.distortion.k1, camera.distortion.k2
-    i = camera.intrinsics
+    focal = np.diag([camera.intrinsics.fx, camera.intrinsics.fy])
+    r2_max = _max_radius(camera) ** 2
     values = np.full(len(points), np.nan)
     for n, (X, Y, Z) in enumerate(cam):
         if Z <= 0:
             continue
         xn, yn = X / Z, Y / Z
         r2 = xn * xn + yn * yn
-        if r2 > _max_radius(camera) ** 2:
+        if r2 > r2_max:
             continue
-        d_normal = (d_cam[:2] - np.outer([xn, yn], d_cam[2])) / Z  # 2x2
-        d_r2 = 2 * (xn * d_normal[0] + yn * d_normal[1])
-        scale = 1 + k1 * r2 + k2 * r2 * r2
+        d_ideal = (d_cam[:2] - np.outer([xn, yn], d_cam[2])) / Z  # 2x2
+        d_r2 = 2 * (xn * d_ideal[0] + yn * d_ideal[1])
         d_scale = (k1 + 2 * k2 * r2) * d_r2
-        d_distorted = scale * d_normal + np.outer([xn, yn], d_scale)
-        forward = np.diag([i.fx, i.fy]) @ d_distorted
+        d_distorted = _radial(camera, r2) * d_ideal + np.outer([xn, yn], d_scale)
+        forward = focal @ d_distorted
         values[n] = np.linalg.norm(np.linalg.inv(forward), 2)
     return values
 
@@ -156,15 +155,15 @@ LINE_SAMPLES = 64
 
 
 def court_lines_image(
-    camera: CameraCalibration, *, video_size: VideoSize, samples: int = LINE_SAMPLES
+    camera: CameraCalibration, *, video_size: VideoSize
 ) -> dict[CourtLine, np.ndarray]:
     """Each named court line as a polyline of raw video pixels, with the lens bend included.
 
-    Each line is sampled at `samples` evenly spaced floor points from its first end to its
-    second, so a polyline is (samples, 2). A sample the camera can't see is a NaN row.
+    Each line is sampled at `LINE_SAMPLES` evenly spaced floor points from its first end to
+    its second, so a polyline is (LINE_SAMPLES, 2). A sample the camera can't see is a NaN row.
     The lines are the court's boundaries from docs/COURT.md, not the painted lines' centres.
     """
-    steps = np.linspace(0.0, 1.0, samples)[:, None]
+    steps = np.linspace(0.0, 1.0, LINE_SAMPLES)[:, None]
     lines: dict[CourtLine, np.ndarray] = {}
     for name, (start, end) in COURT_LINES.items():
         floor = np.asarray(start) + steps * (np.asarray(end) - np.asarray(start))
@@ -204,16 +203,24 @@ def _max_radius(camera: CameraCalibration) -> float:
     return float(np.sqrt(min(positive))) if positive else np.inf
 
 
-def _distort(camera: CameraCalibration, normal: np.ndarray) -> np.ndarray:
+def _radial(camera: CameraCalibration, r2: np.ndarray | float) -> np.ndarray | float:
+    """The radial distortion factor 1 + k1 r^2 + k2 r^4, from the squared radius."""
     k1, k2 = camera.distortion.k1, camera.distortion.k2
-    r2 = (normal**2).sum(axis=1, keepdims=True)
-    out = normal * (1 + k1 * r2 + k2 * r2**2)
-    out[(r2 > _max_radius(camera) ** 2)[:, 0]] = np.nan
-    return out
+    return 1 + k1 * r2 + k2 * r2 * r2
+
+
+def _distort(camera: CameraCalibration, ideal: np.ndarray) -> np.ndarray:
+    """Normalised pinhole coordinates to normalised distorted ones. NaN past the lens fold."""
+    r2 = (ideal**2).sum(axis=1, keepdims=True)
+    distorted = ideal * _radial(camera, r2)
+    distorted[(r2 > _max_radius(camera) ** 2)[:, 0]] = np.nan
+    return distorted
 
 
 NEWTON_STEPS = 50
-"""Newton steps for undistortion. It converges in under 10 for real lenses."""
+"""Most Newton steps for undistortion. A row that hasn't converged by then is NaN."""
+NEWTON_TOLERANCE = 1e-12
+"""Largest radius error, in focal lengths, that counts as converged. About 1e-9 px."""
 
 
 def _undistort(camera: CameraCalibration, distorted: np.ndarray) -> np.ndarray:
@@ -227,21 +234,25 @@ def _undistort(camera: CameraCalibration, distorted: np.ndarray) -> np.ndarray:
         return distorted.copy()
     r_max = _max_radius(camera)
     rd = np.sqrt((distorted**2).sum(axis=1))
-    rd_max = r_max * (1 + k1 * r_max**2 + k2 * r_max**4) if np.isfinite(r_max) else np.inf
+    rd_max = r_max * _radial(camera, r_max**2) if np.isfinite(r_max) else np.inf
     r = np.minimum(rd, r_max)
-    for _ in range(NEWTON_STEPS):
-        r2 = r * r
-        f = r * (1 + k1 * r2 + k2 * r2 * r2) - rd
-        slope = 1 + 3 * k1 * r2 + 5 * k2 * r2 * r2
-        with np.errstate(divide="ignore", invalid="ignore"):
-            r = np.clip(r - f / slope, 0, r_max)
     with np.errstate(divide="ignore", invalid="ignore"):
+        for _ in range(NEWTON_STEPS):
+            r2 = r * r
+            slope = 1 + 3 * k1 * r2 + 5 * k2 * r2 * r2
+            r = np.clip(r - (r * _radial(camera, r2) - rd) / slope, 0, r_max)
+        converged = np.abs(r * _radial(camera, r * r) - rd) <= NEWTON_TOLERANCE
         scale = np.where(rd > 0, r / rd, 1.0)
-    normal = distorted * scale[:, None]
-    normal[rd > rd_max] = np.nan
-    return normal
+    ideal = distorted * scale[:, None]
+    ideal[(rd > rd_max) | ~converged] = np.nan
+    return ideal
 
 
-def _to_pixels(camera: CameraCalibration, normal: np.ndarray) -> np.ndarray:
+def _to_pixels(camera: CameraCalibration, distorted: np.ndarray) -> np.ndarray:
     i = camera.intrinsics
-    return normal * np.array([i.fx, i.fy]) + np.array([i.cx, i.cy])
+    return distorted * np.array([i.fx, i.fy]) + np.array([i.cx, i.cy])
+
+
+def _from_pixels(camera: CameraCalibration, pixels: np.ndarray) -> np.ndarray:
+    i = camera.intrinsics
+    return (pixels - np.array([i.cx, i.cy])) / np.array([i.fx, i.fy])
