@@ -53,7 +53,7 @@
       "type": "string"
     },
     "frames": {
-      "description": "Frames behind the clicked image: about 25 for the median, or 1 frame.",
+      "description": "The frames the median image was made from, about 25.",
       "items": {
         "description": "0-based index of a decoded frame.",
         "minimum": 0,
@@ -62,6 +62,20 @@
       "minItems": 1,
       "title": "Frames",
       "type": "array"
+    },
+    "single_frame": {
+      "anyOf": [
+        {
+          "description": "0-based index of a decoded frame.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The frame the single-frame view showed. null if it was never used.",
+      "title": "Single Frame"
     },
     "image_size": {
       "$ref": "#/$defs/ImageSize"
@@ -203,6 +217,7 @@
     "version",
     "video_id",
     "frames",
+    "single_frame",
     "image_size",
     "keypoints",
     "line_points",

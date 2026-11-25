@@ -76,8 +76,10 @@ class CameraClicks(StrictModel):
     version: int = Field(ge=1, description="The camera.json version fitted from these clicks.")
     video_id: VideoId = Field(description="The video the clicked image came from.")
     frames: list[Frame] = Field(
-        min_length=1,
-        description="Frames behind the clicked image: about 25 for the median, or 1 frame.",
+        min_length=1, description="The frames the median image was made from, about 25."
+    )
+    single_frame: Frame | None = Field(
+        description="The frame the single-frame view showed. null if it was never used."
     )
     image_size: ImageSize
     keypoints: dict[FloorKeypoint, Pixel] = Field(description="Floor keypoint clicks by name.")

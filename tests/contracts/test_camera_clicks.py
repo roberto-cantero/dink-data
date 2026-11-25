@@ -61,8 +61,14 @@ def test_accepts_every_named_point_and_line():
 
 def test_a_line_may_have_more_than_5_points():
     data = example("camera_clicks")
-    data["line_points"]["far_baseline"].extend([[800.0, 212.0]] * 3)
+    data["line_points"]["far_baseline"] = [[800.0 + 50 * n, 454.0] for n in range(6)]
     assert len(CameraClicks.model_validate(data).line_points["far_baseline"]) == 6
+
+
+def test_single_frame_is_null_when_never_used():
+    data = example("camera_clicks")
+    data["single_frame"] = None
+    assert CameraClicks.model_validate(data).single_frame is None
 
 
 def test_skipped_points_are_absent():
@@ -83,6 +89,8 @@ def test_skipped_points_are_absent():
         pytest.param(lambda d: d.update(frames=[-1]), id="negative frame"),
         pytest.param(lambda d: d.update(frames=[9720, 120]), id="frames out of order"),
         pytest.param(lambda d: d.update(frames=[120, 120]), id="repeated frame"),
+        pytest.param(lambda d: d.pop("single_frame"), id="single frame missing"),
+        pytest.param(lambda d: d.update(single_frame=-1), id="negative single frame"),
         pytest.param(lambda d: d["image_size"].update(width=0), id="zero width"),
         pytest.param(lambda d: d["keypoints"].update(corner_5=[10.0, 10.0]), id="unknown keypoint"),
         pytest.param(
