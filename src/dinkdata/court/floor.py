@@ -13,9 +13,10 @@ Pixels are raw, distorted, full-resolution video pixels. (0, 0) is the top-left 
 the image, not the centre of the top-left pixel, so the centre of pixel (i, j) is at
 (i + 0.5, j + 0.5). This matches `camera_clicks` and the studio's `image_xy`. A point from
 a tool that puts pixel centres on whole numbers, as OpenCV does, needs 0.5 added to x and y
-before it is mapped. Each function checks the video's
-size against the calibration's `image_size` and raises on a mismatch, so a 720p copy is never
-mapped with 1080p numbers.
+before it is mapped.
+
+Each function checks the video's size against the calibration's `image_size` and raises on a
+mismatch, so a 720p copy is never mapped with 1080p numbers.
 """
 
 import re
