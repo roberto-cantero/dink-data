@@ -163,13 +163,22 @@ It writes `data/cvat/<video_id>_f<start>/`, which git ignores, and prints the ta
 
 ## Calibrating a camera, about 2 minutes
 
-1. Run `dink calibrate <camera_id>` to open a clear frame with no players near the lines.
-2. Click every visible keypoint. Skip one that isn't visible.
-3. Click 3 to 5 points along each visible line, and the net top at both sidelines and the
-   centre.
-4. Check that the fitted court sits on the painted lines and that the reprojection error is
-   under the threshold.
-5. Set the camera setup (down-the-line low, down-the-line high or diagonal) and save.
+1. Run `dink calibrate <camera_id>`. It opens a browser page with the median of about 25
+   frames from one of the camera's videos, which removes the players. A key switches to a
+   single frame when the median blurs a line. `--from v<n>` starts from a saved version's
+   clicks instead.
+2. Click each keypoint the court diagram highlights, at the centre of the painted line. S
+   skips one that isn't visible, Backspace undoes the last click, and you can drag a placed
+   point. A 4x loupe follows the cursor. You need at least 4 keypoints.
+3. For each named line, click 3 to 5 points spread along it, then press Enter. S skips a line.
+4. Click the three net tops, where the top of the net crosses above each sideline and the
+   centre line.
+5. Drag a rectangle over the watermark and over the facility logo. They are copied from the
+   last version when there is one.
+6. Press F to fit. Check that the fitted court sits on the painted lines, and look at the 3
+   worst keypoints. Fix or skip a point and fit again if one is off.
+7. Confirm the suggested camera setup (down-the-line low, down-the-line high or diagonal) and
+   save. The tool writes `camera.json` and `clicks.json` as a new version and uploads both.
 
 ## Full-event gold, 3 to 5 hours a game
 
