@@ -138,8 +138,29 @@ Positions on the court in feet, with the origin at the far-left baseline corner 
 **Calibration**:
 The fitted lens and position of one camera, which converts floor pixels to court coordinates.
 
+**Keypoint**:
+A named court point, such as `far_left_corner`, that calibration matches to a click.
+_Avoid_: point 1, corner number
+
+**Court line**:
+A named painted line, such as `left_sideline`, that calibration fits clicks onto.
+
+**Net top**:
+The top of the net above a sideline or the centre line, the only clicks above the floor.
+
+**Lens group**:
+Cameras that share fitted lens parameters.
+_Avoid_: camera model, unless the model is known
+
+**Held-back error**:
+A calibration's mean leave-one-out error over its keypoints, in pixels: each keypoint is refit without itself and measured. `camera.json` v1 stores it in `reprojection_error_px`.
+_Avoid_: reprojection error, for the error of the full fit
+
 **Visibility mask**:
-The part of the court a camera can see.
+The floor a camera can see, in court coordinates, up to 10 ft beyond the lines.
+
+**Overlay mask**:
+An image region to ignore, such as the PickleCam watermark or a facility logo.
 
 **Background image**:
 A picture of the empty court for a stretch of a recording.
