@@ -2,7 +2,7 @@
 
 import pytest
 
-from dinkdata.court.keypoints import COURT_LINES, KEYPOINTS, KeypointName
+from dinkdata.court.keypoints import COURT_LINE_ENDS, KEYPOINTS, KeypointName
 
 
 def test_keypoints_match_court_md():
@@ -41,4 +41,4 @@ def test_court_lines_match_court_md():
         "far_centre_line": ((10, 0), (10, 15)),
         "near_centre_line": ((10, 29), (10, 44)),
     }
-    assert expected == COURT_LINES
+    assert expected == COURT_LINE_ENDS

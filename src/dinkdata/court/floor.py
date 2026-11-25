@@ -9,7 +9,11 @@ third axis points down into the floor, so a point `h` ft above the floor has z =
 camera looks along +z, image x runs right and image y runs down. The functions take heights
 above the floor and turn them into z themselves.
 
-Pixels are raw, distorted, full-resolution video pixels. Each function checks the video's
+Pixels are raw, distorted, full-resolution video pixels. (0, 0) is the top-left corner of
+the image, not the centre of the top-left pixel, so the centre of pixel (i, j) is at
+(i + 0.5, j + 0.5). This matches `camera_clicks` and the studio's `image_xy`. A point from
+a tool that puts pixel centres on whole numbers, as OpenCV does, needs 0.5 added to x and y
+before it is mapped. Each function checks the video's
 size against the calibration's `image_size` and raises on a mismatch, so a 720p copy is never
 mapped with 1080p numbers.
 """
@@ -20,7 +24,7 @@ from pathlib import Path
 import numpy as np
 
 from dinkdata.contracts.camera import CameraCalibration
-from dinkdata.court.keypoints import COURT_LINES, CourtLine
+from dinkdata.court.keypoints import COURT_LINE_ENDS, CourtLine
 
 CAMERAS = Path("data/cameras")
 """Local calibrations, laid out as in R2. docs/DATA.md has the rclone command that fills it."""
@@ -165,7 +169,7 @@ def court_lines_image(
     """
     steps = np.linspace(0.0, 1.0, LINE_SAMPLES)[:, None]
     lines: dict[CourtLine, np.ndarray] = {}
-    for name, (start, end) in COURT_LINES.items():
+    for name, (start, end) in COURT_LINE_ENDS.items():
         floor = np.asarray(start) + steps * (np.asarray(end) - np.asarray(start))
         lines[name] = court_to_image(camera, floor, video_size=video_size)
     return lines

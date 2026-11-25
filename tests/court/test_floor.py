@@ -9,7 +9,7 @@ from dinkdata.court.floor import (
     feet_per_pixel,
     image_to_court,
 )
-from dinkdata.court.keypoints import COURT_LINES, KEYPOINTS, KeypointName
+from dinkdata.court.keypoints import COURT_LINE_ENDS, KEYPOINTS, KeypointName
 from tests.court.cameras import BARREL, HEIGHT, SETUPS, WIDTH, calibration, looking_at
 
 VIDEO = (WIDTH, HEIGHT)
@@ -142,9 +142,9 @@ def chord_distance(polyline: np.ndarray) -> np.ndarray:
 def test_court_lines_lie_on_the_projected_lines(lens):
     camera = synthetic("dtl_high", lens)
     lines = court_lines_image(camera, video_size=VIDEO)
-    assert set(lines) == set(COURT_LINES)
+    assert set(lines) == set(COURT_LINE_ENDS)
     for name, polyline in lines.items():
-        (x0, y0), (x1, y1) = COURT_LINES[name]
+        (x0, y0), (x1, y1) = COURT_LINE_ENDS[name]
         ends = court_to_image(camera, np.array([[x0, y0], [x1, y1]]), video_size=VIDEO)
         np.testing.assert_allclose(polyline[[0, -1]], ends, atol=1e-6, err_msg=name)
         court = image_to_court(camera, polyline, video_size=VIDEO)

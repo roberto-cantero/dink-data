@@ -62,7 +62,7 @@ KEYPOINTS: dict[KeypointName, tuple[float, float, float]] = {
 }
 """Each keypoint as (x, y, height above the floor) in feet."""
 
-COURT_LINES: dict[CourtLine, tuple[tuple[float, float], tuple[float, float]]] = {
+COURT_LINE_ENDS: dict[CourtLine, tuple[tuple[float, float], tuple[float, float]]] = {
     "far_baseline": ((0.0, 0.0), (WIDTH, 0.0)),
     "near_baseline": ((0.0, LENGTH), (WIDTH, LENGTH)),
     "left_sideline": ((0.0, 0.0), (0.0, LENGTH)),
