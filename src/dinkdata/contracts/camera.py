@@ -1,8 +1,11 @@
 """`camera.json`: one calibration of one camera. Owner: Robby (docs/COURT.md, DESIGN 6.3).
 
 A pinhole camera with radial distortion (k1, k2). `rotation` is a Rodrigues vector and
-`translation` is in feet. Together they take court coordinates to camera coordinates. Saved
-as `cameras/{camera_id}/v{n}/camera.json`. A new calibration is a new version.
+`translation` is in feet. Together they take court coordinates to camera coordinates. Court
+coordinates use the axes in docs/COURT.md: x runs across the court and y runs toward the
+camera, so z points down into the floor. A point h ft above the floor has z = -h, and a camera
+above the floor has a negative z centre. Saved as `cameras/{camera_id}/v{n}/camera.json`. A
+new calibration is a new version.
 """
 
 from typing import Annotated, Literal
