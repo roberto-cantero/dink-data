@@ -25,7 +25,8 @@ from pathlib import Path
 import numpy as np
 
 from dinkdata.contracts.camera import CameraCalibration
-from dinkdata.court.keypoints import COURT_LINE_ENDS, CourtLine
+from dinkdata.contracts.camera_clicks import CourtLine
+from dinkdata.court.keypoints import COURT_LINE_ENDS
 
 CAMERAS = Path("data/cameras")
 """Local calibrations, laid out as in R2. docs/DATA.md has the rclone command that fills it."""
