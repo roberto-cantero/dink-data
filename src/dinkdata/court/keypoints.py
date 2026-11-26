@@ -3,40 +3,14 @@
 Code names them and never numbers them. The coordinates are the court's boundaries, as in
 COURT.md. The solver moves the painted lines 1 in to their centres; these names don't.
 
-The name types match `dinkdata.contracts.camera_clicks` from #92, which becomes their one
-definition. Once #92 is on main, import the names from there and keep only the coordinates here.
+The names come from `dinkdata.contracts.camera_clicks`, their one definition. This module
+keeps only the coordinates.
 """
 
-from typing import Literal
-
+from dinkdata.contracts.camera_clicks import CourtLine, FloorKeypoint, NetTop
 from dinkdata.court.zones import CENTRE_X, FAR_KITCHEN_Y, LENGTH, NEAR_KITCHEN_Y, NET_Y, WIDTH
 
-FloorKeypoint = Literal[
-    "far_left_corner",
-    "far_right_corner",
-    "near_right_corner",
-    "near_left_corner",
-    "far_kitchen_left",
-    "far_kitchen_right",
-    "near_kitchen_right",
-    "near_kitchen_left",
-    "far_kitchen_centre",
-    "near_kitchen_centre",
-    "far_baseline_centre",
-    "near_baseline_centre",
-]
-NetTop = Literal["net_top_left", "net_top_centre", "net_top_right"]
 KeypointName = FloorKeypoint | NetTop
-CourtLine = Literal[
-    "far_baseline",
-    "near_baseline",
-    "left_sideline",
-    "right_sideline",
-    "far_kitchen_line",
-    "near_kitchen_line",
-    "far_centre_line",
-    "near_centre_line",
-]
 
 NET_HEIGHT_SIDELINE = 3.0
 """36 in, in feet."""
