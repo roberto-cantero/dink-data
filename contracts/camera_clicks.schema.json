@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/roberto-cantero/dink-data/contracts/camera_clicks.schema.json",
+  "title": "DinkData clicks behind a calibration (clicks.json)",
+  "$comment": "Generated from src/dinkdata/contracts/ by `uv run dink contracts export`. Don't edit by hand. Rules JSON Schema can't express, such as ordering, ids and the gold score, are checked by the pydantic models.",
+  "$defs": {
+    "ImageSize": {
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ],
+      "title": "ImageSize",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The clicks behind one calibration. Rules JSON Schema can't express are checked in code.",
+  "properties": {
+    "schema": {
+      "const": "dinkdata.camera_clicks/v1",
+      "title": "Schema",
+      "type": "string"
+    },
+    "camera_id": {
+      "description": "Opaque camera id (dinkdata.contracts.ids).",
+      "pattern": "^c_[0-9a-f]{16}$",
+      "title": "Camera Id",
+      "type": "string"
+    },
+    "version": {
+      "description": "The camera.json version fitted from these clicks.",
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "video_id": {
+      "description": "The video the clicked image came from.",
+      "pattern": "^v_[0-9a-f]{16}$",
+      "title": "Video Id",
+      "type": "string"
+    },
+    "frames": {
+      "description": "The frames the median image was made from, about 25.",
+      "items": {
+        "description": "0-based index of a decoded frame.",
+        "minimum": 0,
+        "type": "integer"
+      },
+      "minItems": 1,
+      "title": "Frames",
+      "type": "array"
+    },
+    "single_frame": {
+      "anyOf": [
+        {
+          "description": "0-based index of a decoded frame.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The frame the single-frame view showed. null if it was never used.",
+      "title": "Single Frame"
+    },
+    "image_size": {
+      "$ref": "#/$defs/ImageSize"
+    },
+    "keypoints": {
+      "additionalProperties": {
+        "maxItems": 2,
+        "minItems": 2,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "type": "array"
+      },
+      "description": "Floor keypoint clicks by name.",
+      "propertyNames": {
+        "enum": [
+          "far_left_corner",
+          "far_right_corner",
+          "near_right_corner",
+          "near_left_corner",
+          "far_kitchen_left",
+          "far_kitchen_right",
+          "near_kitchen_right",
+          "near_kitchen_left",
+          "far_kitchen_centre",
+          "near_kitchen_centre",
+          "far_baseline_centre",
+          "near_baseline_centre"
+        ]
+      },
+      "title": "Keypoints",
+      "type": "object"
+    },
+    "line_points": {
+      "additionalProperties": {
+        "description": "Points clicked along one court line. The tool asks for 3 to 5.",
+        "items": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "minItems": 2,
+        "type": "array"
+      },
+      "description": "Line points by court line.",
+      "propertyNames": {
+        "enum": [
+          "far_baseline",
+          "near_baseline",
+          "left_sideline",
+          "right_sideline",
+          "far_kitchen_line",
+          "near_kitchen_line",
+          "far_centre_line",
+          "near_centre_line"
+        ]
+      },
+      "title": "Line Points",
+      "type": "object"
+    },
+    "net_tops": {
+      "additionalProperties": {
+        "maxItems": 2,
+        "minItems": 2,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "type": "array"
+      },
+      "description": "Net top clicks by name.",
+      "propertyNames": {
+        "enum": [
+          "net_top_left",
+          "net_top_centre",
+          "net_top_right"
+        ]
+      },
+      "title": "Net Tops",
+      "type": "object"
+    },
+    "overlay_rects": {
+      "description": "Rectangles over the watermark, logo and other overlays.",
+      "items": {
+        "description": "x_min, y_min, x_max, y_max in pixels.",
+        "maxItems": 4,
+        "minItems": 4,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "type": "array"
+      },
+      "title": "Overlay Rects",
+      "type": "array"
+    },
+    "labeller": {
+      "description": "A person's short handle.",
+      "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+      "title": "Labeller",
+      "type": "string"
+    },
+    "saved_at": {
+      "format": "date-time",
+      "title": "Saved At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "camera_id",
+    "version",
+    "video_id",
+    "frames",
+    "single_frame",
+    "image_size",
+    "keypoints",
+    "line_points",
+    "net_tops",
+    "overlay_rects",
+    "labeller",
+    "saved_at"
+  ],
+  "type": "object"
+}

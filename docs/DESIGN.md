@@ -777,6 +777,7 @@ personal data.
 | `catalog.parquet` | `video_id`, `facility_id`, `camera_id`, `uploaded_at`, `duration_s`, `fps_nominal`, `size_bytes`, `setup`, `split`, `fetched`, `notes`. `uploaded_at` can be null for a hand download and `setup` stays null until calibration. Every game of a facility has the same split |
 | `{video_id}.frames.parquet` | `frame`, `t`, `dropped_before`, `duplicate`. One row per decoded frame, and the first frame's `t` is 0 |
 | `camera.json` | Camera id and model, setup, image size, intrinsics, distortion (k1, k2), rotation, translation, held-back error (stored as `reprojection_error_px`), visible region in court feet, overlay masks in pixels, source, version |
+| `clicks.json` | The clicks one calibration was fitted from: camera id and version, video id, the median and single frames, image size, keypoint, line point and net top clicks by name, overlay rectangles, labeller and save time (ADR 0020) |
 | `ball.parquet` | `frame`, `t`, `x`, `y`, `visible`, `conf`, `interpolated`, the top 3 `peaks` |
 | `players.parquet` | One row per frame per track: `frame`, `t`, `player_id`, `track_id`, `team`, `box`, 17 `keypoints`, `foot_court`, `estimated_foot`, `conf`, `foot_conf`. Tracks that aren't players have a null `player_id` |
 | `candidates.parquet` | For each candidate, `frame`, `t`, `conf`, the hit, bounce and net probabilities, and the hitter probabilities for p1 to p4 |
@@ -834,7 +835,7 @@ costs cents because those files are small.
 ```
 catalog/catalog.parquet, catalog/id_map.parquet (private)
 videos/{video_id}.mp4, videos/{video_id}.frames.parquet
-cameras/{camera_id}/v{n}/camera.json
+cameras/{camera_id}/v{n}/camera.json and clicks.json
 labels/gold-events/{video_id}/{labeller}/v{n}.json
 labels/gold-rallies/{video_id}/{labeller}/v{n}.json
 labels/ball/{video_id}/{labeller}/v{n}.parquet, labels/feet/{video_id}/{labeller}/v{n}.parquet

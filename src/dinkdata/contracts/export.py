@@ -12,6 +12,7 @@ from pydantic import TypeAdapter
 
 from dinkdata.contracts.ball import BallLabelRow, BallRow
 from dinkdata.contracts.camera import CameraCalibration
+from dinkdata.contracts.camera_clicks import CameraClicks
 from dinkdata.contracts.candidates import CandidateRow
 from dinkdata.contracts.catalog import CatalogRow
 from dinkdata.contracts.frames import FrameRow
@@ -37,6 +38,7 @@ SOURCES: dict[str, tuple[Any, str]] = {
     "catalog": (list[CatalogRow], "DinkData video catalog (catalog.parquet rows)"),
     "frames": (list[FrameRow], "DinkData frame timestamps (frames.parquet rows)"),
     "camera": (CameraCalibration, "DinkData camera calibration (camera.json)"),
+    "camera_clicks": (CameraClicks, "DinkData clicks behind a calibration (clicks.json)"),
     "ball": (list[BallRow], "DinkData ball track (ball.parquet rows)"),
     "candidates": (list[CandidateRow], "DinkData event candidates (candidates.parquet rows)"),
     "ball_labels": (list[BallLabelRow], "DinkData ball clicks (ball_labels.parquet rows)"),
