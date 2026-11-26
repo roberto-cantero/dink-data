@@ -94,8 +94,10 @@ along y and never along x.
    from the first 20 calibrations. That threshold is in pixels at full 1080p resolution, the
    only size PickleCam records today, so another size would need it scaled.
 5. The solver refuses a fit that puts the camera below the floor or on the far side of the
-   net, which usually means swapped names, a lens whose undistortion folds inside the image,
-   or a fit that didn't converge.
+   net, which usually means swapped names, a lens whose undistortion folds inside the
+   farthest click from the image centre, or a fit that didn't converge. The clicks don't fix
+   the lens beyond the farthest one, so a fold between it and the image corner is allowed.
+   The floor functions give NaN past the fold, and the visibility mask stops short of it.
 6. The visibility mask is the image border projected onto the floor, clipped at the horizon
    and at 10 ft beyond the lines on every side.
 7. The tool suggests the camera setup from the fit. A camera turned more than 20° off the

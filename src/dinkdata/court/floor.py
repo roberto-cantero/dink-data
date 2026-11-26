@@ -20,6 +20,7 @@ mismatch, so a 720p copy is never mapped with 1080p numbers.
 """
 
 import re
+from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
@@ -85,7 +86,7 @@ def court_to_image(
     court[:, :2] = points[:, :2]
     if points.shape[1] == 3:
         court[:, 2] = -points[:, 2]
-    cam = court @ _rotation(camera).T + np.asarray(camera.translation)
+    cam = court @ rotation(camera.rotation).T + np.asarray(camera.translation)
     with np.errstate(divide="ignore", invalid="ignore"):
         ideal = cam[:, :2] / cam[:, 2:3]
     ideal[cam[:, 2] <= 0] = np.nan
@@ -105,8 +106,8 @@ def image_to_court(
     pixels = np.asarray(pixels, dtype=float)
     if pixels.ndim != 2 or pixels.shape[1] != 2:
         raise ValueError(f"pixels must be (N, 2), not {pixels.shape}")
-    ideal = _undistort(camera, _from_pixels(camera, pixels))
-    rot = _rotation(camera)
+    ideal = undistort(camera, _from_pixels(camera, pixels))
+    rot = rotation(camera.rotation)
     rays = np.column_stack([ideal, np.ones(len(ideal))]) @ rot  # R^T @ ray, per row
     centre = -rot.T @ np.asarray(camera.translation)
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -133,12 +134,12 @@ def feet_per_pixel(
     points = np.asarray(points, dtype=float)
     if points.ndim != 2 or points.shape[1] != 2:
         raise ValueError(f"points must be (N, 2), not {points.shape}")
-    rot = _rotation(camera)
+    rot = rotation(camera.rotation)
     cam = points @ rot[:, :2].T + np.asarray(camera.translation)
     d_cam = rot[:, :2]  # d(camera coords) / d(x, y), the same for every floor point
     k1, k2 = camera.distortion.k1, camera.distortion.k2
     focal = np.diag([camera.intrinsics.fx, camera.intrinsics.fy])
-    r2_max = _max_radius(camera) ** 2
+    r2_max = max_radius(camera) ** 2
     values = np.full(len(points), np.nan)
     for n, (X, Y, Z) in enumerate(cam):
         if Z <= 0:
@@ -186,9 +187,9 @@ def _check_size(camera: CameraCalibration, video_size: VideoSize) -> None:
         )
 
 
-def _rotation(camera: CameraCalibration) -> np.ndarray:
-    """Rodrigues vector to rotation matrix."""
-    vec = np.asarray(camera.rotation, dtype=float)
+def rotation(vector: Sequence[float] | np.ndarray) -> np.ndarray:
+    """A Rodrigues vector, such as a calibration's `rotation`, as a 3x3 rotation matrix."""
+    vec = np.asarray(vector, dtype=float)
     angle = float(np.linalg.norm(vec))
     if angle == 0:
         return np.eye(3)
@@ -197,7 +198,7 @@ def _rotation(camera: CameraCalibration) -> np.ndarray:
     return np.eye(3) + np.sin(angle) * k + (1 - np.cos(angle)) * (k @ k)
 
 
-def _max_radius(camera: CameraCalibration) -> float:
+def max_radius(camera: CameraCalibration) -> float:
     """The undistorted radius where the radial mapping stops growing, or inf if it never does.
 
     The distorted radius is r (1 + k1 r^2 + k2 r^4). Its derivative 1 + 3 k1 u + 5 k2 u^2,
@@ -219,7 +220,7 @@ def _distort(camera: CameraCalibration, ideal: np.ndarray) -> np.ndarray:
     """Normalised pinhole coordinates to normalised distorted ones. NaN past the lens fold."""
     r2 = (ideal**2).sum(axis=1, keepdims=True)
     distorted = ideal * _radial(camera, r2)
-    distorted[(r2 > _max_radius(camera) ** 2)[:, 0]] = np.nan
+    distorted[(r2 > max_radius(camera) ** 2)[:, 0]] = np.nan
     return distorted
 
 
@@ -229,8 +230,11 @@ NEWTON_TOLERANCE = 1e-12
 """Largest radius error, in focal lengths, that counts as converged. About 1e-9 px."""
 
 
-def _undistort(camera: CameraCalibration, distorted: np.ndarray) -> np.ndarray:
-    """Invert the radial distortion with Newton iteration on the radius.
+def undistort(camera: CameraCalibration, distorted: np.ndarray) -> np.ndarray:
+    """Normalised distorted coordinates to normalised pinhole ones, inverting k1 and k2.
+
+    Normalised coordinates are pixels minus the principal point, divided by the focal length.
+    It uses Newton iteration on the radius.
 
     Solves r (1 + k1 r^2 + k2 r^4) = rd for each distorted radius rd, starting at r = rd and
     staying inside the radius where the mapping folds. A radius past the fold is NaN.
@@ -238,7 +242,7 @@ def _undistort(camera: CameraCalibration, distorted: np.ndarray) -> np.ndarray:
     k1, k2 = camera.distortion.k1, camera.distortion.k2
     if k1 == 0 and k2 == 0:
         return distorted.copy()
-    r_max = _max_radius(camera)
+    r_max = max_radius(camera)
     rd = np.sqrt((distorted**2).sum(axis=1))
     rd_max = r_max * _radial(camera, r_max**2) if np.isfinite(r_max) else np.inf
     r = np.minimum(rd, r_max)
