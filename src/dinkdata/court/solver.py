@@ -32,7 +32,7 @@ import numpy as np
 from dinkdata.contracts.camera import CameraCalibration
 from dinkdata.contracts.camera_clicks import CameraClicks, CourtLine, FloorKeypoint, NetTop
 from dinkdata.contracts.common import CameraSetup
-from dinkdata.court.floor import _undistort, image_to_court
+from dinkdata.court.floor import image_to_court, max_radius, rotation, undistort
 from dinkdata.court.keypoints import COURT_LINE_ENDS, KEYPOINTS
 from dinkdata.court.zones import FAR_KITCHEN_Y, LENGTH, NEAR_KITCHEN_Y, NET_Y, WIDTH
 
@@ -60,6 +60,8 @@ MIN_HELD_BACK_LINES = 2
 """A refit with one keypoint fewer than MIN_KEYPOINTS needs line points on this many lines."""
 MAX_EVALUATIONS = 2000
 """The most residual evaluations one least-squares fit may take before it counts as failed."""
+FOLD_MARGIN = 0.05
+"""During the fit, the lens must keep growing this share past the farthest click. Provisional."""
 UNDISTORT_STEPS = 20
 """Newton steps when undistorting a line point during the fit. Converges well inside the fold."""
 
@@ -69,6 +71,8 @@ VISIBLE_MARGIN_FT = 10.0
 """The visibility mask reaches this far beyond the court's lines on every side."""
 BORDER_SAMPLES = 128
 """Samples per image side when projecting the image border onto the floor."""
+FOLD_INSET = 1e-4
+"""The visibility mask stops this share of the fold radius inside a fold within the image."""
 
 
 class CalibrationError(ValueError):
@@ -137,15 +141,14 @@ def solve(clicks: CameraClicks, *, setup: CameraSetup) -> CalibrationFit:
     problem = _Problem.from_clicks(clicks)
     problem.check_enough_keypoints()
 
-    start = _initial_guess(problem)
-    params = _fit(problem, start, what="the fit", from_far=True)
+    params = _best_fit(problem)
     camera = _calibration(clicks, setup, params, error_px=0.0)
-    _check_camera(camera)
+    _check_camera(camera, farthest_px=problem.farthest_px)
 
     held_back: dict[FloorKeypoint, float] = {}
     for n, name in enumerate(problem.keypoint_names):
         without = problem.without_keypoint(n)
-        refit = _fit(without, params, what=f"the refit without {name}")
+        refit, _ = _fit(without, params, what=f"the refit without {name}")
         pixel = _project(refit, problem.keypoint_court[n : n + 1], problem.image_size)[0]
         held_back[name] = float(np.linalg.norm(pixel - problem.keypoint_px[n]))
 
@@ -166,7 +169,8 @@ def solve(clicks: CameraClicks, *, setup: CameraSetup) -> CalibrationFit:
 def visible_region(camera: CameraCalibration) -> list[tuple[float, float]]:
     """The floor the camera sees, as a polygon in court feet.
 
-    The image border, sampled densely, is projected onto the floor. A border pixel at or above
+    The image border, sampled densely, is projected onto the floor. Where the lens folds inside
+    the image, the border is pulled in to just inside the fold. A border pixel at or above
     the horizon, or one whose floor point is very far away, stops short at a distance beyond
     the clipping box, so the clip cuts it off. The polygon is clipped to VISIBLE_MARGIN_FT
     beyond the court's lines.
@@ -188,13 +192,20 @@ def visible_region(camera: CameraCalibration) -> list[tuple[float, float]]:
         LENGTH + VISIBLE_MARGIN_FT,
     )
 
-    rot = _rotation(np.asarray(camera.rotation))
+    rot = rotation(camera.rotation)
     centre = -rot.T @ np.asarray(camera.translation)
     corners = np.array([[box[0], box[2]], [box[1], box[2]], [box[1], box[3]], [box[0], box[3]]])
     far = 4 * float(np.max(np.linalg.norm(corners - centre[:2], axis=1)))
 
+    # Past the fold the lens maps nowhere, so the border is pulled in to just inside it.
+    image_centre = np.array([w / 2, h / 2])
+    offset = border - image_centre
+    reach_px = np.linalg.norm(offset, axis=1)
+    limit = fold_radius_px(camera) * (1 - FOLD_INSET)
+    border = image_centre + offset * np.minimum(1.0, limit / np.maximum(reach_px, 1e-12))[:, None]
+
     i = camera.intrinsics
-    ideal = _undistort(camera, (border - np.array([i.cx, i.cy])) / np.array([i.fx, i.fy]))
+    ideal = undistort(camera, (border - np.array([i.cx, i.cy])) / np.array([i.fx, i.fy]))
     rays = np.column_stack([ideal, np.ones(len(ideal))]) @ rot
     floor = image_to_court(camera, border, video_size=(w, h))
     reach = np.linalg.norm(floor - centre[:2], axis=1)
@@ -242,6 +253,18 @@ class _Problem:
             net_px=np.array([clicks.net_tops[n] for n in net_names], float).reshape(-1, 2),
             lines=lines,
         )
+
+    @property
+    def click_radii_px(self) -> np.ndarray:
+        """Each click's distance from the image centre, in pixels."""
+        clicks = [self.keypoint_px, self.net_px, *(points for _, _, points in self.lines)]
+        centre = np.array(self.image_size) / 2
+        return np.linalg.norm(np.concatenate(clicks) - centre, axis=1)
+
+    @property
+    def farthest_px(self) -> float:
+        """The distance of the farthest click from the image centre, in pixels."""
+        return float(self.click_radii_px.max())
 
     def without_keypoint(self, n: int) -> "_Problem":
         keep = [i for i in range(len(self.keypoint_names)) if i != n]
@@ -299,6 +322,11 @@ class _Problem:
             parts.append((heights + self.net_court[:, 2]) / NET_SAG_SIGMA_FT * prior_px)
         for _, ends, points in self.lines:
             parts.append(_line_distance(params, ends, points, self.image_size))
+        # A barrier keeps the lens growing out past every click: each click within FOLD_MARGIN
+        # of the fold costs its distance past that line, in pixels. Without it a fit can fold
+        # the lens inside the clicks, where the lens is flat and maps nothing well.
+        _, fold = _fold(k1, k2)
+        parts.append(np.maximum(0.0, self.click_radii_px * (1 + FOLD_MARGIN) - f * fold))
         width = self.image_size[0]
         parts.append(
             np.array(
@@ -332,14 +360,25 @@ def _lens(params: np.ndarray, height: int) -> tuple[float, float, float]:
     return float(height * np.exp(params[6])), float(params[7]), float(params[8])
 
 
-def _rotation(vec: np.ndarray) -> np.ndarray:
-    """Rodrigues vector to rotation matrix, as in the floor functions."""
-    angle = float(np.linalg.norm(vec))
-    if angle == 0:
-        return np.eye(3)
-    kx, ky, kz = vec / angle
-    k = np.array([[0, -kz, ky], [kz, 0, -kx], [-ky, kx, 0]])
-    return np.eye(3) + np.sin(angle) * k + (1 - np.cos(angle)) * (k @ k)
+def _fold(k1: float, k2: float) -> tuple[float, float]:
+    """The undistorted and distorted radii, in focal lengths, where the lens stops growing.
+
+    The same root as `floor.max_radius`, from k1 and k2 alone, so the fit can use it. Both are
+    inf for a lens that never folds.
+    """
+    if k2 == 0:
+        u = -1 / (3 * k1) if k1 < 0 else np.inf
+    else:
+        disc = 9 * k1 * k1 - 20 * k2
+        roots = (
+            [] if disc < 0 else [(-3 * k1 + sign * np.sqrt(disc)) / (10 * k2) for sign in (-1, 1)]
+        )
+        positive = [r for r in roots if r > 0]
+        u = min(positive) if positive else np.inf
+    if not np.isfinite(u):
+        return np.inf, np.inf
+    r = float(np.sqrt(u))
+    return r, r * (1 + k1 * u + k2 * u * u)
 
 
 _MIN_DEPTH_FT = 1e-3
@@ -353,7 +392,7 @@ def _project(params: np.ndarray, points: np.ndarray, image_size: tuple[int, int]
     """
     width, height = image_size
     f, k1, k2 = _lens(params, height)
-    cam = points @ _rotation(params[:3]).T + params[3:6]
+    cam = points @ rotation(params[:3]).T + params[3:6]
     depth = np.maximum(cam[:, 2:3], _MIN_DEPTH_FT)
     ideal = cam[:, :2] / depth
     r2 = (ideal**2).sum(axis=1, keepdims=True)
@@ -373,16 +412,22 @@ def _line_distance(
     """
     width, height = image_size
     f, k1, k2 = _lens(params, height)
-    cam = ends @ _rotation(params[:3]).T + params[3:6]
+    cam = ends @ rotation(params[:3]).T + params[3:6]
     normal = np.cross(cam[0], cam[1])
     normal = normal / np.linalg.norm(normal[:2])
 
+    # This is `floor.undistort` with a click past the fold held at the fold instead of NaN, so
+    # the optimiser always sees finite residuals. The barrier in `residuals` pulls the fold out
+    # past such a click, and the fitted lens is checked afterwards.
     distorted = (points - np.array([width / 2, height / 2])) / f
     rd = np.sqrt((distorted**2).sum(axis=1))
-    r = rd.copy()
+    r_max, _ = _fold(k1, k2)
+    r = np.minimum(rd, r_max)
     for _ in range(UNDISTORT_STEPS):
         r2 = r * r
-        r = r - (r * (1 + k1 * r2 + k2 * r2 * r2) - rd) / (1 + 3 * k1 * r2 + 5 * k2 * r2 * r2)
+        slope = 1 + 3 * k1 * r2 + 5 * k2 * r2 * r2
+        step = (r * (1 + k1 * r2 + k2 * r2 * r2) - rd) / np.maximum(slope, 1e-9)
+        r = np.clip(r - step, 0.0, r_max)
     scale = np.where(rd > 0, r / np.maximum(rd, 1e-12), 1.0)
     ideal = distorted * scale[:, None]
     gap = ideal @ normal[:2] + normal[2]
@@ -393,7 +438,7 @@ def _line_distance(
     r2 = (ideal**2).sum(axis=1)
     radial = 1 + k1 * r2 + k2 * r2 * r2
     bend = 2 * (k1 + 2 * k2 * r2)
-    along = (ideal @ normal[:2]) * bend / (radial + bend * r2)
+    along = (ideal @ normal[:2]) * bend / np.maximum(radial + bend * r2, 1e-9)
     mapped = (normal[:2] - along[:, None] * ideal) / radial[:, None]
     stretch = np.linalg.norm(mapped, axis=1)
     return f * gap / np.maximum(stretch, 1e-12)
@@ -402,14 +447,16 @@ def _line_distance(
 # Fitting
 
 
-def _initial_guess(problem: _Problem) -> np.ndarray:
-    """Pose and focal length from a floor homography of the keypoints, with no distortion.
+def _initial_guesses(problem: _Problem) -> list[np.ndarray]:
+    """Two starts from a floor homography of the keypoints, with no distortion.
 
     With the principal point known, the homography's first two columns are the court's x and
     y axes in camera coordinates, scaled by 1 / f in x and y. Their being orthogonal and of
-    equal length gives f. A guess that gives no f falls back to the prior's focal length.
+    equal length gives f, which is the first start. The homography ignores the lens, so for a
+    low camera that sees the court at a grazing angle that f can be far off. The second start
+    puts f at the prior and refits the pose at that f.
     """
-    from scipy.spatial.transform import Rotation
+    from scipy.optimize import least_squares
 
     width, height = problem.image_size
     pixels = problem.keypoint_px - np.array([width / 2, height / 2])
@@ -421,7 +468,24 @@ def _initial_guess(problem: _Problem) -> np.ndarray:
     if abs(c1 * c1 - c2 * c2) > 1e-12:
         guesses.append(-(a1 * a1 + b1 * b1 - a2 * a2 - b2 * b2) / (c1 * c1 - c2 * c2))
     positive = [g for g in guesses if g > 0]
-    f = float(np.sqrt(np.median(positive))) if positive else FOCAL_PRIOR * width
+    prior_f = FOCAL_PRIOR * width
+    homography_f = float(np.sqrt(np.median(positive))) if positive else prior_f
+
+    first = _pose_from_homography(problem, hom, homography_f)
+    second = _pose_from_homography(problem, hom, prior_f)
+
+    def pose_residuals(pose: np.ndarray) -> np.ndarray:
+        return problem.residuals(np.concatenate([pose, second[6:]]))
+
+    refit = least_squares(pose_residuals, second[:6], x_scale="jac", max_nfev=MAX_EVALUATIONS)
+    if np.isfinite(refit.x).all():
+        second[:6] = refit.x
+    return [first, second]
+
+
+def _pose_from_homography(problem: _Problem, hom: np.ndarray, f: float) -> np.ndarray:
+    """Parameters with the pose that the homography gives at focal length `f`, and no lens."""
+    from scipy.spatial.transform import Rotation
 
     m = np.diag([1 / f, 1 / f, 1.0]) @ hom
     scale = 2 / (np.linalg.norm(m[:, 0]) + np.linalg.norm(m[:, 1]))
@@ -430,11 +494,10 @@ def _initial_guess(problem: _Problem) -> np.ndarray:
         scale = -scale
     r1, r2, t = scale * m[:, 0], scale * m[:, 1], scale * m[:, 2]
     u, _, vt = np.linalg.svd(np.column_stack([r1, r2, np.cross(r1, r2)]))
-    rot = u @ vt
     params = np.zeros(9 + len(problem.net_names))
-    params[:3] = Rotation.from_matrix(rot).as_rotvec()
+    params[:3] = Rotation.from_matrix(u @ vt).as_rotvec()
     params[3:6] = t
-    params[6] = np.log(f / height)
+    params[6] = np.log(f / problem.image_size[1])
     params[9:] = -problem.net_court[:, 2]
     return params
 
@@ -460,17 +523,20 @@ def _homography(court: np.ndarray, pixels: np.ndarray) -> np.ndarray:
     return hom / np.linalg.norm(hom[:, :2], axis=0).mean()
 
 
-def _fit(problem: _Problem, start: np.ndarray, *, what: str, from_far: bool = False) -> np.ndarray:
+def _fit(
+    problem: _Problem, start: np.ndarray, *, what: str, from_far: bool = False
+) -> tuple[np.ndarray, float]:
     """Least squares with the robust loss. Raises `FitDidNotConverge` when it stops early.
 
     `from_far` marks a start from the homography guess, which can be far off. The robust loss
     has local minima there, so a plain least-squares pass runs first to reach the right basin.
-    A refit starts from the full fit, which is already close.
+    A refit starts from the full fit, which is already close. Returns the parameters and the
+    final robust cost.
     """
     from scipy.optimize import least_squares
 
     stages = [("linear", 1.0), ("soft_l1", ROBUST_SCALE * problem.image_size[1])]
-    params = start
+    params, cost = start, np.inf
     for loss, scale in stages if from_far else stages[1:]:
         result = least_squares(
             problem.residuals,
@@ -485,8 +551,22 @@ def _fit(problem: _Problem, start: np.ndarray, *, what: str, from_far: bool = Fa
                 f"{what} didn't converge after {result.nfev} evaluations ({result.message}). "
                 "Check the clicks for a misplaced or misnamed point."
             )
-        params = result.x
-    return params
+        params, cost = result.x, float(result.cost)
+    return params, cost
+
+
+def _best_fit(problem: _Problem) -> np.ndarray:
+    """Fit from each start and keep the lowest cost. Refuses only when every start fails."""
+    fits, failure = [], None
+    for start in _initial_guesses(problem):
+        try:
+            fits.append(_fit(problem, start, what="the fit", from_far=True))
+        except FitDidNotConverge as error:
+            failure = error
+    if not fits:
+        assert failure is not None
+        raise failure
+    return min(fits, key=lambda fit: fit[1])[0]
 
 
 def _calibration(
@@ -516,8 +596,26 @@ def _calibration(
     )
 
 
-def _check_camera(camera: CameraCalibration) -> None:
-    rot = _rotation(np.asarray(camera.rotation))
+def fold_radius_px(camera: CameraCalibration) -> float:
+    """How far from the image centre, in raw pixels, the lens stops growing. inf if never.
+
+    The floor functions give NaN past this radius, and the visibility mask stops short of it.
+    """
+    r = max_radius(camera)
+    if not np.isfinite(r):
+        return np.inf
+    k1, k2 = camera.distortion.k1, camera.distortion.k2
+    return float(r * (1 + k1 * r * r + k2 * r**4) * camera.intrinsics.fx)
+
+
+def _check_camera(camera: CameraCalibration, *, farthest_px: float) -> None:
+    """Refuse a camera below the floor, beyond the net, or with a lens that folds in the clicks.
+
+    The lens only has to grow out to the farthest click. Beyond that nothing constrains it,
+    and the floor functions give NaN past the fold, so a fold between the clicks and the image
+    corner is allowed.
+    """
+    rot = rotation(camera.rotation)
     x, y, z = -rot.T @ np.asarray(camera.translation)
     if z >= 0:
         raise CameraBelowFloor(
@@ -526,22 +624,18 @@ def _check_camera(camera: CameraCalibration) -> None:
         )
     if y < NET_Y:
         raise CameraBeyondNet(
-            f"the fit puts the camera at y = {y:.1f} ft, on the far side of the net. Names are "
-            "probably swapped between near and far. Check the keypoint names."
+            f"the fit puts the camera at y = {y:.1f} ft, on the far side of the net, so the "
+            "court is turned around. Names are probably swapped both between left and right "
+            "and between near and far. Check the keypoint names."
         )
-    k1, k2 = camera.distortion.k1, camera.distortion.k2
-    roots = np.roots([5 * k2, 3 * k1, 1]) if k2 != 0 else np.roots([3 * k1, 1])
-    folds = [r.real for r in np.atleast_1d(roots) if abs(r.imag) < 1e-12 and r.real > 0]
-    if folds:
-        u = min(folds)
-        fold_px = np.sqrt(u) * (1 + k1 * u + k2 * u * u) * camera.intrinsics.fx
-        corner_px = np.hypot(camera.image_size.width / 2, camera.image_size.height / 2)
-        if fold_px < corner_px:
-            raise FoldingLens(
-                f"the fitted lens (k1 = {k1:.3f}, k2 = {k2:.3f}) folds {fold_px:.0f} px from the "
-                f"image centre, inside the image's {corner_px:.0f} px corners. Add line points "
-                "near the image edges, or check for a misplaced click."
-            )
+    fold = fold_radius_px(camera)
+    if fold <= farthest_px:
+        k1, k2 = camera.distortion.k1, camera.distortion.k2
+        raise FoldingLens(
+            f"the fitted lens (k1 = {k1:.3f}, k2 = {k2:.3f}) folds {fold:.0f} px from the image "
+            f"centre, inside the clicks, which reach {farthest_px:.0f} px. A click far from the "
+            "centre is probably misplaced or misnamed."
+        )
 
 
 # The visibility mask

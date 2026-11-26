@@ -11,7 +11,7 @@ import pytest
 from dinkdata.contracts.camera import CameraCalibration
 from dinkdata.contracts.camera_clicks import CameraClicks
 from dinkdata.court import solver
-from dinkdata.court.floor import court_to_image
+from dinkdata.court.floor import court_to_image, image_to_court, max_radius, rotation
 from dinkdata.court.solver import (
     CameraBelowFloor,
     CameraBeyondNet,
@@ -20,6 +20,7 @@ from dinkdata.court.solver import (
     FoldingLens,
     HeldBackErrorUndefined,
     TooFewKeypoints,
+    fold_radius_px,
     line_centre,
     solve,
 )
@@ -41,19 +42,11 @@ def synthetic(setup: str) -> CameraCalibration:
 
 
 def centre_of(camera: CameraCalibration) -> np.ndarray:
-    return -_rotation(camera).T @ np.asarray(camera.translation)
-
-
-def _rotation(camera: CameraCalibration) -> np.ndarray:
-    vec = np.asarray(camera.rotation)
-    angle = float(np.linalg.norm(vec))
-    kx, ky, kz = vec / angle
-    k = np.array([[0, -kz, ky], [kz, 0, -kx], [-ky, kx, 0]])
-    return np.eye(3) + np.sin(angle) * k + (1 - np.cos(angle)) * (k @ k)
+    return -rotation(camera.rotation).T @ np.asarray(camera.translation)
 
 
 def angle_between_deg(a: CameraCalibration, b: CameraCalibration) -> float:
-    rel = _rotation(a) @ _rotation(b).T
+    rel = rotation(a.rotation) @ rotation(b.rotation).T
     return float(np.degrees(np.arccos(np.clip((np.trace(rel) - 1) / 2, -1, 1))))
 
 
@@ -256,17 +249,54 @@ def test_swapped_near_and_far_names_are_refused():
 def test_a_camera_beyond_the_net_is_refused():
     """Swapping both left and right and near and far turns the court around the net."""
     clicks = rename(rename(make_clicks(synthetic("dtl_high")), ("left", "right")), ("near", "far"))
-    with pytest.raises(CameraBeyondNet, match="swapped"):
+    with pytest.raises(CameraBeyondNet, match="turned around"):
         solve(clicks, setup="dtl_high")
 
 
-def test_a_lens_that_folds_inside_the_image_is_refused():
-    # This lens stops growing at a radius of 0.61 focal lengths, inside the image corners
-    # at 1.1. Only the clicks inside the fold are made.
-    truth = looking_at(**SETUPS["dtl_high"], k1=-0.4, k2=0.0)
-    clicks = make_clicks(truth)
+STRONG_BARREL = {"k1": -0.4, "k2": 0.0}
+"""This lens stops growing 609 px from the image centre at f = 1000, inside the 1101 px corners."""
+
+
+def test_a_lens_that_folds_inside_the_clicks_is_refused(monkeypatch: pytest.MonkeyPatch):
+    # The fit's barrier keeps the fold beyond the clicks, so this check is the last guard.
+    # A negative margin turns the barrier off. Every click but one lies inside this lens's
+    # fold, and a misplaced click near the image corner, which the robust loss ignores, lies
+    # past it.
+    monkeypatch.setattr(solver, "FOLD_MARGIN", -1.0)
+    clicks = make_clicks(looking_at(**SETUPS["dtl_high"], **STRONG_BARREL))
+    clicks.keypoints["near_left_corner"] = (5.0, HEIGHT - 5.0)
     with pytest.raises(FoldingLens, match="folds"):
         solve(clicks, setup="dtl_high")
+
+
+def test_a_misplaced_far_click_has_the_worst_held_back_error():
+    """With the barrier on, the same misplaced click is fitted around and shows as the worst."""
+    clicks = make_clicks(looking_at(**SETUPS["dtl_high"], **STRONG_BARREL))
+    clicks.keypoints["near_left_corner"] = (5.0, HEIGHT - 5.0)
+    fit = solve(clicks, setup="dtl_high")
+    worst = max(fit.held_back_px, key=lambda name: fit.held_back_px[name])
+    assert worst == "near_left_corner"
+
+
+FOLDS_IN_CORNERS = {"k1": -0.2, "k2": -0.01}
+"""A lens that folds 830 px from the centre at f = 1000: beyond the court, inside the corners."""
+
+
+def test_a_lens_that_folds_beyond_every_click_is_accepted():
+    truth = looking_at(**SETUPS["dtl_high"], **FOLDS_IN_CORNERS)
+    clicks = make_clicks(truth, noise_px=1.0)
+    camera = solve(clicks, setup="dtl_high").camera
+
+    assert fold_radius_px(camera) < np.hypot(WIDTH / 2, HEIGHT / 2)
+    # The floor functions stop at the fold, so the image corners map nowhere.
+    corners = np.array([[0.5, 0.5], [WIDTH - 0.5, HEIGHT - 0.5]])
+    assert np.isnan(image_to_court(camera, corners, video_size=VIDEO)).all()
+    # Every vertex of the visible region maps back inside the image.
+    region = np.array(camera.visible_region)
+    back = court_to_image(camera, region, video_size=VIDEO)
+    assert np.isfinite(back).all()
+    assert (back >= -1e-6).all() and (back[:, 0] <= WIDTH + 1e-6).all()
+    assert (back[:, 1] <= HEIGHT + 1e-6).all()
 
 
 def test_a_fit_that_does_not_converge_is_refused(monkeypatch: pytest.MonkeyPatch):
@@ -286,6 +316,82 @@ def test_every_refusal_is_a_calibration_error():
         FitDidNotConverge,
     ):
         assert issubclass(error, solver.CalibrationError)
+
+
+# Reliability over noise. People click to a pixel or two, so 20 noisy sets of clicks per
+# setup must all fit.
+
+SWEEP_SEEDS = range(20)
+SWEEP_NOISE_PX = 1.0
+MINIMUM_LINES = ("far_baseline", "left_sideline", "right_sideline")
+
+
+def refusals(setup: str, **limits: Any) -> list[str]:
+    truth = synthetic(setup)
+    failed = []
+    for seed in SWEEP_SEEDS:
+        clicks = make_clicks(truth, noise_px=SWEEP_NOISE_PX, seed=seed, **limits)
+        try:
+            solve(clicks, setup=truth.setup)
+        except solver.CalibrationError as error:
+            failed.append(f"seed {seed}: {type(error).__name__}: {error}")
+    return failed
+
+
+@pytest.mark.parametrize("setup", ["dtl_low", "dtl_high", "diagonal"])
+def test_full_clicks_with_1_px_noise_always_fit(setup: str):
+    assert refusals(setup) == []
+
+
+@pytest.mark.parametrize("setup", ["dtl_low", "dtl_high", "diagonal"])
+def test_the_minimum_clicks_with_1_px_noise_always_fit(setup: str):
+    assert refusals(setup, keypoints=FOUR, lines=MINIMUM_LINES) == []
+
+
+FIVE_WITH_A_BASELINE = (
+    "far_left_corner",
+    "far_baseline_centre",
+    "far_right_corner",
+    "far_kitchen_left",
+    "far_kitchen_right",
+)
+
+
+@pytest.mark.parametrize("setup", ["dtl_low", "dtl_high", "diagonal"])
+def test_five_keypoints_with_3_on_a_baseline_have_a_stable_held_back_error(setup: str):
+    """Leaving out a kitchen keypoint leaves 3 on the baseline and 1 off it."""
+    truth = synthetic(setup)
+    errors = []
+    for seed in SWEEP_SEEDS:
+        clicks = make_clicks(
+            truth,
+            noise_px=SWEEP_NOISE_PX,
+            seed=seed,
+            keypoints=FIVE_WITH_A_BASELINE,
+            lines=MINIMUM_LINES,
+        )
+        fit = solve(clicks, setup=truth.setup)
+        errors.append(max(fit.held_back_px.values()))
+    assert max(errors) < 6 * SWEEP_NOISE_PX
+
+
+# The contract examples
+
+
+def test_the_example_clicks_give_the_example_camera():
+    """Pins the solver, the two contract examples and the floor functions together."""
+    root = Path(__file__).parents[2] / "contracts"
+    clicks = CameraClicks.model_validate_json((root / "camera_clicks.example.json").read_text())
+    want = CameraCalibration.model_validate_json((root / "camera.example.json").read_text())
+
+    got = solve(clicks, setup="dtl_low").camera
+
+    assert got.intrinsics.fx == pytest.approx(want.intrinsics.fx, rel=0.01)
+    assert got.distortion.k1 == pytest.approx(want.distortion.k1, abs=0.02)
+    assert got.distortion.k2 == pytest.approx(want.distortion.k2, abs=0.02)
+    assert np.linalg.norm(centre_of(got) - centre_of(want)) < 0.2
+    assert angle_between_deg(got, want) < 0.2
+    assert got.reprojection_error_px < 2.0
 
 
 # Warnings
@@ -319,9 +425,12 @@ def _inside(polygon: np.ndarray, points: np.ndarray) -> np.ndarray:
     return ((crosses & (x < at)).sum(axis=1) % 2) == 1
 
 
-@pytest.mark.parametrize("setup", ["dtl_low", "dtl_high", "diagonal"])
+@pytest.mark.parametrize("setup", ["dtl_low", "dtl_high", "diagonal", "folds_in_corners"])
 def test_the_visible_region_is_the_true_floor_footprint(setup: str):
-    truth = synthetic(setup)
+    if setup == "folds_in_corners":
+        truth = looking_at(**SETUPS["dtl_high"], **FOLDS_IN_CORNERS)
+    else:
+        truth = synthetic(setup)
     camera = solve(make_clicks(truth), setup=truth.setup).camera
     region = np.array(camera.visible_region)
 
@@ -338,6 +447,14 @@ def test_the_visible_region_is_the_true_floor_footprint(setup: str):
     unseen = (
         ~finite | (px < -margin) | (px > WIDTH + margin) | (py < -margin) | (py > HEIGHT + margin)
     )
+    # Past the lens fold the truth gives NaN. The fitted fold sits a little off the true one,
+    # so points within 2% of the fold's radius count as neither seen nor unseen.
+    cam = np.column_stack([floor, np.zeros(len(floor))]) @ rotation(truth.rotation).T
+    cam += np.asarray(truth.translation)
+    radius = np.hypot(cam[:, 0], cam[:, 1]) / cam[:, 2]
+    near_fold = np.abs(radius / max_radius(truth) - 1) < 0.02
+    seen &= ~near_fold
+    unseen &= ~near_fold
     inside = _inside(region, floor)
     assert seen.sum() > 100
     assert inside[seen].all()
