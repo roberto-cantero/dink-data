@@ -375,6 +375,27 @@ def test_five_keypoints_with_3_on_a_baseline_have_a_stable_held_back_error(setup
     assert max(errors) < 6 * SWEEP_NOISE_PX
 
 
+def test_a_bad_start_fails_fast_so_the_second_start_runs(monkeypatch: pytest.MonkeyPatch):
+    """On this seed the homography start's plain pass never converges. It must give up fast.
+
+    A normal solve, with both starts and every leave-one-out refit, takes about 800 residual
+    evaluations. Counting them, not seconds, keeps the test steady on slow CI runners.
+    """
+    calls = [0]
+    residuals = solver._Problem.residuals
+
+    def counted(problem: Any, params: np.ndarray) -> np.ndarray:
+        calls[0] += 1
+        return residuals(problem, params)
+
+    monkeypatch.setattr(solver._Problem, "residuals", counted)
+    truth = synthetic("dtl_low")
+    fit = solve(make_clicks(truth, noise_px=1.0, seed=113), setup="dtl_low")
+
+    assert calls[0] < 3000
+    assert np.linalg.norm(centre_of(fit.camera) - centre_of(truth)) < 0.5
+
+
 # The contract examples
 
 
