@@ -22,7 +22,6 @@ PLACEHOLDERS = {
     "catalog": "Sync the list of PickleCam videos into the catalog.",
     "sample": "Pick the sample and gold games, holding out whole facilities.",
     "fetch": "Copy selected videos and their frame timestamps into storage.",
-    "calibrate": "Calibrate a camera from clicked court points.",
     "run": "Run the pipeline on recordings.",
     "eval": "Score a pipeline run against the gold set.",
     "report": "Build the one-page report for a game.",
@@ -275,6 +274,89 @@ def studio(
     mode = "Events" if label else "Rally"
     typer.echo(f"{mode} mode for {video_id}: http://127.0.0.1:{port}")
     uvicorn.run(studio_app, host="127.0.0.1", port=port)
+
+
+@app.command()
+def calibrate(
+    camera_id: Annotated[str, typer.Argument(help="Camera id, such as c_ and 16 hex.")],
+    labeller: Annotated[str | None, typer.Option(help="Your short handle, such as robby.")] = None,
+    video: Annotated[
+        str | None,
+        typer.Option(
+            help="Video id to calibrate on. Defaults to the camera's first video in the catalog.",
+            show_default=False,
+        ),
+    ] = None,
+    videos: Annotated[
+        Path, typer.Option(help="Local folder of videos named <video_id>.mp4, as in R2.")
+    ] = Path("data/videos"),
+    cameras: Annotated[Path, typer.Option(help="Local folder of calibrations, as in R2.")] = Path(
+        "data/cameras"
+    ),
+    local: Annotated[
+        bool, typer.Option("--local", help="Keep the calibration on this machine and skip R2.")
+    ] = False,
+    port: Annotated[int, typer.Option(help="Port on 127.0.0.1.")] = 8765,
+) -> None:
+    """Calibrate a camera from clicked court points, in the studio's Calibrate mode.
+
+    The page shows the median of about 25 frames of one of the camera's videos. Saving writes
+    camera.json and clicks.json as the camera's next version in R2 and in --cameras. Run with
+    `uv run --env-file .env` so the catalog, the video and the saves use R2.
+    """
+    if labeller is None:
+        typer.echo(
+            "Say who is calibrating: dink calibrate <camera_id> --labeller <handle>.", err=True
+        )
+        raise typer.Exit(code=1)
+    try:
+        import uvicorn
+
+        from dinkdata.studio import calibrate as calibrate_mode
+        from dinkdata.studio import sync
+        from dinkdata.studio.server import create_calibrate_app
+    except ImportError:
+        typer.echo(
+            "Calibrate mode needs its extras: uv sync --extra cv --extra cpu --extra studio",
+            err=True,
+        )
+        raise typer.Exit(code=1) from None
+    import tempfile
+
+    from dinkdata.contracts.catalog import CATALOG
+    from dinkdata.data import r2
+    from dinkdata.data.ingest import CATALOG_PATH
+
+    store = None
+    if not local and not r2.rclone_missing() and os.environ.get("RCLONE_CONFIG_R2_TYPE"):
+        store = sync.RcloneLabelStore()
+    try:
+        if store is None:
+            if video is None:
+                typer.echo(
+                    "R2 is off, so the catalog can't pick the camera's video. Pass --video "
+                    "<video_id>, or run with uv run --env-file .env.",
+                    err=True,
+                )
+                raise typer.Exit(code=1)
+            typer.echo("R2 is off, so the catalog isn't checked and saves stay in --cameras.")
+            video_id = video
+        else:
+            with tempfile.TemporaryDirectory() as work:
+                local_catalog = Path(work) / "catalog.parquet"
+                store.get(CATALOG_PATH, local_catalog)
+                rows = CATALOG.rows(CATALOG.read(local_catalog))
+            video_id = calibrate_mode.pick_video(rows, camera_id, video)
+        mp4, frames = sync.fetch_video(store, videos, video_id)
+        typer.echo(f"Making the median picture of {video_id}...")
+        calibrate_app = create_calibrate_app(
+            mp4, frames, camera_id, video_id, labeller, cameras, store=store
+        )
+    except (ValueError, r2.RcloneError) as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(f"Calibrate mode for {camera_id} on {video_id}: http://127.0.0.1:{port}")
+    uvicorn.run(calibrate_app, host="127.0.0.1", port=port)
 
 
 @app.command()

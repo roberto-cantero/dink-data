@@ -4,6 +4,10 @@ Start it with `dink studio --rallies <video_id>` for rally mode or `dink studio 
 <video_id>` for events mode, each with `--labeller <handle>`. It listens on 127.0.0.1 only,
 and the video's file name never reaches the page or a label file.
 
+`dink calibrate <camera_id>` starts Calibrate mode, which `create_calibrate_app` builds. It
+shows a median picture of one of the camera's videos, fits the clicks and saves a versioned
+calibration (`dinkdata.studio.calibrate`).
+
 Rally mode plays the video in the browser, which needs no exact frames. Events mode serves
 each frame exactly, by index, from the video reader, and every `t` it saves comes from the
 frame's timestamp (`dinkdata.studio.frames`). Saves are validated against the contracts,
@@ -25,13 +29,21 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from dinkdata.contracts.common import VIDEO_ID_PATTERN, Frame, PlayerId, Seconds, load, to_json
+from dinkdata.contracts.common import (
+    CAMERA_ID_PATTERN,
+    VIDEO_ID_PATTERN,
+    Frame,
+    PlayerId,
+    Seconds,
+    load,
+    to_json,
+)
 from dinkdata.contracts.frames import FRAMES
 from dinkdata.contracts.game_log import EventLog
 from dinkdata.contracts.rallies import RallyLabels
 from dinkdata.contracts.tables import column
-from dinkdata.data.r2 import RcloneError
-from dinkdata.studio import events, rally, store, sync
+from dinkdata.data.r2 import ListingStore, RcloneError
+from dinkdata.studio import calibrate, events, rally, store, sync
 
 logger = logging.getLogger(__name__)
 
@@ -387,3 +399,131 @@ def _load_gold(
             f"{path.relative_to(labels)} isn't valid rally gold ({_errors(error)[0]}). If it is "
             "v1, run `dink contracts upgrade-rallies`."
         ) from None
+
+
+# ---- calibrate mode ----
+
+
+def create_calibrate_app(
+    video: Path,
+    frames: Path,
+    camera_id: str,
+    video_id: str,
+    labeller: str,
+    cameras: Path,
+    *,
+    store: ListingStore | None = None,
+) -> FastAPI:
+    """Calibrate mode for one camera, on one of its videos and its frames.parquet.
+
+    Saves go to `cameras/{camera_id}/v{n}/` and, with a `store`, to R2 first. The median
+    picture is made here, before the server starts, so the page never waits for it.
+    """
+    from dinkdata.studio.frames import FrameSource, jpeg  # needs the cv extra
+
+    if not re.fullmatch(CAMERA_ID_PATTERN, camera_id):
+        raise ValueError(f"not a camera id: {camera_id!r}. Camera ids look like c_ and 16 hex.")
+    if not re.fullmatch(VIDEO_ID_PATTERN, video_id):
+        raise ValueError(f"not a video id: {video_id!r}. Make one with `dink id video`.")
+    if not _HANDLE.fullmatch(labeller):
+        raise ValueError(f"a labeller must be a short lowercase handle, not {labeller!r}")
+    if not video.is_file() or not frames.is_file():
+        raise ValueError(f"calibrate mode needs {video.name} and its frames.parquet")
+
+    table = FRAMES.read(frames)
+    source = FrameSource(video, table)
+    try:
+        sampled = calibrate.sample_frames(len(source))
+        median = jpeg(calibrate.median_picture(video, table, sampled))
+    except BaseException:
+        source.close()
+        raise
+    size = (source.width, source.height)
+    folder = cameras / camera_id
+    pictures = f"/api/picture/{camera_id}/{video_id}"
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        yield
+        source.close()
+
+    app = _base_app("calibrate.html", lifespan)
+
+    @app.get("/api/session")
+    def session() -> dict[str, Any]:
+        return {
+            "camera_id": camera_id,
+            "video_id": video_id,
+            "labeller": labeller,
+            "width": source.width,
+            "height": source.height,
+            "frames": sampled,
+            "median_url": f"{pictures}/median",
+            "frame_url": f"{pictures}/frame",
+            "versions": calibrate.local_versions(folder),
+            "r2": {"on": store is not None},
+            "diagram": calibrate.diagram(),
+        }
+
+    # The camera and video ids are in the path because the studio always runs on the same
+    # port: a picture the browser cached for one camera must never answer for another.
+    def _check(for_camera: str, for_video: str) -> None:
+        if (for_camera, for_video) != (camera_id, video_id):
+            raise HTTPException(404, "that picture belongs to another camera or video")
+
+    cached = {"Cache-Control": "private, max-age=86400, immutable"}
+
+    @app.get("/api/picture/{for_camera}/{for_video}/median")
+    def median_picture(for_camera: str, for_video: str) -> Response:
+        _check(for_camera, for_video)
+        return Response(median, media_type="image/jpeg", headers=cached)
+
+    @app.get("/api/picture/{for_camera}/{for_video}/frame/{index}")
+    def single_frame(for_camera: str, for_video: str, index: int) -> Response:
+        _check(for_camera, for_video)
+        if not 0 <= index < len(source):
+            raise HTTPException(404, f"frame {index} is outside the video's {len(source)} frames")
+        return Response(source.jpeg(index), media_type="image/jpeg", headers=cached)
+
+    def _fit(clicks: calibrate.Clicks) -> Any:
+        """The clicks as a record and its fit, or a 422 response that says what is wrong."""
+        try:
+            record = calibrate.to_clicks(
+                clicks,
+                camera_id=camera_id,
+                video_id=video_id,
+                version=1,
+                frames=sampled,
+                image_size=size,
+                labeller=labeller,
+            )
+        except ValidationError as error:
+            return JSONResponse({"errors": _errors(error)}, status_code=422)
+        try:
+            return record, calibrate.fit(record, clicks.setup)
+        except ValueError as error:  # NoSetup and the solver's CalibrationError
+            return JSONResponse({"errors": [str(error)]}, status_code=422)
+
+    @app.post("/api/fit", response_model=None)
+    def fit(clicks: calibrate.Clicks) -> JSONResponse | dict[str, Any]:
+        fitted = _fit(clicks)
+        if isinstance(fitted, JSONResponse):
+            return fitted
+        return calibrate.view(fitted[1])
+
+    @app.post("/api/save", response_model=None)
+    def save(clicks: calibrate.Clicks) -> JSONResponse | dict[str, Any]:
+        fitted = _fit(clicks)
+        if isinstance(fitted, JSONResponse):
+            return fitted
+        record, result = fitted
+        try:
+            n = calibrate.save(record, result, cameras=cameras, store=store)
+        except (RcloneError, OSError) as error:
+            logger.warning("R2 failed for the calibration of %s: %s", camera_id, error)
+            return JSONResponse(
+                {"errors": [f"{R2_FAILED} Nothing was saved. Save again."]}, status_code=502
+            )
+        return {"version": n, "path": f"{camera_id}/v{n}", "uploaded": store is not None}
+
+    return app

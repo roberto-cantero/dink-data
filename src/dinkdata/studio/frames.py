@@ -16,6 +16,7 @@ from fractions import Fraction
 from pathlib import Path
 
 import av
+import numpy as np
 import pyarrow as pa
 
 from dinkdata.video.reader import VideoFrame, VideoReader
@@ -88,16 +89,22 @@ class FrameSource:
 
 
 def _encode(frame: VideoFrame) -> bytes:
-    height, width = frame.image.shape[:2]
+    data = jpeg(frame.image)
+    if not data:
+        raise RuntimeError(f"frame {frame.index} couldn't be encoded")
+    return data
+
+
+def jpeg(image: np.ndarray) -> bytes:
+    """An RGB uint8 picture as a JPEG, or empty bytes if it couldn't be encoded."""
+    height, width = image.shape[:2]
     codec = av.CodecContext.create("mjpeg", "w")
     codec.width, codec.height, codec.pix_fmt = width, height, "yuvj420p"
     codec.time_base = Fraction(1, 1)
     codec.options = {"qmin": str(QSCALE), "qmax": str(QSCALE)}
-    picture = av.VideoFrame.from_ndarray(frame.image, format="rgb24").reformat(format="yuvj420p")
+    picture = av.VideoFrame.from_ndarray(image, format="rgb24").reformat(format="yuvj420p")
     data = b"".join(bytes(p) for p in [*codec.encode(picture), *codec.encode(None)])
-    if not data.startswith(b"\xff\xd8"):
-        raise RuntimeError(f"frame {frame.index} couldn't be encoded")
-    return data
+    return data if data.startswith(b"\xff\xd8") else b""
 
 
 def _nominal_rate(video: Path) -> float:
