@@ -11,7 +11,16 @@ runner = CliRunner()
 def test_help_lists_every_command():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    for name in [*PLACEHOLDERS, "version", "studio", "id", "ingest", "highlights", "stats"]:
+    for name in [
+        *PLACEHOLDERS,
+        "version",
+        "studio",
+        "calibrate",
+        "id",
+        "ingest",
+        "highlights",
+        "stats",
+    ]:
         assert name in result.output
 
 
@@ -112,3 +121,37 @@ def test_studio_errors_go_to_stderr(monkeypatch):
     assert result.exit_code == 1
     assert "extras" in result.stderr
     assert "extras" not in result.stdout
+
+
+def test_calibrate_help_runs():
+    result = runner.invoke(app, ["calibrate", "--help"])
+    assert result.exit_code == 0
+    assert "camera_id" in result.output
+    assert "--video" in result.output
+
+
+def test_calibrate_with_r2_off_needs_a_video(tmp_path):
+    result = runner.invoke(
+        app, ["calibrate", "c_5eed00000000ca01", "--labeller", "robby", "--local"]
+    )
+    assert result.exit_code == 1
+    assert "--video" in result.output
+
+
+def test_calibrate_with_r2_off_says_where_the_video_goes(tmp_path):
+    result = runner.invoke(
+        app,
+        [
+            "calibrate",
+            "c_5eed00000000ca01",
+            "--video",
+            "v_5eed00000000ca11",
+            "--labeller",
+            "robby",
+            "--videos",
+            str(tmp_path),
+            "--local",
+        ],
+    )
+    assert result.exit_code == 1
+    assert "v_5eed00000000ca11.mp4" in result.output

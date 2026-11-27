@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calibrate a camera</title>
+  <link rel="stylesheet" href="/static/rally.css">
+  <link rel="stylesheet" href="/static/calibrate.css">
+</head>
+<body>
+  <header>
+    <h1>Calibrate</h1>
+    <span id="who"></span>
+    <span id="r2"></span>
+    <span id="status" role="status"></span>
+    <label>Setup
+      <select id="setup">
+        <option value="">pick one</option>
+      </select>
+    </label>
+    <button id="fit" type="button" title="Fit the clicks (F)">Fit</button>
+    <button id="save" type="button" title="Save a new version (Cmd+S)">Save</button>
+  </header>
+
+  <main>
+    <section id="picture">
+      <div id="stage">
+        <img id="image" alt="The camera's court" draggable="false">
+        <canvas id="overlay"></canvas>
+        <canvas id="loupe" width="200" height="200" hidden></canvas>
+        <div id="hint"></div>
+      </div>
+      <div id="view"></div>
+    </section>
+
+    <section id="side">
+      <svg id="diagram" viewBox="-3 -3 26 50" aria-label="Court diagram"></svg>
+      <div id="messages"></div>
+      <table id="points">
+        <thead><tr><th>Point</th><th>Clicked</th><th>Held back</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <details id="keys" open>
+        <summary>Keys</summary>
+        <dl>
+          <dt>Click</dt><dd>Place the highlighted point, at the centre of the painted line</dd>
+          <dt>Drag</dt><dd>Move a placed point</dd>
+          <dt>S</dt><dd>Skip the highlighted point, when it isn't visible</dd>
+          <dt>Backspace</dt><dd>Undo the last click</dd>
+          <dt>M</dt><dd>Switch between the median picture and a single frame</dd>
+          <dt>, and .</dt><dd>The single frame before or after, among the sampled frames</dd>
+          <dt>F</dt><dd>Fit and draw the fitted court lines</dd>
+          <dt>L</dt><dd>Hide or show the fitted court</dd>
+          <dt>Cmd+S</dt><dd>Save a new version</dd>
+        </dl>
+        <p>Click a point's name to place it again.</p>
+      </details>
+    </section>
+  </main>
+  <script src="/static/calibrate.js"></script>
+</body>
+</html>

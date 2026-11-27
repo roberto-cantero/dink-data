@@ -9,29 +9,14 @@ R2 keys mirror the local folder: `labels/gold-events/<video_id>/<handle>/v<n>.js
 `<labels>/gold-events/<video_id>/<handle>/v<n>.json` on disk.
 """
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
 
-from dinkdata.data.r2 import DIRECTORY_NOT_FOUND, RcloneStore, Store
+from dinkdata.data.r2 import ListingStore, RcloneStore, Store
 
-
-class LabelStore(Store, Protocol):
-    def files(self, folder: str) -> list[str]:
-        """Every file under `folder`, as paths relative to it. Empty if there are none."""
-        ...
-
-
-@dataclass
-class RcloneLabelStore(RcloneStore):
-    """The R2 bucket, with the folder listing the studio needs."""
-
-    def files(self, folder: str) -> list[str]:
-        result = self._run(["lsf", "-R", "--files-only", f"{self.remote}/{folder}"])
-        if result.returncode == DIRECTORY_NOT_FOUND:
-            return []
-        self._check(result)
-        return sorted(line for line in result.stdout.splitlines() if line)
+LabelStore = ListingStore
+"""R2 with the folder listing the studio needs."""
+RcloneLabelStore = RcloneStore
+"""The R2 bucket. Its folder listing moved to `RcloneStore` for the versioned save."""
 
 
 def pull(store: LabelStore, labels: Path, folder: str) -> list[str]:

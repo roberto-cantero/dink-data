@@ -1,0 +1,47 @@
+/* Calibrate mode, on top of rally.css. */
+
+#stage { overflow: hidden; user-select: none; touch-action: none; cursor: crosshair; }
+#stage img, #stage #overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+#stage #overlay { pointer-events: none; }
+#stage.dragging { cursor: grabbing; }
+#loupe {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border: 2px solid white;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px black;
+}
+#hint { pointer-events: none; }
+#view { margin-top: 4px; font-family: ui-monospace, monospace; color: var(--muted); }
+
+#r2 { font-family: ui-monospace, monospace; color: var(--muted); }
+#r2.off { color: var(--amber); }
+
+#diagram { width: 180px; display: block; margin: 0 auto 8px; }
+#diagram .court { fill: var(--game); }
+#diagram line { stroke: var(--text); stroke-width: 0.25; }
+#diagram line.net { stroke: var(--muted); stroke-dasharray: 0.6 0.4; }
+#diagram circle { fill: var(--panel); stroke: var(--text); stroke-width: 0.2; cursor: pointer; }
+#diagram circle.placed { fill: var(--accent); }
+#diagram circle.skipped { fill: var(--line); }
+#diagram circle.current { fill: var(--amber); r: 1.3; }
+
+#messages p { margin: 4px 0; }
+#messages .error { color: var(--red); }
+#messages .warning { color: var(--amber); }
+#messages .worst { font-weight: 600; }
+
+#points { width: 100%; border-collapse: collapse; }
+#points th, #points td { text-align: left; padding: 2px 6px; border-bottom: 1px solid var(--line); }
+#points td { font-family: ui-monospace, monospace; }
+#points tr { cursor: pointer; }
+#points tr.current { background: var(--select); }
+#points tr.worst td:last-child { color: var(--red); font-weight: 600; }
+#points .skipped { color: var(--muted); }
