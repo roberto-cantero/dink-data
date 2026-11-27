@@ -60,9 +60,10 @@ MIN_HELD_BACK_LINES = 2
 """A refit with one keypoint fewer than MIN_KEYPOINTS needs line points on this many lines."""
 MAX_EVALUATIONS = 2000
 """The most residual evaluations one robust fit may take before it counts as failed."""
-PLAIN_MAX_EVALUATIONS = 200
-"""The most evaluations a plain pass from a start may take. Good ones converge in under 10, so
-a start that needs more is bad, and failing fast lets the other start run. Provisional."""
+PLAIN_MAX_EVALUATIONS = 500
+"""The most evaluations a plain pass from a start may take. Good ones converge in a few hundred
+at most, and one stuck far from the answer runs to the cap, so failing there lets the other
+start run. Provisional."""
 FOLD_MARGIN = 0.05
 """During the fit, the lens must keep growing this share past the farthest click. Provisional."""
 UNDISTORT_STEPS = 20

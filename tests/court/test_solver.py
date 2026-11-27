@@ -375,11 +375,25 @@ def test_five_keypoints_with_3_on_a_baseline_have_a_stable_held_back_error(setup
     assert max(errors) < 6 * SWEEP_NOISE_PX
 
 
+@pytest.mark.parametrize("seed", [8, 21, 23, 28])
+def test_slow_good_plain_passes_with_the_minimum_clicks_still_fit(seed: int):
+    """With the minimum clicks a good plain pass can take a few hundred evaluations.
+
+    These seeds took 201 to 277 on dtl_low at 2 px, so a plain-pass cap below that refuses
+    them, or lets the other start win with a wrong fit (review of #107).
+    """
+    truth = synthetic("dtl_low")
+    clicks = make_clicks(truth, noise_px=2.0, seed=seed, keypoints=FOUR, lines=MINIMUM_LINES)
+    fit = solve(clicks, setup="dtl_low")
+    assert fit.camera.intrinsics.fx == pytest.approx(truth.intrinsics.fx, rel=0.03)
+
+
 def test_a_bad_start_fails_fast_so_the_second_start_runs(monkeypatch: pytest.MonkeyPatch):
     """On this seed the homography start's plain pass never converges. It must give up fast.
 
     A normal solve, with both starts and every leave-one-out refit, takes about 800 residual
-    evaluations. Counting them, not seconds, keeps the test steady on slow CI runners.
+    evaluations. This one takes about 6,200 with the plain pass capped, and 25,000 without the
+    cap. Counting calls, not seconds, keeps the test steady on slow CI runners.
     """
     calls = [0]
     residuals = solver._Problem.residuals
@@ -392,7 +406,7 @@ def test_a_bad_start_fails_fast_so_the_second_start_runs(monkeypatch: pytest.Mon
     truth = synthetic("dtl_low")
     fit = solve(make_clicks(truth, noise_px=1.0, seed=113), setup="dtl_low")
 
-    assert calls[0] < 3000
+    assert calls[0] < 7000
     assert np.linalg.norm(centre_of(fit.camera) - centre_of(truth)) < 0.5
 
 
