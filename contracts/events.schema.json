@@ -660,7 +660,7 @@
   "description": "The game log of one recording. Rules JSON Schema can't express are checked in code.",
   "properties": {
     "schema": {
-      "const": "dinkdata.events/v2",
+      "const": "dinkdata.events/v3",
       "title": "Schema",
       "type": "string"
     },
@@ -668,7 +668,15 @@
       "$ref": "#/$defs/Video"
     },
     "camera": {
-      "$ref": "#/$defs/Camera"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Camera"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The calibration behind every court_xy. null before the camera has one."
     },
     "players": {
       "items": {
