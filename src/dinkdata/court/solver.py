@@ -59,7 +59,11 @@ MIN_KEYPOINTS = 4
 MIN_HELD_BACK_LINES = 2
 """A refit with one keypoint fewer than MIN_KEYPOINTS needs line points on this many lines."""
 MAX_EVALUATIONS = 2000
-"""The most residual evaluations one least-squares fit may take before it counts as failed."""
+"""The most residual evaluations one robust fit may take before it counts as failed."""
+PLAIN_MAX_EVALUATIONS = 500
+"""The most evaluations a plain pass from a start may take. Good ones converge in a few hundred
+at most, and one stuck far from the answer runs to the cap, so failing there lets the other
+start run. Provisional."""
 FOLD_MARGIN = 0.05
 """During the fit, the lens must keep growing this share past the farthest click. Provisional."""
 UNDISTORT_STEPS = 20
@@ -477,7 +481,7 @@ def _initial_guesses(problem: _Problem) -> list[np.ndarray]:
     def pose_residuals(pose: np.ndarray) -> np.ndarray:
         return problem.residuals(np.concatenate([pose, second[6:]]))
 
-    refit = least_squares(pose_residuals, second[:6], x_scale="jac", max_nfev=MAX_EVALUATIONS)
+    refit = least_squares(pose_residuals, second[:6], x_scale="jac", max_nfev=PLAIN_MAX_EVALUATIONS)
     if np.isfinite(refit.x).all():
         second[:6] = refit.x
     return [first, second]
@@ -535,16 +539,19 @@ def _fit(
     """
     from scipy.optimize import least_squares
 
-    stages = [("linear", 1.0), ("soft_l1", ROBUST_SCALE * problem.image_size[1])]
+    stages = [
+        ("linear", 1.0, PLAIN_MAX_EVALUATIONS),
+        ("soft_l1", ROBUST_SCALE * problem.image_size[1], MAX_EVALUATIONS),
+    ]
     params, cost = start, np.inf
-    for loss, scale in stages if from_far else stages[1:]:
+    for loss, scale, cap in stages if from_far else stages[1:]:
         result = least_squares(
             problem.residuals,
             params,
             loss=loss,
             f_scale=scale,
             x_scale="jac",
-            max_nfev=MAX_EVALUATIONS,
+            max_nfev=cap,
         )
         if result.status <= 0 or not np.isfinite(result.x).all():
             raise FitDidNotConverge(
